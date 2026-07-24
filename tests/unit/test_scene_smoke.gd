@@ -31,3 +31,23 @@ func test_listening_scene_instantiates() -> void:
 	add_child_autofree(node)
 	node.setup({"window": 1.2, "tier": 4})
 	assert_not_null(node)
+
+
+func test_freetime_scene_instantiates() -> void:
+	var scene: PackedScene = load("res://scenes/minigames/freetime.tscn")
+	var node := scene.instantiate()
+	add_child_autofree(node)
+	node.setup({"pull_strength": 60.0})
+	assert_not_null(node)
+
+
+func test_dinner_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/dinner.tscn").instantiate()
+	add_child_autofree(node)
+	assert_not_null(node)
+
+
+func test_sleep_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/sleep.tscn").instantiate()
+	add_child_autofree(node)
+	assert_not_null(node)
