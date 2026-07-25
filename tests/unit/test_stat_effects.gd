@@ -9,6 +9,13 @@ func before_each() -> void:
 	state = GameState.new()
 
 
+func test_wake_changes_nothing() -> void:
+	var before := state.energy
+	StatEffects.apply("wake", {"score": 1.0, "skipped": false}, state, cfg)
+	assert_eq(state.energy, before)
+	assert_almost_eq(state.performance, 0.5, 0.001)
+
+
 func test_brush_done_restores_energy_and_flags() -> void:
 	var before := state.energy
 	StatEffects.apply("brush", {"score": 1.0, "skipped": false}, state, cfg)
@@ -30,6 +37,17 @@ func test_work_records_score_and_drains() -> void:
 	assert_eq(state.energy, before_e - cfg.work_drain)
 
 
+func test_lunch_restores_energy() -> void:
+	var before := state.energy
+	StatEffects.apply("lunch", {"score": 1.0, "skipped": false}, state, cfg)
+	assert_eq(state.energy, before + cfg.lunch_restore)
+
+
+func test_lunch_does_not_touch_performance() -> void:
+	StatEffects.apply("lunch", {"score": 0.0, "skipped": false}, state, cfg)
+	assert_almost_eq(state.performance, 0.5, 0.001)
+
+
 func test_dinner_cook_beats_takeout() -> void:
 	var s2 := GameState.new()
 	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "cook"}, state, cfg)
@@ -37,17 +55,41 @@ func test_dinner_cook_beats_takeout() -> void:
 	assert_gt(state.energy, s2.energy)
 
 
-func test_freetime_game_drains_and_hooks() -> void:
-	StatEffects.apply("freetime", {"score": 0.3, "skipped": false, "choice": "game"}, state, cfg)
+func test_bedtime_derives_from_games_played() -> void:
+	assert_eq(StatEffects.derive_bedtime(0), "early")
+	assert_eq(StatEffects.derive_bedtime(1), "mid")
+	assert_eq(StatEffects.derive_bedtime(2), "late")
+	assert_eq(StatEffects.derive_bedtime(9), "late")
+
+
+func test_freetime_drains_once_per_game_played() -> void:
+	var before := state.energy
+	var result := {"score": 0.3, "skipped": false, "choice": "logoff", "games_played": 3}
+	StatEffects.apply("freetime", result, state, cfg)
+	assert_eq(state.energy, before - cfg.late_game_drain * 3.0)
 	assert_true(state.played_late)
-
-
-func test_freetime_logoff_clears_habit() -> void:
-	state.played_late = true
-	StatEffects.apply("freetime", {"score": 1.0, "skipped": false, "choice": "logoff"}, state, cfg)
-	assert_false(state.played_late)
-
-
-func test_sleep_sets_bedtime() -> void:
-	StatEffects.apply("sleep", {"score": 1.0, "skipped": false, "choice": "late"}, state, cfg)
 	assert_eq(state.bedtime, "late")
+
+
+func test_freetime_with_no_games_is_an_early_night() -> void:
+	state.played_late = true
+	var before := state.energy
+	var result := {"score": 1.0, "skipped": false, "choice": "logoff", "games_played": 0}
+	StatEffects.apply("freetime", result, state, cfg)
+	assert_eq(state.energy, before)
+	assert_false(state.played_late)
+	assert_eq(state.bedtime, "early")
+
+
+func test_freetime_one_game_is_a_mid_bedtime() -> void:
+	var result := {"score": 0.5, "skipped": false, "choice": "logoff", "games_played": 1}
+	StatEffects.apply("freetime", result, state, cfg)
+	assert_eq(state.bedtime, "mid")
+
+
+func test_sleep_is_a_no_op_because_bedtime_is_already_derived() -> void:
+	state.bedtime = "late"
+	var before := state.energy
+	StatEffects.apply("sleep", {"score": 1.0, "skipped": false}, state, cfg)
+	assert_eq(state.bedtime, "late")
+	assert_eq(state.energy, before)

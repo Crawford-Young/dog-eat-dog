@@ -43,6 +43,7 @@ static func typing_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"tier": clarity_tier(energy),
 		"error_tolerance": lerpf(cfg.typing_error_tolerance_base, cfg.typing_error_tolerance_min, d),
+		"wrong_cap": cfg.typing_wrong_cap,
 	}
 
 
@@ -51,6 +52,7 @@ static func listening_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"window": lerpf(cfg.listening_window_base, cfg.listening_window_min, d),
 		"tier": clarity_tier(energy),
+		"text_speed": lerpf(cfg.listening_text_speed_base, cfg.listening_text_speed_max, d),
 	}
 
 
@@ -59,4 +61,9 @@ static func temptation_params(energy: float, cfg: BalanceConfig, played_late: bo
 	var pull := lerpf(cfg.temptation_pull_base, cfg.temptation_pull_max, d)
 	if played_late:
 		pull += cfg.temptation_habit_bonus
-	return {"pull_strength": pull}
+	return {
+		"pull_strength": pull,
+		"dwell_time": cfg.temptation_dwell_time,
+		"pull_growth": cfg.temptation_pull_growth,
+		"pull_ceiling": cfg.temptation_pull_ceiling,
+	}

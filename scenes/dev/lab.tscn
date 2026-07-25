@@ -1,0 +1,115 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/lab.gd" id="1"]
+
+[sub_resource type="ButtonGroup" id="EnergyGroup"]
+
+[node name="Lab" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Menu" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 520.0
+offset_bottom = 560.0
+
+[node name="Title" type="Label" parent="Menu"]
+text = "playtest lab"
+
+[node name="Activities" type="VBoxContainer" parent="Menu"]
+unique_name_in_owner = true
+
+[node name="Wake" type="Button" parent="Menu/Activities"]
+text = "wake"
+
+[node name="Brush" type="Button" parent="Menu/Activities"]
+text = "brush"
+
+[node name="Typing" type="Button" parent="Menu/Activities"]
+text = "typing (work)"
+
+[node name="Listening" type="Button" parent="Menu/Activities"]
+text = "listening (lunch)"
+
+[node name="Dinner" type="Button" parent="Menu/Activities"]
+text = "dinner"
+
+[node name="Freetime" type="Button" parent="Menu/Activities"]
+text = "freetime"
+
+[node name="Sleep" type="Button" parent="Menu/Activities"]
+text = "sleep"
+
+[node name="EnergyLabel" type="Label" parent="Menu"]
+text = "energy preset"
+
+[node name="EnergyRow" type="HBoxContainer" parent="Menu"]
+unique_name_in_owner = true
+
+[node name="Fresh" type="Button" parent="Menu/EnergyRow"]
+toggle_mode = true
+button_group = SubResource("EnergyGroup")
+text = "fresh (90)"
+
+[node name="Okay" type="Button" parent="Menu/EnergyRow"]
+toggle_mode = true
+button_group = SubResource("EnergyGroup")
+button_pressed = true
+text = "okay (55)"
+
+[node name="Wrecked" type="Button" parent="Menu/EnergyRow"]
+toggle_mode = true
+button_group = SubResource("EnergyGroup")
+text = "wrecked (20)"
+
+[node name="HabitCheck" type="CheckBox" parent="Menu"]
+unique_name_in_owner = true
+text = "3-day streak"
+
+[node name="BedtimeRow" type="HBoxContainer" parent="Menu"]
+
+[node name="BedtimeLabel" type="Label" parent="Menu/BedtimeRow"]
+text = "bedtime (sleep only)"
+
+[node name="BedtimeOption" type="OptionButton" parent="Menu/BedtimeRow"]
+unique_name_in_owner = true
+
+[node name="Host" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="ResultPanel" type="Panel" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.25
+anchor_top = 0.2
+anchor_right = 0.75
+anchor_bottom = 0.8
+visible = false
+
+[node name="ResultLabel" type="Label" parent="ResultPanel"]
+unique_name_in_owner = true
+anchor_left = 0.1
+anchor_top = 0.1
+anchor_right = 0.9
+anchor_bottom = 0.75
+
+[node name="ReplayButton" type="Button" parent="ResultPanel"]
+unique_name_in_owner = true
+anchor_left = 0.15
+anchor_top = 0.8
+anchor_right = 0.45
+anchor_bottom = 0.92
+text = "replay"
+
+[node name="BackButton" type="Button" parent="ResultPanel"]
+unique_name_in_owner = true
+anchor_left = 0.55
+anchor_top = 0.8
+anchor_right = 0.85
+anchor_bottom = 0.92
+text = "back"

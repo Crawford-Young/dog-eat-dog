@@ -4,26 +4,39 @@ extends Minigame
 ## gesture window. Bubble renders text at tier >= 3, emoji placeholder below.
 
 const BEATS := [
-	{"t": 1.5, "cue": "nod", "emoji": "(^o^) !!", "text": "the deadline moved up... wild right?"},
-	{"t": 4.0, "cue": "none", "emoji": "(-_-) ~~~", "text": "honestly i just need to vent for a second"},
-	{"t": 6.5, "cue": "shake", "emoji": "(o_O) ?!", "text": "and THEN he replied-all again. can you believe it?"},
-	{"t": 9.0, "cue": "nod", "emoji": "(^-^) ...", "text": "anyway. lunch again tomorrow?"},
+	{"t": 1.5, "cue": "nod", "emoji": "😃 ❗❗", "text": "the deadline moved up... wild right?"},
+	{"t": 4.0, "cue": "none", "emoji": "😩 💨", "text": "honestly i just need to vent for a second"},
+	{"t": 6.5, "cue": "shake", "emoji": "🤯 ?!", "text": "and THEN he replied-all again. can you believe it?"},
+	{"t": 9.0, "cue": "nod", "emoji": "😊 ...", "text": "anyway. lunch again tomorrow?"},
 ]
 const STROKES_FOR_GESTURE := 2
 const GESTURE_AMPLITUDE := 30.0
 
 var _session: ListeningSession
 var _tier: int = 4
+var _text_speed: float = Typewriter.DEFAULT_CHARS_PER_SEC
+var _spoken: String = ""
 var _nod_tracker: GestureTracker
 var _shake_tracker: GestureTracker
 var _running: bool = false
 
 @onready var _bubble: Label = %Bubble
+@onready var _typer := TypewriterLabel.new()
+
+
+func _ready() -> void:
+	add_child(_typer)
+	_typer.bind(_bubble)
+	var bubble_font := FontVariation.new()
+	bubble_font.base_font = _bubble.get_theme_font(&"font")
+	bubble_font.fallbacks = [preload("res://assets/fonts/twemoji_mozilla.ttf")]
+	_bubble.add_theme_font_override(&"font", bubble_font)
 
 
 func setup(params: Dictionary) -> void:
 	_session = ListeningSession.new(BEATS, params.window)
 	_tier = params.tier
+	_text_speed = params.get("text_speed", _text_speed)
 	_nod_tracker = GestureTracker.new(GestureTracker.AXIS_Y, GESTURE_AMPLITUDE)
 	_shake_tracker = GestureTracker.new(GestureTracker.AXIS_X, GESTURE_AMPLITUDE)
 	_running = true
@@ -41,11 +54,11 @@ func _process(delta: float) -> void:
 
 
 func _update_bubble() -> void:
-	var beat := _current_beat()
-	if beat.is_empty():
-		_bubble.text = ""
-	else:
-		_bubble.text = beat.text if _tier >= 3 else beat.emoji
+	var beat := _session.active_beat()
+	var line: String = "" if beat.is_empty() else (beat.text if _tier >= 3 else beat.emoji)
+	if line != _spoken:
+		_spoken = line
+		_typer.play(line, _text_speed)
 
 
 func _poll_gesture() -> void:
@@ -60,13 +73,6 @@ func _poll_gesture() -> void:
 func _reset_trackers() -> void:
 	_nod_tracker.reset()
 	_shake_tracker.reset()
-
-
-func _current_beat() -> Dictionary:
-	for beat in BEATS:
-		if _session._time >= beat.t and _session._time <= beat.t + _session._window:
-			return beat
-	return {}
 
 
 func _input(event: InputEvent) -> void:
