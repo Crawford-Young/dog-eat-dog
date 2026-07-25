@@ -26,6 +26,15 @@ A cute chibi dog climbs the corporate ladder in a pastel all-animal office. The 
 
 Override the Godot binary with the `GODOT` env var.
 
+## Web Export
+
+One-time setup: install the 4.7.1 export templates (`Godot_v4.7.1-stable_export_templates.tpz` from the GitHub release) — extract the `templates/web_*` files to `%APPDATA%\Godot\export_templates\4.7.1.stable\`. The committed `export_presets.cfg` uses the nothreads template (`thread_support=false`), so the build runs without COOP/COEP headers. Then:
+
+```sh
+just export-web   # build/web/ (gitignored)
+just serve        # http://localhost:8060
+```
+
 ## Docs
 
 Design specs and wave checklists live in the private planning-docs repo (`~/code/docs/games/dog-eat-dog/`).
