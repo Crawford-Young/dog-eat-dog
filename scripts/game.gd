@@ -15,6 +15,16 @@ const SCENES := {
 	"sleep": preload("res://scenes/minigames/sleep.tscn"),
 }
 const DOG_STATES := ["a husk", "running on fumes", "kinda tired", "doing okay", "bright-eyed"]
+const SLOT_LABELS := {
+	"wake": "morning",
+	"brush": "bathroom",
+	"work_am": "work, morning",
+	"lunch": "lunch",
+	"work_pm": "work, afternoon",
+	"dinner": "dinner",
+	"freetime": "free time",
+	"sleep": "bed",
+}
 
 var state := GameState.new()
 var schedule := DaySchedule.new()
@@ -25,17 +35,20 @@ var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 @onready var _summary_label: Label = %SummaryLabel
 @onready var _day_label: Label = %DayLabel
 @onready var _dog_label: Label = %DogLabel
+@onready var _summary_typer := TypewriterLabel.new()
 
 
 func _ready() -> void:
+	add_child(_summary_typer)
+	_summary_typer.bind(_summary_label)
 	_summary.visible = false
 	_start_slot()
 
 
 func _start_slot() -> void:
-	_day_label.text = "day %d — %s" % [state.day, schedule.current()]
-	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
 	var slot := schedule.current()
+	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS[slot]]
+	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
 	var node: Minigame = SCENES[slot].instantiate()
 	_host.add_child(node)
 	node.finished.connect(_on_finished.bind(slot, node), CONNECT_ONE_SHOT)
@@ -54,6 +67,14 @@ func _params_for(slot: String) -> Dictionary:
 			return Difficulty.listening_params(state.energy, cfg)
 		"freetime":
 			return Difficulty.temptation_params(state.energy, cfg, state.played_late)
+		"dinner":
+			return {"text_speed": cfg.typewriter_chars_per_sec}
+		"sleep":
+			return {
+				"bedtime": state.bedtime,
+				"text_speed": cfg.typewriter_chars_per_sec,
+				"hold": cfg.sleep_hold_time,
+			}
 		_:
 			return {}
 
@@ -68,12 +89,15 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 
 
 func _show_summary() -> void:
-	_summary_label.text = "day %d done\nwork felt: %s\ndog is %s" % [
-		state.day,
-		_performance_word(),
-		DOG_STATES[Difficulty.clarity_tier(state.energy)],
-	]
 	_summary.visible = true
+	_summary_typer.play(
+		"day %d done\nwork felt: %s\ndog is %s" % [
+			state.day,
+			_performance_word(),
+			DOG_STATES[Difficulty.clarity_tier(state.energy)],
+		],
+		cfg.typewriter_chars_per_sec,
+	)
 
 
 func _performance_word() -> String:

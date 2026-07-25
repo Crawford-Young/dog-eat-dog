@@ -8,6 +8,10 @@ run:
 edit:
     "{{godot}}" --path . -e
 
+# playtest lab — run one activity in isolation
+lab:
+    "{{godot}}" --path . res://scenes/dev/lab.tscn
+
 # headless unit tests
 test:
     "{{godot}}" --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=.gutconfig.json

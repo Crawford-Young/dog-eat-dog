@@ -14,7 +14,9 @@
 - **Energy is NEVER shown as a number** — the dog's sprite/state text IS the energy display.
 - **No firing, no death** anywhere in systems or copy. Floor = demotion + sick day.
 - Every minigame emits `finished(result)` with `{score: float 0..1, skipped: bool}`; choice scenes add `"choice": String`.
-- All balance tunables live in `resources/balance_default.tres` (`BalanceConfig`) — feel iteration edits data, not code.
+- **Bedtime is derived, never chosen** — `StatEffects.derive_bedtime(games_played)` maps the freetime loop's game count (0 / 1 / 2+) to early / mid / late. The sleep slot is a non-interactive narration beat, not a choice screen.
+- Conversational copy types itself out — `Typewriter` (pure pacing) driven by a `TypewriterLabel` child node. Never set a bubble/prompt/summary `text` directly.
+- All balance tunables live in `BalanceConfig` (`scripts/core/balance_config.gd` holds the defaults; `resources/balance_default.tres` carries overrides only and is currently zero-override) — feel iteration edits tunables, never minigame code.
 - Difficulty flows ONLY through `Difficulty.*_params(energy, cfg)` — no minigame reads GameState directly.
 
 ## Status

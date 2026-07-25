@@ -20,14 +20,21 @@ func test_wrong_gesture_inside_window() -> void:
 	var s := ListeningSession.new(_beats(), 1.0)
 	s.advance(1.2)
 	assert_eq(s.gesture("shake"), "wrong")
-	assert_eq(s.misses, 1)
+	assert_eq(s.hits, 0)
 
 
-func test_expired_cue_counts_miss() -> void:
+func test_expired_cue_scores_nothing() -> void:
 	var s := ListeningSession.new(_beats(), 1.0)
 	var expired := s.advance(2.5)  # beat 1 window (1.0-2.0) passed unanswered
 	assert_eq(expired.size(), 1)
-	assert_eq(s.misses, 1)
+	assert_eq(s.hits, 0)
+
+
+func test_expired_cue_can_no_longer_be_answered() -> void:
+	var s := ListeningSession.new(_beats(), 1.0)
+	s.advance(2.5)
+	assert_eq(s.gesture("nod"), "idle")
+	assert_eq(s.hits, 0)
 
 
 func test_gesture_during_none_trap_is_wrong() -> void:
@@ -40,7 +47,7 @@ func test_gesture_between_beats_is_idle() -> void:
 	var s := ListeningSession.new(_beats(), 1.0)
 	s.advance(0.5)
 	assert_eq(s.gesture("nod"), "idle")
-	assert_eq(s.misses, 0)
+	assert_eq(s.hits, 0)
 
 
 func test_double_hit_same_beat_ignored() -> void:
@@ -49,6 +56,26 @@ func test_double_hit_same_beat_ignored() -> void:
 	s.gesture("nod")
 	assert_eq(s.gesture("nod"), "idle")
 	assert_eq(s.hits, 1)
+
+
+func test_active_beat_is_the_one_in_window() -> void:
+	var s := ListeningSession.new(_beats(), 1.0)
+	s.advance(1.2)
+	assert_eq(s.active_beat().text, "big project right?")
+
+
+func test_active_beat_is_empty_between_beats() -> void:
+	var s := ListeningSession.new(_beats(), 1.0)
+	s.advance(0.5)
+	assert_true(s.active_beat().is_empty())
+
+
+func test_active_beat_follows_the_clock() -> void:
+	var s := ListeningSession.new(_beats(), 1.0)
+	s.advance(3.2)
+	assert_eq(s.active_beat().cue, "none")
+	s.advance(2.0)
+	assert_eq(s.active_beat().cue, "shake")
 
 
 func test_full_run_score() -> void:

@@ -46,7 +46,7 @@ static func _scramble(phrase: String, fraction: float, rng: RandomNumberGenerato
 static func _noise(length: int, rng: RandomNumberGenerator) -> String:
 	var out := ""
 	for i in length:
-		if i > 0 and i % 6 == 5:
+		if i % 6 == 5:
 			out += " "
 		else:
 			out += NOISE_CHARS[rng.randi_range(0, NOISE_CHARS.length() - 1)]

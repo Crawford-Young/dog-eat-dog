@@ -35,3 +35,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | Wave | Scope | Status |
 |---|---|---|
 | 1 | Vertical slice — one playable day, placeholder art, web export | in progress |
+
+## Credits
+
+- Emoji glyphs: [Twemoji](https://github.com/twitter/twemoji) © Twitter, Inc and other contributors, licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/); bundled as the [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr) COLR font build (Apache-2.0).
