@@ -135,6 +135,7 @@ func _params_for(slot: String) -> Dictionary:
 				"burrow_target": cfg.sick_burrow_target,
 				"burrow_time": cfg.sick_burrow_time,
 				"text_speed": cfg.typewriter_chars_per_sec,
+				"hold": cfg.sleep_hold_time,
 			}
 		_:
 			return {}
@@ -181,7 +182,9 @@ func _show_summary() -> void:
 func _tomorrow_energy() -> float:
 	if state.sick_today:
 		return clampf(state.sick_recovery, 0.0, 100.0)
-	var energy: float = cfg.sleep_energy[state.bedtime]
+	var leftover: float = state.energy
+	var energy: float = cfg.energy_carry_weight * leftover \
+			+ (1.0 - cfg.energy_carry_weight) * cfg.sleep_energy[state.bedtime]
 	if not state.brushed_today:
 		energy -= cfg.skip_brush_penalty
 	return clampf(energy, 0.0, 100.0)

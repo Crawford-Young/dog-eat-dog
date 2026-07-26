@@ -231,9 +231,14 @@ func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
 
 
 func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
+	# Wave-2 QA ruling (issue #5): next-day energy now blends leftover energy
+	# with the bedtime target (energy_carry_weight, default 0.5), so a wrecked
+	# bedtime target alone no longer guarantees a sick warning — it has to
+	# clear the threshold together with whatever energy is left at day's end
+	# (30.0 for this fixed walk: 0.5*30 + 0.5*late < sick_energy_threshold).
 	var main := _fresh_main()
 	var wrecked := BalanceConfig.new()
-	wrecked.sleep_energy = {"early": 90.0, "mid": 65.0, "late": 8.0}
+	wrecked.sleep_energy = {"early": 90.0, "mid": 65.0, "late": -10.0}
 	main.cfg = wrecked
 	_walk(main)
 	assert_string_contains(_summary_text(main), "tomorrow might not happen")

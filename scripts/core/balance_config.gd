@@ -50,6 +50,10 @@ extends Resource
 @export var late_game_drain: float = 15.0
 @export var skip_brush_penalty: float = 10.0
 @export var sleep_energy: Dictionary = {"early": 90.0, "mid": 65.0, "late": 35.0}
+# Wave-2 QA ruling (issue #5): a night's rest is a blend of leftover energy and
+# the bedtime target, not a full reset — 0.5 means yesterday's exhaustion
+# carries half its weight into tomorrow morning.
+@export var energy_carry_weight: float = 0.5
 
 # --- wave 2: ranks + economy ---
 @export var salaries: Array[int] = [60, 90, 130]
