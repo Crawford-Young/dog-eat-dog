@@ -35,6 +35,18 @@ just export-web   # build/web/ (gitignored)
 just serve        # http://localhost:8060
 ```
 
+## Controls
+
+| Slot | Input |
+|---|---|
+| Wake | Mash `Space` to fill the get-up bar (it decays) |
+| Brush | Move the mouse back and forth to scrub; Skip button available |
+| Work (typing) | Type the shown line; wrong chars insert and block until `Backspace`d |
+| Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
+| Dinner | Click a choice card (cook / takeout) |
+| Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it; deliberately click **Log off** to end the night |
+| Sleep | No input — bedtime derives from how many games you played |
+
 ## Docs
 
 Design specs and wave checklists live in the private planning-docs repo (`~/code/docs/games/dog-eat-dog/`).
@@ -43,7 +55,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 
 | Wave | Scope | Status |
 |---|---|---|
-| 1 | Vertical slice — one playable day, placeholder art, web export | in progress |
+| 1 | Vertical slice — one playable day, placeholder art, web export | done |
 
 ## Credits
 

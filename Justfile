@@ -27,6 +27,7 @@ cache:
 # export web build (requires export templates — see wave1 T10)
 export-web:
     mkdir -p build/web
+    touch build/.gdignore
     "{{godot}}" --headless --path . --export-release "Web" build/web/index.html
 
 # serve the web build locally
