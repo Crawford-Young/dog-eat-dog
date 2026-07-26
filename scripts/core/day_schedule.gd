@@ -48,7 +48,3 @@ func advance() -> bool:
 		return false
 	_index += 1
 	return true
-
-
-func reset() -> void:
-	_index = 0

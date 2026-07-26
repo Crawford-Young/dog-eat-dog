@@ -10,13 +10,6 @@ func test_walks_all_slots_in_order() -> void:
 	assert_eq(seen, DaySchedule.SLOTS)
 
 
-func test_reset_returns_to_wake() -> void:
-	var d := DaySchedule.new()
-	d.advance()
-	d.reset()
-	assert_eq(d.current(), "wake")
-
-
 func test_build_normal_day_includes_coffee_before_morning_work() -> void:
 	var s := GameState.new()
 	var slots := DaySchedule.build(s, BalanceConfig.new())

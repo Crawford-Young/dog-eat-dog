@@ -10,6 +10,12 @@ func _beat() -> Minigame:
 	return b
 
 
+func test_one_press_fills_a_quarter_of_the_bar() -> void:
+	var b := _beat()
+	b.press()
+	assert_eq(b.get_node("%BurrowBar").value, 0.25, "bar writes 0..1 fractions like wake/brush")
+
+
 func test_full_mash_scores_one() -> void:
 	var b := _beat()
 	for i in 4:
