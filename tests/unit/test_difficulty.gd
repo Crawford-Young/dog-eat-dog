@@ -112,3 +112,22 @@ func test_temptation_ceiling_clears_the_worst_starting_pull() -> void:
 	# bonus can hand out, or a tired repeat offender starts already capped
 	var worst := Difficulty.temptation_params(0.0, cfg, true)
 	assert_gt(cfg.temptation_pull_ceiling, worst.pull_strength)
+
+
+func test_coffee_boosts_typing_clarity_two_tiers() -> void:
+	var p := Difficulty.typing_params(30.0, cfg, cfg.coffee_buff_tiers)
+	assert_eq(p.tier, Difficulty.clarity_tier(30.0) + 2)
+
+
+func test_coffee_boost_caps_at_top_tier() -> void:
+	var p := Difficulty.typing_params(90.0, cfg, cfg.coffee_buff_tiers)
+	assert_eq(p.tier, 4)
+
+
+func test_no_boost_matches_wave_one_behavior() -> void:
+	assert_eq(Difficulty.typing_params(50.0, cfg).tier, Difficulty.clarity_tier(50.0))
+
+
+func test_sick_morning_below_threshold_only() -> void:
+	assert_true(Difficulty.is_sick_morning(cfg.sick_energy_threshold - 0.1, cfg))
+	assert_false(Difficulty.is_sick_morning(cfg.sick_energy_threshold, cfg))
