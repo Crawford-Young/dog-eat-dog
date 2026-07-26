@@ -23,6 +23,14 @@ offset_right = 400.0
 offset_bottom = 60.0
 text = "dog is doing okay"
 
+[node name="PosterLabel" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 64.0
+offset_right = 400.0
+offset_bottom = 88.0
+text = "mailroom · savings 0 / 4000"
+
 [node name="MinigameHost" type="Control" parent="."]
 unique_name_in_owner = true
 anchor_right = 1.0
@@ -44,6 +52,7 @@ anchor_top = 0.15
 anchor_right = 0.9
 anchor_bottom = 0.6
 horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="NextDayButton" type="Button" parent="Summary"]
 anchor_left = 0.3
@@ -52,4 +61,29 @@ anchor_right = 0.7
 anchor_bottom = 0.85
 text = "next day"
 
+[node name="Ending" type="Panel" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.3
+anchor_top = 0.25
+anchor_right = 0.7
+anchor_bottom = 0.75
+visible = false
+
+[node name="EndingLabel" type="Label" parent="Ending"]
+unique_name_in_owner = true
+anchor_left = 0.1
+anchor_top = 0.15
+anchor_right = 0.9
+anchor_bottom = 0.6
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RestartButton" type="Button" parent="Ending"]
+anchor_left = 0.3
+anchor_top = 0.7
+anchor_right = 0.7
+anchor_bottom = 0.85
+text = "again, but softer"
+
 [connection signal="pressed" from="Summary/NextDayButton" to="." method="_on_next_day_pressed"]
+[connection signal="pressed" from="Ending/RestartButton" to="." method="_on_restart_pressed"]
