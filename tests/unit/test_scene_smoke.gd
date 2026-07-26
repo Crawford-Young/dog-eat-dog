@@ -68,3 +68,31 @@ func test_sleep_scene_instantiates() -> void:
 	add_child_autofree(node)
 	node.setup({"bedtime": "late", "text_speed": 30.0, "hold": 1.4})
 	assert_not_null(node)
+
+
+func test_coffee_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/coffee.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text_speed": 30.0})
+	assert_not_null(node)
+
+
+func test_retire_offer_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/retire_offer.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text_speed": 30.0})
+	assert_not_null(node)
+
+
+func test_warning_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/warning.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text": "x", "text_speed": 30.0, "hold": 0.0})
+	assert_not_null(node)
+
+
+func test_sick_scene_instantiates() -> void:
+	var node = load("res://scenes/minigames/sick.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"burrow_target": 4, "burrow_time": 0.5, "text_speed": 0.0})
+	assert_not_null(node)
