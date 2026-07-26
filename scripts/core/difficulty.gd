@@ -38,13 +38,17 @@ static func brush_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
-static func typing_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 0) -> Dictionary:
 	var d := _deficit(energy)
 	return {
-		"tier": clarity_tier(energy),
+		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
 		"error_tolerance": lerpf(cfg.typing_error_tolerance_base, cfg.typing_error_tolerance_min, d),
 		"wrong_cap": cfg.typing_wrong_cap,
 	}
+
+
+static func is_sick_morning(energy: float, cfg: BalanceConfig) -> bool:
+	return energy < cfg.sick_energy_threshold
 
 
 static func listening_params(energy: float, cfg: BalanceConfig) -> Dictionary:
