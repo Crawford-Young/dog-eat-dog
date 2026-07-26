@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/narration_beat.gd" id="1"]
+
+[node name="Warning" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Line" type="Label" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.2
+anchor_top = 0.42
+anchor_right = 0.8
+anchor_bottom = 0.6
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2

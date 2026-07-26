@@ -23,6 +23,10 @@ func _ready() -> void:
 
 
 func setup(params: Dictionary) -> void:
+	var disabled: Array = params.get("disabled_choices", [])
+	for button in get_node("%Choices").get_children():
+		if button is Button and button.name.to_lower() in disabled:
+			button.disabled = true
 	_typer.play(_prompt_text, params.get("text_speed", Typewriter.DEFAULT_CHARS_PER_SEC))
 
 
