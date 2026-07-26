@@ -39,6 +39,10 @@ func press() -> void:
 	if _mashing:
 		_presses += 1
 		_bar.value = clampf(float(_presses) / float(_target), 0.0, 1.0)
+		if _presses >= _target:
+			# Bar full = burrowed. Don't sit out the rest of the window in
+			# silence — start the narration the moment the mash is done.
+			_start_narration()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -58,9 +62,18 @@ func _process(delta: float) -> void:
 		return
 	_elapsed += delta
 	if _elapsed >= _window:
-		_mashing = false
-		_narrating = true
-		_typer.play("the day happens somewhere else. the burrito holds.", _text_speed)
+		_start_narration()
+
+
+## Guarded by _mashing so a full-mash trigger (press()) and a window expiry
+## (_process()) can never both fire — whichever happens first wins, and the
+## other becomes a no-op.
+func _start_narration() -> void:
+	if not _mashing:
+		return
+	_mashing = false
+	_narrating = true
+	_typer.play("the day happens somewhere else. the burrito holds.", _text_speed)
 
 
 func _on_narration_done() -> void:

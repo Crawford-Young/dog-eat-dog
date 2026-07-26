@@ -73,4 +73,10 @@ static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:
 	# below the pre-day balance.
 	state.wallet.credit(pay)
 	var cost := state.wallet.drain(cfg.daily_living_cost)
-	return {"pay": pay, "cost": cost, "events": RankLadder.evaluate(state, cfg)}
+	# QA ruling (issue #10 / finding 1): rank news reads as morning-in-bed
+	# news if it waits for the day-end summary — the ladder now evaluates
+	# right after work_pm (game.gd), same day, at the office. A sick day has
+	# no work_pm slot in its schedule (DaySchedule.build), so "sick days
+	# never evaluate the ladder" holds by construction now, not a special case.
+	var normal_events: Array[String] = []
+	return {"pay": pay, "cost": cost, "events": normal_events}

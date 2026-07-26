@@ -54,6 +54,25 @@ func test_overmash_caps_at_one() -> void:
 	assert_eq(result.score, 1.0)
 
 
+func test_full_mash_starts_narration_immediately_without_waiting_out_the_window() -> void:
+	# Mechanical fix: a bar filled early should not sit in silence for the
+	# rest of the burrow window before narrating. The window here is huge
+	# (100s) on purpose — real per-frame ticks during the awaits below could
+	# never cross it by accident, so the only way narration starts is the
+	# full-mash trigger itself, not a coincidental window expiry.
+	var b: Minigame = SickBeatScene.instantiate()
+	add_child_autofree(b)
+	b.setup({"burrow_target": 4, "burrow_time": 100.0, "text_speed": 0.0, "hold": HOLD})
+	watch_signals(b)
+	for i in 4:
+		b.press()
+	await wait_for_signal(b._typer.completed, 2.0)
+	b._process(HOLD + 0.01)
+	assert_signal_emitted(
+		b, "finished", "a full mash should not have to wait out the window before narrating"
+	)
+
+
 func test_narration_holds_before_finishing() -> void:
 	var b := _beat()
 	watch_signals(b)

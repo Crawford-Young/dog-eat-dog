@@ -55,6 +55,19 @@ func _walk(main: Control, overrides: Dictionary = {}, until: String = "") -> voi
 		node.finished.emit(_result_for(slot, overrides))
 		if slot == until:
 			return
+		if slot == "work_pm":
+			_finish_rank_news_beat_if_pending(main, host)
+
+
+## QA ruling (issue #10 / finding 1): promotion/demotion/warning news is now a
+## same-day office beat hosted right after work_pm, OUTSIDE the normal slot
+## schedule — schedule.current() stays "work_pm" (advance() never ran) while
+## it's up. Drive it like any other beat before the walk moves on, unless the
+## caller stopped exactly at "work_pm" to inspect the pending beat itself.
+func _finish_rank_news_beat_if_pending(main: Control, host: Control) -> void:
+	if main.schedule.current() != "work_pm":
+		return
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false})
 
 
 ## Summary and ending copy type themselves out, so the label is still empty on
@@ -233,13 +246,61 @@ func test_restarting_after_the_ending_starts_a_fresh_dog() -> void:
 
 
 func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
+	# QA ruling (issue #10 / finding 1): the "warned" news now lands as a
+	# same-day office beat right after work_pm, not in the day-end summary.
 	var main := _fresh_main()
-	_walk(main, {"work_am": BAD_WORK, "work_pm": BAD_WORK})
-	assert_string_contains(_summary_text(main), "the cat glanced at your screen today. twice.")
+	_walk(main, {"work_am": BAD_WORK, "work_pm": BAD_WORK}, "work_pm")
+	var host: Control = main.get_node("%MinigameHost")
+	var beat := _current_minigame(host)
+	beat._typer.skip()
+	assert_string_contains(
+		(beat.get_node("%Line") as Label).text,
+		"the cat glanced at your screen today. twice.",
+		"the office delivers the news same-day now",
+	)
+	beat.finished.emit({"score": 1.0, "skipped": false})
+	for slot in ["dinner", "freetime", "sleep"]:
+		_current_minigame(host).finished.emit(_result_for(slot, {}))
+	assert_false(
+		_summary_text(main).contains("the cat glanced at your screen today. twice."),
+		"rank news no longer repeats in the day-end summary",
+	)
 	main._on_next_day_pressed()
 	assert_true(
 		DaySchedule.build(main.state, main.cfg).has("warning"),
 		"the warning beat is on tomorrow's list",
+	)
+
+
+func test_a_sustained_promotion_announces_at_the_office_before_the_summary() -> void:
+	# QA ruling (issue #10 / finding 1): rank news is a same-day office beat,
+	# blocking the summary until it's dismissed.
+	var main := _fresh_main()
+	main.state.performance = 0.9
+	main.state.promote_streak = main.cfg.promote_sustain_days - 1
+	_reseed(main)
+	_walk(main, {}, "work_pm")
+	assert_eq(
+		main.schedule.current(), "work_pm", "the office beat blocks advance() until it finishes"
+	)
+	var host: Control = main.get_node("%MinigameHost")
+	var beat := _current_minigame(host)
+	beat._typer.skip()
+	assert_string_contains(
+		(beat.get_node("%Line") as Label).text,
+		"new desk. same dog, better title.",
+		"the beat shows the promoted copy",
+	)
+	assert_false(
+		(main.get_node("%Summary") as Panel).visible,
+		"the summary must not appear while the office beat is still up",
+	)
+	beat.finished.emit({"score": 1.0, "skipped": false})
+	assert_eq(main.state.rank, 1, "the promotion actually landed")
+	for slot in ["dinner", "freetime", "sleep"]:
+		_current_minigame(host).finished.emit(_result_for(slot, {}))
+	assert_true(
+		(main.get_node("%Summary") as Panel).visible, "the day still closes on a summary afterward"
 	)
 
 

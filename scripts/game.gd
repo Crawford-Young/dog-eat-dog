@@ -147,14 +147,54 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		_show_ending()
 		return
 	StatEffects.apply(slot, result, state, cfg)
+	if slot == "work_pm":
+		# QA ruling (issue #10 / finding 1): rank news lands right after
+		# afternoon work, same day, at the office — not as morning-in-bed news
+		# in the close-of-day summary.
+		var rank_events := RankLadder.evaluate(state, cfg)
+		if not rank_events.is_empty():
+			_show_rank_news(rank_events)
+			return
 	if schedule.advance():
 		_start_slot()
 	else:
 		_show_summary()
 
 
-## Closes the day exactly once — close_day pays the salary and runs the rank
-## ladder, so it must never be called twice for one day.
+## Hosted OUTSIDE the normal slot schedule — schedule.advance() is never
+## called for it, so schedule.current() stays "work_pm" while it's up. Its own
+## finished signal resumes the normal advance()/_show_summary flow. One beat
+## even with multiple events: every matching EVENT_COPY line is joined.
+func _show_rank_news(rank_events: Array[String]) -> void:
+	_day_label.text = "day %d — the office" % state.day
+	var lines: Array[String] = []
+	for event in rank_events:
+		if EVENT_COPY.has(event):
+			lines.append(EVENT_COPY[event])
+	if rank_events.has("promoted") and state.rank == RankLadder.MAX_RANK:
+		lines.append(SENIOR_TEASE)
+	var node: Minigame = SCENES["warning"].instantiate()
+	_host.add_child(node)
+	node.finished.connect(_on_rank_news_finished.bind(node), CONNECT_ONE_SHOT)
+	node.setup({
+		"text": "\n".join(lines),
+		"text_speed": cfg.typewriter_chars_per_sec,
+		"hold": cfg.sleep_hold_time,
+	})
+
+
+func _on_rank_news_finished(_result: Dictionary, node: Node) -> void:
+	node.queue_free()
+	if schedule.advance():
+		_start_slot()
+	else:
+		_show_summary()
+
+
+## Closes the day exactly once — close_day pays the salary and drains living
+## costs, so it must never be called twice for one day. Rank news (promotion/
+## demotion/warning) no longer runs here — it's a same-day office beat fired
+## right after work_pm (_show_rank_news), before this ever gets called.
 func _show_summary() -> void:
 	var report := StatEffects.close_day(state, cfg)
 	var events: Array = report.events
@@ -166,11 +206,6 @@ func _show_summary() -> void:
 	lines.append("rent and kibble took %d" % report.cost)
 	lines.append("work felt: %s" % _performance_word())
 	lines.append("dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)])
-	for event in events:
-		if event != "sick_no_pay" and EVENT_COPY.has(event):
-			lines.append(EVENT_COPY[event])
-	if events.has("promoted") and state.rank == RankLadder.MAX_RANK:
-		lines.append(SENIOR_TEASE)
 	if Difficulty.is_sick_morning(_tomorrow_energy(), cfg):
 		lines.append(WOBBLE_COPY)
 	_summary.visible = true
