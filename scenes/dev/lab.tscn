@@ -77,6 +77,24 @@ text = "bedtime (sleep only)"
 [node name="BedtimeOption" type="OptionButton" parent="Menu/BedtimeRow"]
 unique_name_in_owner = true
 
+[node name="DayPresetsLabel" type="Label" parent="Menu"]
+text = "day presets (rides the full day, no minigame isolation)"
+
+[node name="DayPresets" type="VBoxContainer" parent="Menu"]
+unique_name_in_owner = true
+
+[node name="Flush" type="Button" parent="Menu/DayPresets"]
+text = "flush (savings just under retirement target)"
+
+[node name="On_Warning" type="Button" parent="Menu/DayPresets"]
+text = "on warning (performance warning active)"
+
+[node name="Wreck_Morning" type="Button" parent="Menu/DayPresets"]
+text = "wreck morning (energy 8, opens on sick)"
+
+[node name="Coffee_Morning" type="Button" parent="Menu/DayPresets"]
+text = "coffee morning (savings 20, energy 45)"
+
 [node name="Host" type="Control" parent="."]
 unique_name_in_owner = true
 anchor_right = 1.0
