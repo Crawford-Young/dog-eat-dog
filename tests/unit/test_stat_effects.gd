@@ -93,3 +93,73 @@ func test_sleep_is_a_no_op_because_bedtime_is_already_derived() -> void:
 	StatEffects.apply("sleep", {"score": 1.0, "skipped": false}, state, cfg)
 	assert_eq(state.bedtime, "late")
 	assert_eq(state.energy, before)
+
+
+func test_coffee_buy_spends_and_flags() -> void:
+	var s := GameState.new()
+	s.wallet.credit(10)
+	StatEffects.apply("coffee", {"score": 1.0, "skipped": false, "choice": "buy"}, s, cfg)
+	assert_true(s.coffee_today)
+	assert_eq(s.wallet.savings, 10 - cfg.coffee_price)
+
+
+func test_coffee_skip_costs_nothing() -> void:
+	var s := GameState.new()
+	StatEffects.apply("coffee", {"score": 1.0, "skipped": false, "choice": "skip"}, s, cfg)
+	assert_false(s.coffee_today)
+	assert_eq(s.wallet.savings, 0)
+
+
+func test_coffee_crash_drains_after_morning_work() -> void:
+	var sober := GameState.new()
+	sober.energy = 80.0
+	StatEffects.apply("work_am", {"score": 0.5, "skipped": false}, sober, cfg)
+	var wired := GameState.new()
+	wired.energy = 80.0
+	wired.coffee_today = true
+	StatEffects.apply("work_am", {"score": 0.5, "skipped": false}, wired, cfg)
+	assert_eq(wired.energy, sober.energy - cfg.coffee_crash_drain)
+
+
+func test_takeout_costs_money_cook_is_free() -> void:
+	var s := GameState.new()
+	s.wallet.credit(50)
+	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "takeout"}, s, cfg)
+	assert_eq(s.wallet.savings, 50 - cfg.takeout_price)
+	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "cook"}, s, cfg)
+	assert_eq(s.wallet.savings, 50 - cfg.takeout_price)
+
+
+func test_sick_beat_sets_recovery_from_mash_score() -> void:
+	var s := GameState.new()
+	StatEffects.apply("sick", {"score": 1.0, "skipped": false}, s, cfg)
+	assert_true(s.sick_today)
+	assert_eq(s.sick_recovery, cfg.sick_reset_max)
+	StatEffects.apply("sick", {"score": 0.0, "skipped": false}, s, cfg)
+	assert_eq(s.sick_recovery, cfg.sick_reset_min)
+
+
+func test_close_day_pays_rank_salary() -> void:
+	var s := GameState.new()
+	s.rank = 1
+	var report := StatEffects.close_day(s, cfg)
+	assert_eq(report.pay, cfg.salaries[1])
+	assert_eq(s.wallet.savings, cfg.salaries[1])
+
+
+func test_close_day_sick_no_pay_no_ladder() -> void:
+	var s := GameState.new()
+	s.sick_today = true
+	s.performance = 0.0
+	var report := StatEffects.close_day(s, cfg)
+	assert_eq(report.pay, 0)
+	assert_eq(s.wallet.savings, 0)
+	assert_false(s.warning)
+	assert_eq(report.events, ["sick_no_pay"])
+
+
+func test_close_day_surfaces_ladder_events() -> void:
+	var s := GameState.new()
+	s.performance = 0.1
+	var report := StatEffects.close_day(s, cfg)
+	assert_eq(report.events, ["warned"])
