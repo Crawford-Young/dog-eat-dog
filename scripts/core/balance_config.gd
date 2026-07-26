@@ -50,3 +50,19 @@ extends Resource
 @export var late_game_drain: float = 15.0
 @export var skip_brush_penalty: float = 10.0
 @export var sleep_energy: Dictionary = {"early": 90.0, "mid": 65.0, "late": 35.0}
+
+# --- wave 2: ranks + economy ---
+@export var salaries: Array[int] = [60, 90, 130]
+@export var promote_threshold: float = 0.7
+@export var promote_sustain_days: int = 3
+@export var demote_threshold: float = 0.25
+@export var coffee_price: int = 5
+@export var coffee_buff_tiers: int = 2
+@export var coffee_crash_drain: float = 18.0
+@export var takeout_price: int = 12
+@export var retirement_target: int = 4000
+@export var sick_energy_threshold: float = 12.0
+@export var sick_reset_min: float = 45.0
+@export var sick_reset_max: float = 80.0
+@export var sick_burrow_target: int = 20
+@export var sick_burrow_time: float = 6.0
