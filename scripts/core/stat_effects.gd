@@ -62,8 +62,15 @@ static func derive_bedtime(games_played: int) -> String:
 
 static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:
 	if state.sick_today:
+		# QA ruling (issue #8): rent and kibble don't pause for a sick day —
+		# being sick actively costs money, same as any other day.
+		var cost := state.wallet.drain(cfg.daily_living_cost)
 		var sick_events: Array[String] = ["sick_no_pay"]
-		return {"pay": 0, "events": sick_events}
+		return {"pay": 0, "cost": cost, "events": sick_events}
 	var pay: int = cfg.salaries[state.rank]
+	# Pay lands FIRST, then the drain — the day's paycheque covers its own
+	# living cost, so a working day nets exactly the margin, never a dip
+	# below the pre-day balance.
 	state.wallet.credit(pay)
-	return {"pay": pay, "events": RankLadder.evaluate(state, cfg)}
+	var cost := state.wallet.drain(cfg.daily_living_cost)
+	return {"pay": pay, "cost": cost, "events": RankLadder.evaluate(state, cfg)}

@@ -139,12 +139,19 @@ func test_sick_beat_sets_recovery_from_mash_score() -> void:
 	assert_eq(s.sick_recovery, cfg.sick_reset_min)
 
 
-func test_close_day_pays_rank_salary() -> void:
+func test_close_day_pays_rank_salary_and_drains_living_cost() -> void:
+	# QA ruling (issue #8): the day nets the margin over living costs, not the
+	# raw salary — pay lands first, then the drain.
 	var s := GameState.new()
 	s.rank = 1
 	var report := StatEffects.close_day(s, cfg)
 	assert_eq(report.pay, cfg.salaries[1])
-	assert_eq(s.wallet.savings, cfg.salaries[1])
+	assert_eq(report.cost, cfg.daily_living_cost)
+	assert_eq(
+		s.wallet.savings,
+		cfg.salaries[1] - cfg.daily_living_cost,
+		"a working day nets the margin over living costs",
+	)
 
 
 func test_close_day_sick_no_pay_no_ladder() -> void:
@@ -153,9 +160,23 @@ func test_close_day_sick_no_pay_no_ladder() -> void:
 	s.performance = 0.0
 	var report := StatEffects.close_day(s, cfg)
 	assert_eq(report.pay, 0)
+	assert_eq(report.cost, 0, "no savings to drain, so nothing is taken")
 	assert_eq(s.wallet.savings, 0)
 	assert_false(s.warning)
 	assert_eq(report.events, ["sick_no_pay"])
+
+
+func test_close_day_sick_drains_savings_but_never_negative() -> void:
+	# Money-never-negative invariant pin (issue #8 ruling: sick days cost
+	# money too): a sick day still tries to take the full living cost, but
+	# clamps at whatever savings actually exist.
+	var s := GameState.new()
+	s.sick_today = true
+	s.wallet.credit(20)
+	var report := StatEffects.close_day(s, cfg)
+	assert_eq(report.pay, 0)
+	assert_eq(report.cost, 20, "only the 20 that existed gets drained")
+	assert_eq(s.wallet.savings, 0)
 
 
 func test_close_day_surfaces_ladder_events() -> void:

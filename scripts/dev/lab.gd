@@ -97,9 +97,12 @@ func _preset_state(preset: String) -> GameState:
 	var state := GameState.new()
 	match preset:
 		"flush":
-			# One paid day crosses the retirement target -> retire_offer
-			# appears at the next morning's build.
-			state.wallet.savings = cfg.retirement_target - cfg.salaries[state.rank]
+			# QA ruling (issue #8): close_day nets the margin over living
+			# costs, not the raw salary — seed one margin under target so a
+			# single paid day still crosses it -> retire_offer appears at the
+			# next morning's build.
+			state.wallet.savings = cfg.retirement_target \
+					- (cfg.salaries[state.rank] - cfg.daily_living_cost)
 		"on_warning":
 			state.warning = true
 			state.performance = 0.2

@@ -163,6 +163,7 @@ func _show_summary() -> void:
 		lines.append(EVENT_COPY["sick_no_pay"])
 	else:
 		lines.append("paid %d bone-bucks" % report.pay)
+	lines.append("rent and kibble took %d" % report.cost)
 	lines.append("work felt: %s" % _performance_word())
 	lines.append("dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)])
 	for event in events:

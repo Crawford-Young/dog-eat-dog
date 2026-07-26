@@ -84,10 +84,21 @@ func test_freetime_games_decide_the_bedtime_the_sleep_beat_narrates() -> void:
 
 
 func test_a_full_day_pays_the_days_salary() -> void:
+	# QA ruling (issue #8): close_day nets the margin over living costs, not
+	# the raw salary. This fixed walk buys no coffee/takeout (coffee "skip",
+	# dinner "cook"), so the only drain past the paycheque is the daily
+	# living cost.
 	var main := _fresh_main()
 	_walk(main)
-	assert_eq(main.state.wallet.savings, main.cfg.salaries[0], "the mailroom salary lands at close")
+	assert_eq(
+		main.state.wallet.savings,
+		main.cfg.salaries[0] - main.cfg.daily_living_cost,
+		"the mailroom salary, minus the day's living cost, lands at close",
+	)
 	assert_string_contains(_summary_text(main), "paid %d bone-bucks" % main.cfg.salaries[0])
+	assert_string_contains(
+		_summary_text(main), "rent and kibble took %d" % main.cfg.daily_living_cost
+	)
 
 
 func test_the_poster_tracks_rank_and_savings() -> void:
@@ -98,7 +109,9 @@ func test_the_poster_tracks_rank_and_savings() -> void:
 	main._on_next_day_pressed()
 	assert_eq(
 		poster.text,
-		"mailroom · savings %d / %d" % [main.cfg.salaries[0], main.cfg.retirement_target],
+		"mailroom · savings %d / %d" % [
+			main.cfg.salaries[0] - main.cfg.daily_living_cost, main.cfg.retirement_target
+		],
 		"the poster refreshes on the next morning's first slot",
 	)
 
@@ -199,8 +212,8 @@ func test_staying_one_more_day_keeps_the_day_running() -> void:
 	assert_true((main.get_node("%Summary") as Panel).visible, "the day finishes as normal")
 	assert_eq(
 		main.state.wallet.savings,
-		main.cfg.retirement_target + main.cfg.salaries[0],
-		"one more day is one more paycheque",
+		main.cfg.retirement_target + (main.cfg.salaries[0] - main.cfg.daily_living_cost),
+		"one more day is one more paycheque, minus that day's living cost",
 	)
 
 

@@ -20,3 +20,12 @@ func spend(cost: int) -> bool:
 
 func can_retire(target: int) -> bool:
 	return savings >= target
+
+
+## Takes up to `cost` out of savings, clamping at zero — money never goes
+## negative. Returns the amount actually taken, since callers (the day-end
+## summary) need to report the real drain, not the requested one.
+func drain(cost: int) -> int:
+	var taken := mini(maxi(cost, 0), savings)
+	savings -= taken
+	return taken
