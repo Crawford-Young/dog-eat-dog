@@ -34,7 +34,7 @@ func setup(params: Dictionary) -> void:
 func press() -> void:
 	if _mashing:
 		_presses += 1
-		_bar.value = clampf(float(_presses) / float(_target), 0.0, 1.0) * 100.0
+		_bar.value = clampf(float(_presses) / float(_target), 0.0, 1.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
