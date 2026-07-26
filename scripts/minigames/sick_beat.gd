@@ -11,6 +11,9 @@ var _presses: int = 0
 var _mashing: bool = false
 var _narrating: bool = false
 var _text_speed: float = 30.0
+var _hold: float = 1.4
+var _held: float = 0.0
+var _holding: bool = false
 
 @onready var _prompt: Label = %Prompt
 @onready var _bar: ProgressBar = %BurrowBar
@@ -27,6 +30,7 @@ func setup(params: Dictionary) -> void:
 	_target = params.get("burrow_target", _target)
 	_window = params.get("burrow_time", _window)
 	_text_speed = params.get("text_speed", _text_speed)
+	_hold = params.get("hold", _hold)
 	_prompt.text = "everything hurts. burrow. (mash SPACE)"
 	_mashing = true
 
@@ -44,6 +48,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	if _holding:
+		_held += delta
+		if _held >= _hold:
+			_holding = false
+			_finish(clampf(float(_presses) / float(_target), 0.0, 1.0))
+		return
 	if not _mashing:
 		return
 	_elapsed += delta
@@ -56,4 +66,4 @@ func _process(delta: float) -> void:
 func _on_narration_done() -> void:
 	if _narrating:
 		_narrating = false
-		_finish(clampf(float(_presses) / float(_target), 0.0, 1.0))
+		_holding = true

@@ -38,9 +38,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_session.backspace()
 		_render()
 		return
-	var c := char(event.unicode)
-	if c == "":
+	if event.unicode == 0:
+		# Bare modifiers (Shift, Ctrl, Alt...) fire a keydown with unicode 0.
+		# char(0) is a length-1 NUL string, NOT "" — letting it through jams a
+		# NUL byte into the wrong buffer whenever the player reaches for Shift.
 		return
+	var c := char(event.unicode)
 	_session.input_char(c)
 	_render()
 	if _session.is_complete():

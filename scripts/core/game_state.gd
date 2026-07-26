@@ -31,7 +31,11 @@ func start_next_day(cfg: BalanceConfig) -> void:
 		# already decided tomorrow's energy. No brush penalty on a sick day.
 		energy = sick_recovery
 	else:
-		energy = cfg.sleep_energy[bedtime]
+		# Wave-2 QA ruling (issue #5): sleep is a blend of leftover energy and
+		# the bedtime target, not a full reset — exhaustion carries over.
+		var leftover := energy
+		energy = cfg.energy_carry_weight * leftover \
+				+ (1.0 - cfg.energy_carry_weight) * cfg.sleep_energy[bedtime]
 		if not brushed_today:
 			energy -= cfg.skip_brush_penalty
 	energy = clampf(energy, 0.0, 100.0)
