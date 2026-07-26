@@ -179,8 +179,12 @@ func test_close_day_sick_drains_savings_but_never_negative() -> void:
 	assert_eq(s.wallet.savings, 0)
 
 
-func test_close_day_surfaces_ladder_events() -> void:
+func test_close_day_no_longer_evaluates_the_ladder() -> void:
+	# QA ruling (issue #10 / finding 1): rank news moved to a same-day office
+	# beat fired right after work_pm (game.gd), not close_day. close_day now
+	# always reports an empty events array on a normal day.
 	var s := GameState.new()
 	s.performance = 0.1
 	var report := StatEffects.close_day(s, cfg)
-	assert_eq(report.events, ["warned"])
+	assert_eq(report.events, [])
+	assert_false(s.warning, "the ladder never ran, so no warning is raised here")
