@@ -53,13 +53,15 @@ func test_cancel_after_a_day_preset_reshows_the_menu() -> void:
 	assert_true(lab.get_node("%Menu").visible, "esc backs out of a day preset same as any activity")
 
 
-func test_preset_state_flush_seeds_savings_one_paycheque_under_target() -> void:
+func test_preset_state_flush_seeds_savings_one_margin_under_target() -> void:
+	# QA ruling (issue #8): close_day nets the margin (salary - living cost),
+	# not the raw salary, so the preset now seeds savings one margin short.
 	var lab := _fresh_lab()
 	var state: GameState = lab._preset_state("flush")
 	assert_eq(
 		state.wallet.savings,
-		lab.cfg.retirement_target - lab.cfg.salaries[state.rank],
-		"one paid day crosses the retirement target",
+		lab.cfg.retirement_target - (lab.cfg.salaries[state.rank] - lab.cfg.daily_living_cost),
+		"one paid day's margin crosses the retirement target",
 	)
 
 

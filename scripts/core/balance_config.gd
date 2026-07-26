@@ -57,6 +57,10 @@ extends Resource
 
 # --- wave 2: ranks + economy ---
 @export var salaries: Array[int] = [60, 90, 130]
+# QA ruling (issue #8): retirement pacing is a living-costs drain, not a raw
+# salary tally — rent + kibble, taken every close_day. The margin over this is
+# the only real saving. Margins at defaults: 15 / 45 / 85 per rank.
+@export var daily_living_cost: int = 45
 @export var promote_threshold: float = 0.7
 @export var promote_sustain_days: int = 3
 @export var demote_threshold: float = 0.25
