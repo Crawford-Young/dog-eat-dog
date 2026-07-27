@@ -110,3 +110,21 @@ func test_clothes_scene_instantiates() -> void:
 	add_child_autofree(node)
 	node.setup({"fumble_chance": 0.0})
 	assert_not_null(node)
+
+
+func test_breakfast_scene_instantiates() -> void:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"window": 0.3, "speed": 1.6, "beats": 3})
+	assert_not_null(node)
+
+
+func test_drive_scene_instantiates() -> void:
+	var node: Minigame = load("res://scenes/minigames/drive.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({
+		"length": 100.0, "top_speed": 50.0, "accel": 40.0,
+		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
+		"car_count": 4,
+	})
+	assert_not_null(node)
