@@ -119,6 +119,49 @@ func test_breakfast_scene_instantiates() -> void:
 	assert_not_null(node)
 
 
+## `_unhandled_input` never sees an event a Control has already eaten, and every
+## Control defaults to MOUSE_FILTER_STOP. So a minigame that routes CLICKS through
+## `_unhandled_input` must leave its decorative Controls transparent to the mouse,
+## or it renders perfectly, instantiates clean, and is unplayable in a real window.
+## Buttons are exempt — they are supposed to eat their own clicks. (issue #6)
+func _mouse_blockers(root: Node) -> Array:
+	var blockers: Array = []
+	var controls: Array = root.find_children("*", "Control", true, false)
+	controls.push_back(root)
+	for node in controls:
+		if node is Button or not node is Control:
+			continue
+		if (node as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			blockers.append(String(node.name))
+	return blockers
+
+
+func test_clothes_lets_the_mouse_reach_the_game() -> void:
+	var node: Minigame = load("res://scenes/minigames/clothes.tscn").instantiate()
+	add_child_autofree(node)
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the drag: %s" % str(blockers))
+
+
+func test_breakfast_lets_the_mouse_reach_the_game() -> void:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
+
+
+## The blocker can also sit ABOVE the minigame: the shell hosts every scene, and a
+## full-rect Control there eats the click before the minigame's `_unhandled_input`
+## ever runs. Fixing the leaf scene alone is not enough — the whole chain from the
+## shell root down to the item has to be transparent. (issue #6)
+func test_the_shell_never_eats_a_minigames_clicks() -> void:
+	var node = load("res://scenes/main.tscn").instantiate()
+	add_child_autofree(node)
+	assert_eq((node as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE, "Main root")
+	var host: Control = node.get_node("%MinigameHost")
+	assert_eq(host.mouse_filter, Control.MOUSE_FILTER_IGNORE, "MinigameHost")
+
+
 func test_drive_scene_instantiates() -> void:
 	var node: Minigame = load("res://scenes/minigames/drive.tscn").instantiate()
 	add_child_autofree(node)
