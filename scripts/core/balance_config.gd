@@ -98,7 +98,14 @@ extends Resource
 @export var drive_block_margin: float = 25.0
 @export var drive_switch_lag_base: float = 0.0
 @export var drive_switch_lag_max: float = 0.45
-@export var drive_cars_base: int = 6
-@export var drive_cars_max: int = 14
+## Traffic comes in waves — one car in every lane but one. These are wave
+## counts, not car counts: the commute scales by how many walls you weave
+## through. Past 3 waves the walls sit closer together than block_margin +
+## pin_gap, so a tired dog eats a pin at each one no matter how well it drives.
+@export var drive_waves_base: int = 3
+@export var drive_waves_max: int = 5
+## How far behind the car ahead of it a car settles, in its own lane. 20 units
+## is 80px — wider than a 72px car, so traffic never overlaps on screen.
+@export var drive_car_min_gap: float = 20.0
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]

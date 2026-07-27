@@ -150,10 +150,6 @@ func test_breakfast_lets_the_mouse_reach_the_game() -> void:
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
-## The blocker can also sit ABOVE the minigame: the shell hosts every scene, and a
-## full-rect Control there eats the click before the minigame's `_unhandled_input`
-## ever runs. Fixing the leaf scene alone is not enough — the whole chain from the
-## shell root down to the item has to be transparent. (issue #6)
 ## Breakfast takes a click OR space, but advertised only the click — and the click
 ## was the affordance issue #6 had broken, so the prompt named the one input that
 ## did not work. Copy states every accepted input. (issue #8)
@@ -165,6 +161,10 @@ func test_breakfast_prompt_names_both_of_its_inputs() -> void:
 	assert_true(prompt.contains("CLICK"), "prompt names CLICK: %s" % prompt)
 
 
+## The blocker can also sit ABOVE the minigame: the shell hosts every scene, and a
+## full-rect Control there eats the click before the minigame's `_unhandled_input`
+## ever runs. Fixing the leaf scene alone is not enough — the whole chain from the
+## shell root down to the item has to be transparent. (issue #6)
 func test_the_shell_never_eats_a_minigames_clicks() -> void:
 	var node = load("res://scenes/main.tscn").instantiate()
 	add_child_autofree(node)
@@ -179,6 +179,6 @@ func test_drive_scene_instantiates() -> void:
 	node.setup({
 		"length": 100.0, "top_speed": 50.0, "accel": 40.0,
 		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
-		"car_count": 4,
+		"car_min_gap": 20.0, "car_count": 4,
 	})
 	assert_not_null(node)
