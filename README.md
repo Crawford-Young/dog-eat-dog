@@ -46,6 +46,10 @@ just serve        # http://localhost:8060
 | Dinner | Click a choice card (cook / takeout) |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it; deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime derives from how many games you played |
+| Coffee cart | Click a choice card (buy / skip) — buy is disabled when you can't afford it |
+| Retire offer | Choice card, first thing in the morning once savings hit the target — retire ends the run |
+| Warning / rank news | No input — the cat's narration beat plays out (warning lands before work; rank news lands at the office right after afternoon work) |
+| Sick day | Mash `Space` to burrow into the blanket — a sick morning replaces the whole day |
 
 ## Docs
 
@@ -56,6 +60,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | Wave | Scope | Status |
 |---|---|---|
 | 1 | Vertical slice — one playable day, placeholder art, web export | done |
+| 2 | Ranks + economy — salary and living costs, rank ladder with warning-first demotion, coffee cart, sick days, retirement ending, energy carryover, lab day presets | done |
 
 ## Credits
 

@@ -62,8 +62,8 @@ func is_done() -> bool:
 	return _done
 
 
-## Decays with every game played. Wave-1 nothing consumes it yet (see the D1
-## note in stat_effects.gd) — it is the hook for the wave-2 rep sink.
+## Decays with every game played. Nothing consumes it yet (see the D1
+## note in stat_effects.gd) — it is the hook for the wave-3 rep sink.
 func score() -> float:
 	return 1.0 / (1.0 + games_played)
 
