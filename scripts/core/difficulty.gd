@@ -25,7 +25,6 @@ static func wake_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"mash_target": roundi(lerpf(cfg.wake_mash_base, cfg.wake_mash_max, d)),
 		"decay_per_sec": lerpf(0.0, cfg.wake_decay_max, d),
-		"par_time": cfg.wake_par_time,
 	}
 
 
@@ -34,16 +33,51 @@ static func brush_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"strokes_required": roundi(lerpf(cfg.brush_strokes_base, cfg.brush_strokes_max, d)),
 		"amplitude": cfg.brush_amplitude,
-		"par_time": cfg.brush_par_time,
 	}
 
 
-static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 0) -> Dictionary:
-	var d := _deficit(energy)
+static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 0, rank: int = 0) -> Dictionary:
 	return {
 		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
-		"error_tolerance": lerpf(cfg.typing_error_tolerance_base, cfg.typing_error_tolerance_min, d),
 		"wrong_cap": cfg.typing_wrong_cap,
+		"shift_time": cfg.typing_shift_time,
+		"par_units": cfg.typing_par_units[clampi(rank, 0, cfg.typing_par_units.size() - 1)],
+	}
+
+
+static func shower_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var d := _deficit(energy)
+	return {
+		"spots": roundi(lerpf(cfg.shower_spots_base, cfg.shower_spots_max, d)),
+		"revolutions": cfg.shower_revolutions,
+		"min_radius": cfg.shower_min_radius,
+	}
+
+
+static func dress_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var d := _deficit(energy)
+	return {"fumble_chance": lerpf(cfg.dress_fumble_base, cfg.dress_fumble_max, d)}
+
+
+static func breakfast_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var d := _deficit(energy)
+	return {
+		"window": lerpf(cfg.breakfast_window_base, cfg.breakfast_window_min, d),
+		"speed": cfg.breakfast_beat_speed,
+		"beats": cfg.breakfast_beats,
+	}
+
+
+static func drive_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var d := _deficit(energy)
+	return {
+		"length": cfg.drive_length,
+		"top_speed": cfg.drive_top_speed,
+		"accel": cfg.drive_accel,
+		"pin_gap": cfg.drive_pin_gap,
+		"block_margin": cfg.drive_block_margin,
+		"switch_lag": lerpf(cfg.drive_switch_lag_base, cfg.drive_switch_lag_max, d),
+		"car_count": roundi(lerpf(cfg.drive_cars_base, cfg.drive_cars_max, d)),
 	}
 
 

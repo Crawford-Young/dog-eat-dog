@@ -56,35 +56,6 @@ func test_wrong_buffer_stops_growing_at_the_cap() -> void:
 	assert_eq(t.errors, 5)
 
 
-func test_perfect_score_is_one() -> void:
-	var t := TypingSession.new("ab")
-	t.input_char("a")
-	t.input_char("b")
-	assert_almost_eq(t.score(0.1), 1.0, 0.001)
-
-
-func test_errors_within_tolerance_keep_full_score() -> void:
-	var t := TypingSession.new("abcdefghij")  # 10 chars
-	t.input_char("x")  # 1 error
-	t.backspace()
-	for c in "abcdefghij":
-		t.input_char(c)
-	# error_rate = 1/11 ≈ 0.09 <= tolerance 0.3 → full score
-	assert_almost_eq(t.score(0.3), 1.0, 0.001)
-
-
-func test_errors_beyond_tolerance_reduce_score() -> void:
-	var t := TypingSession.new("ab")
-	for i in 3:
-		t.input_char("x")
-	for i in 3:
-		t.backspace()
-	t.input_char("a")
-	t.input_char("b")
-	# error_rate = 3/5 = 0.6; tolerance 0.1 → score = 1 - (0.6-0.1)*2 = 0.0
-	assert_almost_eq(t.score(0.1), 0.0, 0.001)
-
-
 func test_input_after_complete_ignored() -> void:
 	var t := TypingSession.new("a")
 	t.input_char("a")

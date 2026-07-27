@@ -6,18 +6,11 @@ extends Resource
 @export var wake_mash_base: int = 12
 @export var wake_mash_max: int = 40
 @export var wake_decay_max: float = 6.0
-# D1 (deferred to wave 3): par times pace a score nothing consumes yet — see
-# the note at the top of stat_effects.gd. Intentionally inert through wave 2.
-@export var wake_par_time: float = 4.0
 
 @export var brush_strokes_base: int = 6
 @export var brush_strokes_max: int = 16
 @export var brush_amplitude: float = 40.0
-# D1 (deferred to wave 3): inert for the same reason as wake_par_time.
-@export var brush_par_time: float = 5.0
 
-@export var typing_error_tolerance_base: float = 0.30
-@export var typing_error_tolerance_min: float = 0.05
 @export var typing_wrong_cap: int = 5
 
 @export var listening_window_base: float = 1.2
@@ -74,3 +67,38 @@ extends Resource
 @export var sick_reset_max: float = 80.0
 @export var sick_burrow_target: int = 20
 @export var sick_burrow_time: float = 6.0
+
+# --- wave 3a: day clock + morning minigames ---
+@export var morning_start_minutes: int = 420
+@export var morning_budget_minutes: float = 120.0
+@export var clock_scale: float = 1.5
+@export var skip_time_cost: float = 8.0
+@export var clock_amber_fraction: float = 0.4
+@export var clock_red_fraction: float = 0.15
+@export var lateness_debit_per_min: float = 0.004
+@export var lateness_debit_cap: float = 0.12
+@export var shower_spots_base: int = 2
+@export var shower_spots_max: int = 5
+@export var shower_revolutions: float = 2.0
+@export var shower_min_radius: float = 12.0
+@export var skip_shower_penalty: float = 10.0
+@export var dress_fumble_base: float = 0.0
+@export var dress_fumble_max: float = 0.9
+@export var breakfast_window_base: float = 0.30
+@export var breakfast_window_min: float = 0.12
+@export var breakfast_beat_speed: float = 1.6
+@export var breakfast_beats: int = 3
+@export var breakfast_energy_min: float = 2.0
+@export var breakfast_energy_max: float = 8.0
+@export var skip_breakfast_penalty: float = 4.0
+@export var drive_length: float = 400.0
+@export var drive_top_speed: float = 50.0
+@export var drive_accel: float = 40.0
+@export var drive_pin_gap: float = 30.0
+@export var drive_block_margin: float = 25.0
+@export var drive_switch_lag_base: float = 0.0
+@export var drive_switch_lag_max: float = 0.45
+@export var drive_cars_base: int = 6
+@export var drive_cars_max: int = 14
+@export var typing_shift_time: float = 25.0
+@export var typing_par_units: Array[int] = [3, 4, 5]

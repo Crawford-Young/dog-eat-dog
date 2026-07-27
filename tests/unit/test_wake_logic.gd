@@ -2,7 +2,7 @@ extends GutTest
 
 
 func _params(target: int = 10, decay: float = 2.0) -> Dictionary:
-	return {"mash_target": target, "decay_per_sec": decay, "par_time": 4.0}
+	return {"mash_target": target, "decay_per_sec": decay}
 
 
 func test_presses_fill_progress() -> void:

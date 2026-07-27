@@ -43,13 +43,3 @@ func backspace() -> bool:
 
 func is_complete() -> bool:
 	return typed_count >= _target.length()
-
-
-func score(error_tolerance: float) -> float:
-	var total := typed_count + errors
-	if total == 0:
-		return 0.0
-	var error_rate := float(errors) / total
-	if error_rate <= error_tolerance:
-		return 1.0
-	return clampf(1.0 - (error_rate - error_tolerance) * 2.0, 0.0, 1.0)
