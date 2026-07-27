@@ -28,6 +28,18 @@ text = "wake"
 [node name="Brush" type="Button" parent="Menu/Activities"]
 text = "brush"
 
+[node name="Shower" type="Button" parent="Menu/Activities"]
+text = "shower"
+
+[node name="Clothes" type="Button" parent="Menu/Activities"]
+text = "clothes"
+
+[node name="Breakfast" type="Button" parent="Menu/Activities"]
+text = "breakfast"
+
+[node name="Drive" type="Button" parent="Menu/Activities"]
+text = "drive (commute)"
+
 [node name="Typing" type="Button" parent="Menu/Activities"]
 text = "typing (work)"
 
@@ -58,7 +70,7 @@ text = "fresh (90)"
 toggle_mode = true
 button_group = SubResource("EnergyGroup")
 button_pressed = true
-text = "okay (55)"
+text = "okay (65)"
 
 [node name="Wrecked" type="Button" parent="Menu/EnergyRow"]
 toggle_mode = true
@@ -75,6 +87,14 @@ text = "3-day streak"
 text = "bedtime (sleep only)"
 
 [node name="BedtimeOption" type="OptionButton" parent="Menu/BedtimeRow"]
+unique_name_in_owner = true
+
+[node name="RankRow" type="HBoxContainer" parent="Menu"]
+
+[node name="RankLabel" type="Label" parent="Menu/RankRow"]
+text = "rank (typing only)"
+
+[node name="RankOption" type="OptionButton" parent="Menu/RankRow"]
 unique_name_in_owner = true
 
 [node name="DayPresetsLabel" type="Label" parent="Menu"]
@@ -94,6 +114,9 @@ text = "wreck morning (energy 8, opens on sick)"
 
 [node name="Coffee_Morning" type="Button" parent="Menu/DayPresets"]
 text = "coffee morning (savings 20, energy 45)"
+
+[node name="Late_Morning" type="Button" parent="Menu/DayPresets"]
+text = "late morning (20-min budget — rides the clock to red + the late beat)"
 
 [node name="Host" type="Control" parent="."]
 unique_name_in_owner = true

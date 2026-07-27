@@ -84,3 +84,57 @@ func test_preset_state_coffee_morning_seeds_affordable_savings_and_energy() -> v
 	var state: GameState = lab._preset_state("coffee_morning")
 	assert_eq(state.wallet.savings, 20)
 	assert_eq(state.energy, 45.0)
+
+
+func test_shower_activity_launches_and_sets_up() -> void:
+	var lab := _fresh_lab()
+	lab._launch("shower")
+	assert_eq(lab.get_node("%Host").get_child_count(), 1, "shower minigame is hosted")
+
+
+func test_clothes_activity_launches_and_sets_up() -> void:
+	var lab := _fresh_lab()
+	lab._launch("clothes")
+	assert_eq(lab.get_node("%Host").get_child_count(), 1, "clothes minigame is hosted")
+
+
+func test_breakfast_activity_launches_and_sets_up() -> void:
+	var lab := _fresh_lab()
+	lab._launch("breakfast")
+	assert_eq(lab.get_node("%Host").get_child_count(), 1, "breakfast minigame is hosted")
+
+
+func test_drive_activity_launches_and_sets_up() -> void:
+	var lab := _fresh_lab()
+	lab._launch("drive")
+	assert_eq(lab.get_node("%Host").get_child_count(), 1, "drive minigame is hosted")
+
+
+func test_typing_params_uses_the_selected_rank() -> void:
+	var lab := _fresh_lab()
+	lab.get_node("%RankOption").selected = 2
+	var params: Dictionary = lab._params_for("typing")
+	assert_eq(
+		params["par_units"], lab.cfg.typing_par_units[2], "rank selector feeds typing_params"
+	)
+
+
+func test_late_morning_preset_launches_the_main_scene() -> void:
+	var lab := _fresh_lab()
+	lab._launch_day("late_morning")
+	assert_eq(lab.get_node("%Host").get_child_count(), 1, "the day scene is hosted")
+
+
+func test_preset_cfg_late_morning_duplicates_with_a_tiny_budget() -> void:
+	var lab := _fresh_lab()
+	var day_cfg: BalanceConfig = lab._preset_cfg("late_morning")
+	assert_eq(day_cfg.morning_budget_minutes, 20.0, "the duplicate carries the tight budget")
+	assert_eq(lab.cfg.morning_budget_minutes, 120.0, "the shared cfg resource is untouched")
+
+
+func test_preset_cfg_other_presets_return_cfg_unchanged() -> void:
+	var lab := _fresh_lab()
+	var day_cfg: BalanceConfig = lab._preset_cfg("flush")
+	assert_eq(
+		day_cfg.morning_budget_minutes, 120.0, "non-late-morning presets pass cfg through untouched"
+	)
