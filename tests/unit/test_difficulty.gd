@@ -155,11 +155,14 @@ func test_drive_traffic_and_lag_scale_with_deficit() -> void:
 	var cfg := BalanceConfig.new()
 	var fresh := Difficulty.drive_params(100.0, cfg)
 	var wrecked := Difficulty.drive_params(0.0, cfg)
-	assert_eq(fresh.car_count, cfg.drive_cars_base)
-	assert_eq(wrecked.car_count, cfg.drive_cars_max)
+	# The commute scales in whole waves — a wave is one car in every lane but one.
+	assert_eq(fresh.car_count, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE)
+	assert_eq(wrecked.car_count, cfg.drive_waves_max * LaneSim.CARS_PER_WAVE)
+	assert_gt(wrecked.car_count, fresh.car_count)
 	assert_almost_eq(fresh.switch_lag, cfg.drive_switch_lag_base, 0.001)
 	assert_almost_eq(wrecked.switch_lag, cfg.drive_switch_lag_max, 0.001)
 	assert_almost_eq(fresh.length, cfg.drive_length, 0.001)
+	assert_almost_eq(fresh.car_min_gap, cfg.drive_car_min_gap, 0.001)
 
 
 func test_typing_params_carry_shift_and_rank_par() -> void:

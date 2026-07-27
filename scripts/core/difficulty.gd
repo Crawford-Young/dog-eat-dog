@@ -77,7 +77,11 @@ static func drive_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 		"pin_gap": cfg.drive_pin_gap,
 		"block_margin": cfg.drive_block_margin,
 		"switch_lag": lerpf(cfg.drive_switch_lag_base, cfg.drive_switch_lag_max, d),
-		"car_count": roundi(lerpf(cfg.drive_cars_base, cfg.drive_cars_max, d)),
+		"car_min_gap": cfg.drive_car_min_gap,
+		# Traffic is generated in whole waves, so the car count is always a
+		# whole number of walls — the wave count is what the deficit scales.
+		"car_count": roundi(lerpf(cfg.drive_waves_base, cfg.drive_waves_max, d))
+				* LaneSim.CARS_PER_WAVE,
 	}
 
 
