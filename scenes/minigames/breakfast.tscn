@@ -13,7 +13,7 @@ anchor_left = 0.25
 anchor_top = 0.15
 anchor_right = 0.75
 anchor_bottom = 0.23
-text = "CLICK WHEN THE MARKER IS OVER THE PLATE"
+text = "CLICK OR PRESS SPACE WHEN THE MARKER IS OVER THE PLATE"
 horizontal_alignment = 1
 
 [node name="BeatLabel" type="Label" parent="."]

@@ -154,6 +154,17 @@ func test_breakfast_lets_the_mouse_reach_the_game() -> void:
 ## full-rect Control there eats the click before the minigame's `_unhandled_input`
 ## ever runs. Fixing the leaf scene alone is not enough — the whole chain from the
 ## shell root down to the item has to be transparent. (issue #6)
+## Breakfast takes a click OR space, but advertised only the click — and the click
+## was the affordance issue #6 had broken, so the prompt named the one input that
+## did not work. Copy states every accepted input. (issue #8)
+func test_breakfast_prompt_names_both_of_its_inputs() -> void:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	var prompt: String = (node.get_node("Prompt") as Label).text.to_upper()
+	assert_true(prompt.contains("SPACE"), "prompt names SPACE: %s" % prompt)
+	assert_true(prompt.contains("CLICK"), "prompt names CLICK: %s" % prompt)
+
+
 func test_the_shell_never_eats_a_minigames_clicks() -> void:
 	var node = load("res://scenes/main.tscn").instantiate()
 	add_child_autofree(node)
