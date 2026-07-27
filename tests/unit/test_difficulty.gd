@@ -33,7 +33,6 @@ func test_brush_params_full_energy_is_base() -> void:
 	var p := Difficulty.brush_params(100.0, cfg)
 	assert_eq(p.strokes_required, cfg.brush_strokes_base)
 	assert_almost_eq(p.amplitude, cfg.brush_amplitude, 0.001)
-	assert_almost_eq(p.par_time, cfg.brush_par_time, 0.001)
 
 
 func test_brush_params_demand_more_strokes_as_energy_drops() -> void:
@@ -87,7 +86,6 @@ func test_coworker_speech_finishes_inside_its_own_window() -> void:
 func test_typing_params_scale() -> void:
 	assert_eq(Difficulty.typing_params(100.0, cfg).tier, 4)
 	assert_eq(Difficulty.typing_params(0.0, cfg).tier, 0)
-	assert_almost_eq(Difficulty.typing_params(100.0, cfg).error_tolerance, cfg.typing_error_tolerance_base, 0.001)
 
 
 func test_typing_params_carry_the_wrong_buffer_cap() -> void:
@@ -131,3 +129,53 @@ func test_no_boost_matches_wave_one_behavior() -> void:
 func test_sick_morning_below_threshold_only() -> void:
 	assert_true(Difficulty.is_sick_morning(cfg.sick_energy_threshold - 0.1, cfg))
 	assert_false(Difficulty.is_sick_morning(cfg.sick_energy_threshold, cfg))
+
+
+func test_shower_params_scale_with_deficit() -> void:
+	var cfg := BalanceConfig.new()
+	assert_eq(Difficulty.shower_params(100.0, cfg).spots, cfg.shower_spots_base)
+	assert_eq(Difficulty.shower_params(0.0, cfg).spots, cfg.shower_spots_max)
+	assert_almost_eq(Difficulty.shower_params(50.0, cfg).revolutions, cfg.shower_revolutions, 0.001)
+
+
+func test_dress_fumble_scales_with_deficit() -> void:
+	var cfg := BalanceConfig.new()
+	assert_almost_eq(Difficulty.dress_params(100.0, cfg).fumble_chance, cfg.dress_fumble_base, 0.001)
+	assert_almost_eq(Difficulty.dress_params(0.0, cfg).fumble_chance, cfg.dress_fumble_max, 0.001)
+
+
+func test_breakfast_window_narrows_with_deficit() -> void:
+	var cfg := BalanceConfig.new()
+	assert_almost_eq(Difficulty.breakfast_params(100.0, cfg).window, cfg.breakfast_window_base, 0.001)
+	assert_almost_eq(Difficulty.breakfast_params(0.0, cfg).window, cfg.breakfast_window_min, 0.001)
+	assert_eq(Difficulty.breakfast_params(50.0, cfg).beats, cfg.breakfast_beats)
+
+
+func test_drive_traffic_and_lag_scale_with_deficit() -> void:
+	var cfg := BalanceConfig.new()
+	var fresh := Difficulty.drive_params(100.0, cfg)
+	var wrecked := Difficulty.drive_params(0.0, cfg)
+	assert_eq(fresh.car_count, cfg.drive_cars_base)
+	assert_eq(wrecked.car_count, cfg.drive_cars_max)
+	assert_almost_eq(fresh.switch_lag, cfg.drive_switch_lag_base, 0.001)
+	assert_almost_eq(wrecked.switch_lag, cfg.drive_switch_lag_max, 0.001)
+	assert_almost_eq(fresh.length, cfg.drive_length, 0.001)
+
+
+func test_typing_params_carry_shift_and_rank_par() -> void:
+	var cfg := BalanceConfig.new()
+	var p := Difficulty.typing_params(80.0, cfg, 0, 2)
+	assert_almost_eq(p.shift_time, cfg.typing_shift_time, 0.001)
+	assert_eq(p.par_units, cfg.typing_par_units[2])
+	assert_false(p.has("error_tolerance"))
+
+
+func test_typing_par_clamps_rank_to_table() -> void:
+	var cfg := BalanceConfig.new()
+	assert_eq(Difficulty.typing_params(80.0, cfg, 0, 99).par_units, cfg.typing_par_units[2])
+
+
+func test_wake_and_brush_params_have_no_par_time() -> void:
+	var cfg := BalanceConfig.new()
+	assert_false(Difficulty.wake_params(50.0, cfg).has("par_time"))
+	assert_false(Difficulty.brush_params(50.0, cfg).has("par_time"))
