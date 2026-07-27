@@ -6,14 +6,14 @@ extends Resource
 @export var wake_mash_base: int = 12
 @export var wake_mash_max: int = 40
 @export var wake_decay_max: float = 6.0
-# D1 (deferred to wave 2): par times pace a score nothing consumes yet — see
-# the note at the top of stat_effects.gd. Intentionally inert in wave 1.
+# D1 (deferred to wave 3): par times pace a score nothing consumes yet — see
+# the note at the top of stat_effects.gd. Intentionally inert through wave 2.
 @export var wake_par_time: float = 4.0
 
 @export var brush_strokes_base: int = 6
 @export var brush_strokes_max: int = 16
 @export var brush_amplitude: float = 40.0
-# D1 (deferred to wave 2): inert for the same reason as wake_par_time.
+# D1 (deferred to wave 3): inert for the same reason as wake_par_time.
 @export var brush_par_time: float = 5.0
 
 @export var typing_error_tolerance_base: float = 0.30
