@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/minigames/shower_minigame.gd" id="1"]
+
+[node name="Shower" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Tub" type="ColorRect" parent="."]
+anchor_left = 0.25
+anchor_top = 0.25
+anchor_right = 0.75
+anchor_bottom = 0.8
+color = Color(0.75, 0.88, 0.95, 1)
+
+[node name="Prompt" type="Label" parent="."]
+anchor_left = 0.25
+anchor_top = 0.12
+anchor_right = 0.75
+anchor_bottom = 0.2
+text = "CIRCLE THE MOUSE ON THE STINK SPOTS TO SCRUB"
+horizontal_alignment = 1
+
+[node name="Spot" type="ColorRect" parent="."]
+unique_name_in_owner = true
+offset_right = 48.0
+offset_bottom = 48.0
+color = Color(0.55, 0.45, 0.3, 1)
+
+[node name="ScrubBar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.35
+anchor_top = 0.85
+anchor_right = 0.65
+anchor_bottom = 0.89
+max_value = 1.0
+show_percentage = false
+
+[node name="SkipButton" type="Button" parent="."]
+anchor_left = 0.85
+anchor_top = 0.05
+anchor_right = 0.97
+anchor_bottom = 0.12
+text = "skip..."
+
+[connection signal="pressed" from="SkipButton" to="." method="_on_skip_pressed"]

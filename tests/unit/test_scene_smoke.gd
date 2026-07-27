@@ -96,3 +96,17 @@ func test_sick_scene_instantiates() -> void:
 	add_child_autofree(node)
 	node.setup({"burrow_target": 4, "burrow_time": 0.5, "text_speed": 0.0})
 	assert_not_null(node)
+
+
+func test_shower_scene_instantiates() -> void:
+	var node: Minigame = load("res://scenes/minigames/shower.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"spots": 2, "revolutions": 2.0, "min_radius": 12.0})
+	assert_not_null(node)
+
+
+func test_clothes_scene_instantiates() -> void:
+	var node: Minigame = load("res://scenes/minigames/clothes.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"fumble_chance": 0.0})
+	assert_not_null(node)
