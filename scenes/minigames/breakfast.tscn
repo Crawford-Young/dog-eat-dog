@@ -5,6 +5,7 @@
 [node name="Breakfast" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
 script = ExtResource("1")
 
 [node name="Prompt" type="Label" parent="."]
@@ -29,6 +30,7 @@ anchor_left = 0.2
 anchor_top = 0.5
 anchor_right = 0.8
 anchor_bottom = 0.54
+mouse_filter = 2
 color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="HitZone" type="ColorRect" parent="."]
@@ -37,6 +39,7 @@ anchor_left = 0.45
 anchor_top = 0.48
 anchor_right = 0.55
 anchor_bottom = 0.56
+mouse_filter = 2
 color = Color(0.6, 0.9, 0.6, 1)
 
 [node name="Marker" type="ColorRect" parent="."]
@@ -45,6 +48,7 @@ anchor_left = 0.2
 anchor_top = 0.47
 offset_right = 12.0
 offset_bottom = 40.0
+mouse_filter = 2
 color = Color(0.95, 0.6, 0.3, 1)
 
 [node name="SkipButton" type="Button" parent="."]
