@@ -3,9 +3,13 @@ extends RefCounted
 
 ## Walks one day's slot list. Wave 2: the list is built per morning from
 ## state (sick short-circuit, retire offer, warning beat, coffee cart).
+## Wave 3a: the morning is a triage run — shower, clothes, breakfast and the
+## commute all share one draining clock, and the warning talk waits until the
+## dog has actually arrived.
 
-const DEFAULT_SLOTS: Array[String] = ["wake", "brush", "work_am", "lunch",
-		"work_pm", "dinner", "freetime", "sleep"]
+const DEFAULT_SLOTS: Array[String] = ["wake", "brush", "shower", "clothes",
+		"breakfast", "drive", "work_am", "lunch", "work_pm", "dinner",
+		"freetime", "sleep"]
 
 ## Wave-1 name kept as an alias — test_day_flow.gd's scene smoke walk still
 ## reads DaySchedule.SLOTS to drive main.tscn through a default day.
@@ -26,7 +30,9 @@ static func build(state: GameState, cfg: BalanceConfig) -> Array[String]:
 	slots.append("wake")
 	if retiring_available:
 		slots.append("retire_offer")
-	slots.append("brush")
+	slots.append_array(["brush", "shower", "clothes", "breakfast", "drive"])
+	# The warning talk is an office beat — it lands after the commute, never in
+	# the bathroom.
 	if state.warning:
 		slots.append("warning")
 	slots.append_array(["coffee", "work_am", "lunch", "work_pm", "dinner",

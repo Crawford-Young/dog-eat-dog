@@ -5,6 +5,7 @@ var energy: float = 65.0
 var performance: float = 0.5
 var day: int = 1
 var brushed_today: bool = false
+var showered_today: bool = false
 var played_late: bool = false
 var bedtime: String = "mid"
 var wallet := Wallet.new()
@@ -28,7 +29,8 @@ func start_next_day(cfg: BalanceConfig) -> void:
 	day += 1
 	if sick_today:
 		# Sick recovery replaces the bedtime formula: the burrow's mash score
-		# already decided tomorrow's energy. No brush penalty on a sick day.
+		# already decided tomorrow's energy. No brush or shower penalty on a
+		# sick day — the schedule never offered either.
 		energy = sick_recovery
 	else:
 		# Wave-2 QA ruling (issue #5): sleep is a blend of leftover energy and
@@ -38,7 +40,10 @@ func start_next_day(cfg: BalanceConfig) -> void:
 				+ (1.0 - cfg.energy_carry_weight) * cfg.sleep_energy[bedtime]
 		if not brushed_today:
 			energy -= cfg.skip_brush_penalty
+		if not showered_today:
+			energy -= cfg.skip_shower_penalty
 	energy = clampf(energy, 0.0, 100.0)
 	brushed_today = false
+	showered_today = false
 	coffee_today = false
 	sick_today = false

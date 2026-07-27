@@ -4,10 +4,18 @@ extends Control
 ## the day (pay, rank ladder), show a summary, loop. Energy is shown ONLY as the
 ## dog's state text — never a number (spec rule). Money is fine to show: the
 ## poster line is the retirement counter.
+##
+## Wave 3a: this script is the ONLY spender of the morning DayClock — it turns
+## real seconds into game-minutes in _process and charges the fixed skip costs
+## in _on_finished. No minigame ever touches the clock.
 
 const SCENES := {
 	"wake": preload("res://scenes/minigames/wake.tscn"),
 	"brush": preload("res://scenes/minigames/brush.tscn"),
+	"shower": preload("res://scenes/minigames/shower.tscn"),
+	"clothes": preload("res://scenes/minigames/clothes.tscn"),
+	"breakfast": preload("res://scenes/minigames/breakfast.tscn"),
+	"drive": preload("res://scenes/minigames/drive.tscn"),
 	"coffee": preload("res://scenes/minigames/coffee.tscn"),
 	"work_am": preload("res://scenes/minigames/typing.tscn"),
 	"lunch": preload("res://scenes/minigames/listening.tscn"),
@@ -23,6 +31,10 @@ const DOG_STATES := ["a husk", "running on fumes", "kinda tired", "doing okay", 
 const SLOT_LABELS := {
 	"wake": "morning",
 	"brush": "bathroom",
+	"shower": "bathroom",
+	"clothes": "bedroom",
+	"breakfast": "kitchen",
+	"drive": "the commute",
 	"coffee": "coffee cart",
 	"work_am": "work, morning",
 	"lunch": "lunch",
@@ -45,10 +57,25 @@ const EVENT_COPY := {
 const SENIOR_TEASE := "word is, senior roles go to dogs the office knows. maybe eat lunch with people more."
 ## Telegraphed a night early so a sick morning is never a surprise.
 const WOBBLE_COPY := "the dog can barely lift its head. tomorrow might not happen."
+const LATE_COPY := "you slink in at %s. the cat checks the clock. says nothing. writes nothing down. probably."
+const STINK_COPY := "the stink kept its own desk chair today"
+## The slots the morning clock runs during — everything from waking up to
+## parking the car. Once the dog is at the office, time stops mattering.
+const MORNING_TIMED := ["wake", "brush", "shower", "clothes", "breakfast", "drive"]
+## Chores that can be ducked out of. Skipping buys no time back — it costs a
+## flat penalty, so ducking out is a stat trade, never a clock trade.
+const SKIP_SLOTS := ["brush", "shower", "breakfast"]
+const ZONE_COLORS := {
+	"calm": Color(1.0, 1.0, 1.0),
+	"amber": Color(1.0, 0.8, 0.3),
+	"red": Color(1.0, 0.35, 0.3),
+}
 
 var state := GameState.new()
 var schedule := DaySchedule.new()
 var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
+var clock: DayClock
+var _clock_running := false
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -58,6 +85,7 @@ var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 @onready var _poster_label: Label = %PosterLabel
 @onready var _ending: Panel = %Ending
 @onready var _ending_label: Label = %EndingLabel
+@onready var _clock_label: Label = %ClockLabel
 @onready var _summary_typer := TypewriterLabel.new()
 @onready var _ending_typer := TypewriterLabel.new()
 
@@ -69,12 +97,28 @@ func _ready() -> void:
 	_ending_typer.bind(_ending_label)
 	_summary.visible = false
 	_ending.visible = false
+	clock = DayClock.new(cfg.morning_budget_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
 
+## The whole HUD: the clock only exists while a morning slot is up, and it is
+## the only thing that converts real seconds into game-minutes.
+func _process(delta: float) -> void:
+	_clock_label.visible = _clock_running
+	if not _clock_running:
+		return
+	clock.spend(delta * cfg.clock_scale)
+	_clock_label.text = clock.clock_text(cfg.morning_start_minutes)
+	_clock_label.add_theme_color_override(
+		"font_color",
+		ZONE_COLORS[clock.zone(cfg.clock_amber_fraction, cfg.clock_red_fraction)],
+	)
+
+
 func _start_slot() -> void:
 	var slot := schedule.current()
+	_clock_running = slot in MORNING_TIMED
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS[slot]]
 	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
 	_poster_label.text = "%s · savings %d / %d" % [
@@ -94,12 +138,23 @@ func _params_for(slot: String) -> Dictionary:
 			return Difficulty.wake_params(state.energy, cfg)
 		"brush":
 			return Difficulty.brush_params(state.energy, cfg)
+		"shower":
+			return Difficulty.shower_params(state.energy, cfg)
+		"clothes":
+			return Difficulty.dress_params(state.energy, cfg)
+		"breakfast":
+			return Difficulty.breakfast_params(state.energy, cfg)
+		"drive":
+			return Difficulty.drive_params(state.energy, cfg)
 		"work_am":
 			return Difficulty.typing_params(
-				state.energy, cfg, cfg.coffee_buff_tiers if state.coffee_today else 0
+				state.energy,
+				cfg,
+				cfg.coffee_buff_tiers if state.coffee_today else 0,
+				state.rank,
 			)
 		"work_pm":
-			return Difficulty.typing_params(state.energy, cfg)
+			return Difficulty.typing_params(state.energy, cfg, 0, state.rank)
 		"lunch":
 			return Difficulty.listening_params(state.energy, cfg)
 		"freetime":
@@ -146,7 +201,16 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 	if slot == "retire_offer" and result.get("choice") == "retire":
 		_show_ending()
 		return
+	if slot in SKIP_SLOTS and result.get("skipped", false):
+		clock.spend(cfg.skip_time_cost)
+	if slot == "drive":
+		# The commute is the morning's till: whatever the clock overran by is
+		# stamped on the result here, and StatEffects charges it below.
+		result["overrun"] = clock.overrun()
 	StatEffects.apply(slot, result, state, cfg)
+	if slot == "drive" and clock.overrun() > 0.0:
+		_show_late_beat()
+		return
 	if slot == "work_pm":
 		# QA ruling (issue #10 / finding 1): rank news lands right after
 		# afternoon work, same day, at the office — not as morning-in-bed news
@@ -175,7 +239,7 @@ func _show_rank_news(rank_events: Array[String]) -> void:
 		lines.append(SENIOR_TEASE)
 	var node: Minigame = SCENES["warning"].instantiate()
 	_host.add_child(node)
-	node.finished.connect(_on_rank_news_finished.bind(node), CONNECT_ONE_SHOT)
+	node.finished.connect(_on_out_of_band_beat_finished.bind(node), CONNECT_ONE_SHOT)
 	node.setup({
 		"text": "\n".join(lines),
 		"text_speed": cfg.typewriter_chars_per_sec,
@@ -183,7 +247,10 @@ func _show_rank_news(rank_events: Array[String]) -> void:
 	})
 
 
-func _on_rank_news_finished(_result: Dictionary, node: Node) -> void:
+## Shared tail for every out-of-band beat (rank news, late arrival): the beat
+## sat outside the schedule, so finishing it just resumes the day where the
+## slot walk left off.
+func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 	node.queue_free()
 	if schedule.advance():
 		_start_slot()
@@ -191,11 +258,29 @@ func _on_rank_news_finished(_result: Dictionary, node: Node) -> void:
 		_show_summary()
 
 
+## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
+## schedule.current() stays "drive" while it's up. The clock stops first — the
+## overrun is already banked into the drive result, so letting the HUD keep
+## ticking behind this copy would be a lie.
+func _show_late_beat() -> void:
+	_clock_running = false
+	_day_label.text = "day %d — the office" % state.day
+	var node: Minigame = SCENES["warning"].instantiate()
+	_host.add_child(node)
+	node.finished.connect(_on_out_of_band_beat_finished.bind(node), CONNECT_ONE_SHOT)
+	node.setup({
+		"text": LATE_COPY % clock.clock_text(cfg.morning_start_minutes),
+		"text_speed": cfg.typewriter_chars_per_sec,
+		"hold": cfg.sleep_hold_time,
+	})
+
+
 ## Closes the day exactly once — close_day pays the salary and drains living
 ## costs, so it must never be called twice for one day. Rank news (promotion/
 ## demotion/warning) no longer runs here — it's a same-day office beat fired
 ## right after work_pm (_show_rank_news), before this ever gets called.
 func _show_summary() -> void:
+	_clock_running = false
 	var report := StatEffects.close_day(state, cfg)
 	var events: Array = report.events
 	var lines: Array[String] = ["day %d done" % state.day]
@@ -206,6 +291,8 @@ func _show_summary() -> void:
 	lines.append("rent and kibble took %d" % report.cost)
 	lines.append("work felt: %s" % _performance_word())
 	lines.append("dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)])
+	if not state.showered_today and not state.sick_today:
+		lines.append(STINK_COPY)
 	if Difficulty.is_sick_morning(_tomorrow_energy(), cfg):
 		lines.append(WOBBLE_COPY)
 	_summary.visible = true
@@ -223,10 +310,13 @@ func _tomorrow_energy() -> float:
 			+ (1.0 - cfg.energy_carry_weight) * cfg.sleep_energy[state.bedtime]
 	if not state.brushed_today:
 		energy -= cfg.skip_brush_penalty
+	if not state.showered_today:
+		energy -= cfg.skip_shower_penalty
 	return clampf(energy, 0.0, 100.0)
 
 
 func _show_ending() -> void:
+	_clock_running = false
 	for child in _host.get_children():
 		if child is CanvasItem:
 			(child as CanvasItem).visible = false
@@ -253,6 +343,7 @@ func _performance_word() -> String:
 func _on_next_day_pressed() -> void:
 	_summary.visible = false
 	state.start_next_day(cfg)
+	clock = DayClock.new(cfg.morning_budget_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
@@ -262,6 +353,7 @@ func _on_restart_pressed() -> void:
 	_ending_typer.skip()
 	_ending_label.text = ""
 	state = GameState.new()
+	clock = DayClock.new(cfg.morning_budget_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_ending.visible = false
 	_start_slot()

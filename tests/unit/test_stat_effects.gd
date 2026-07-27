@@ -30,6 +30,70 @@ func test_brush_skipped_no_restore() -> void:
 	assert_false(state.brushed_today)
 
 
+func test_shower_restores_and_flags() -> void:
+	var s := GameState.new()
+	s.energy = 50.0
+	StatEffects.apply("shower", {"score": 1.0, "skipped": false}, s, cfg)
+	assert_almost_eq(s.energy, 50.0 + cfg.selfcare_restore, 0.001)
+	assert_true(s.showered_today)
+
+
+func test_shower_skip_no_restore_no_flag() -> void:
+	var s := GameState.new()
+	s.energy = 50.0
+	StatEffects.apply("shower", {"score": 0.0, "skipped": true}, s, cfg)
+	assert_almost_eq(s.energy, 50.0, 0.001)
+	assert_false(s.showered_today)
+
+
+func test_clothes_changes_nothing() -> void:
+	# Getting dressed is mandatory — fumbling already costs clock time, which
+	# is the whole consequence. Nothing reaches state.
+	var before := state.energy
+	StatEffects.apply("clothes", {"score": 0.0, "skipped": false}, state, cfg)
+	assert_eq(state.energy, before)
+	assert_almost_eq(state.performance, 0.5, 0.001)
+
+
+func test_breakfast_refill_scales_with_score() -> void:
+	var s := GameState.new()
+	s.energy = 50.0
+	StatEffects.apply("breakfast", {"score": 1.0, "skipped": false}, s, cfg)
+	assert_almost_eq(s.energy, 50.0 + cfg.breakfast_energy_max, 0.001)
+	var s2 := GameState.new()
+	s2.energy = 50.0
+	StatEffects.apply("breakfast", {"score": 0.0, "skipped": false}, s2, cfg)
+	assert_almost_eq(s2.energy, 50.0 + cfg.breakfast_energy_min, 0.001)
+
+
+func test_breakfast_skip_costs_energy() -> void:
+	var s := GameState.new()
+	s.energy = 50.0
+	StatEffects.apply("breakfast", {"score": 0.0, "skipped": true}, s, cfg)
+	assert_almost_eq(s.energy, 50.0 - cfg.skip_breakfast_penalty, 0.001)
+
+
+func test_drive_on_time_no_debit() -> void:
+	var s := GameState.new()
+	s.performance = 0.6
+	StatEffects.apply("drive", {"score": 1.0, "overrun": 0.0}, s, cfg)
+	assert_almost_eq(s.performance, 0.6, 0.001)
+
+
+func test_drive_late_debits_performance() -> void:
+	var s := GameState.new()
+	s.performance = 0.6
+	StatEffects.apply("drive", {"score": 1.0, "overrun": 10.0}, s, cfg)
+	assert_almost_eq(s.performance, 0.6 - 10.0 * cfg.lateness_debit_per_min, 0.001)
+
+
+func test_drive_debit_caps() -> void:
+	var s := GameState.new()
+	s.performance = 0.6
+	StatEffects.apply("drive", {"score": 1.0, "overrun": 500.0}, s, cfg)
+	assert_almost_eq(s.performance, 0.6 - cfg.lateness_debit_cap, 0.001)
+
+
 func test_work_records_score_and_drains() -> void:
 	var before_e := state.energy
 	StatEffects.apply("work_am", {"score": 1.0, "skipped": false}, state, cfg)
