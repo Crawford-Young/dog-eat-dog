@@ -39,7 +39,7 @@ const DAY_SCENE := preload("res://scenes/main.tscn")
 var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var _current_activity: String = ""
 
-@onready var _menu: VBoxContainer = %Menu
+@onready var _menu: ScrollContainer = %Menu
 @onready var _activities: VBoxContainer = %Activities
 @onready var _day_presets: VBoxContainer = %DayPresets
 @onready var _energy_row: HBoxContainer = %EnergyRow

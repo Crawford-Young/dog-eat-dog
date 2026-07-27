@@ -18,6 +18,29 @@ func _fresh_lab() -> Control:
 	return node
 
 
+## The lab is a SHELL that hosts minigames exactly like main.tscn does, and it had
+## the identical click-eating root — a full-rect STOP Control over a Host that was
+## already IGNORE. Fixing one shell and reporting the bug closed left clothes dead
+## on the surface the playtester actually uses. (issue #6 addendum)
+func test_the_lab_shell_never_eats_a_minigames_clicks() -> void:
+	var lab := _fresh_lab()
+	assert_eq(lab.mouse_filter, Control.MOUSE_FILTER_IGNORE, "Lab root")
+	var host: Control = lab.get_node("%Host")
+	assert_eq(host.mouse_filter, Control.MOUSE_FILTER_IGNORE, "Host")
+
+
+## The menu gains a row or two every wave. A fixed rect just stops drawing the
+## newest ones — no error, no test, the row is simply gone. (issue #9)
+func test_the_lab_menu_absorbs_new_rows_instead_of_hiding_them() -> void:
+	var lab := _fresh_lab()
+	var menu: Control = lab.get_node("%Menu")
+	assert_true(menu is ScrollContainer, "the menu scrolls, so rows can't fall off")
+	var bottom: float = menu.position.y + menu.size.y
+	var viewport_height: float = lab.get_viewport_rect().size.y
+	assert_true(bottom <= viewport_height,
+			"menu bottom %s must stay inside the %s-tall viewport" % [bottom, viewport_height])
+
+
 func test_flush_preset_launches_the_main_scene() -> void:
 	var lab := _fresh_lab()
 	lab._launch_day("flush")
