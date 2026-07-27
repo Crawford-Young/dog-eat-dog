@@ -2,10 +2,12 @@ class_name StatEffects
 
 ## Applies a finished minigame's result to game state. Pure, fully tested.
 ##
-## D1 (deferred to wave 3): wake, brush and lunch scores are computed but not
-## consumed here — wake/brush pace against `wake_par_time`/`brush_par_time` and
-## listening scores its hits, yet none of it reaches state. Wave 3 gives them a
-## sink (reputation). Work scores got their sink this wave (the rank ladder).
+## D1 (still open): the lunch score is computed but not consumed here —
+## listening scores its hits, yet none of it reaches state. A later wave gives
+## it a sink (reputation). Work scores got theirs in wave 2 (the rank ladder).
+## Wave 3a closed the wake/brush half of D1 differently: their par times are
+## gone entirely, because time IS the morning clock's now — dawdling costs
+## budget, and the budget is what the drive cashes out as lateness.
 
 
 static func apply(slot: String, result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
@@ -16,6 +18,26 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 			if not result.get("skipped", false):
 				state.apply_energy(cfg.selfcare_restore)
 				state.brushed_today = true
+		"shower":
+			if not result.get("skipped", false):
+				state.apply_energy(cfg.selfcare_restore)
+				state.showered_today = true
+		"clothes":
+			pass  # mandatory; fumbles already cost clock
+		"breakfast":
+			if result.get("skipped", false):
+				state.apply_energy(-cfg.skip_breakfast_penalty)
+			else:
+				state.apply_energy(lerpf(cfg.breakfast_energy_min,
+						cfg.breakfast_energy_max, result.get("score", 0.0)))
+		"drive":
+			# game.gd stamps the morning's overrun onto the result before this
+			# runs — the commute is where a blown clock is finally charged.
+			var overrun: float = result.get("overrun", 0.0)
+			if overrun > 0.0:
+				var debit := minf(overrun * cfg.lateness_debit_per_min,
+						cfg.lateness_debit_cap)
+				state.performance = clampf(state.performance - debit, 0.0, 1.0)
 		"coffee":
 			if result.get("choice") == "buy" and state.wallet.spend(cfg.coffee_price):
 				state.coffee_today = true

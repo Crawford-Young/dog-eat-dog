@@ -33,6 +33,7 @@ func test_next_day_sets_energy_from_bedtime() -> void:
 	s.energy = 50.0
 	s.bedtime = "early"
 	s.brushed_today = true
+	s.showered_today = true
 	s.start_next_day(cfg)
 	assert_eq(s.day, 2)
 	assert_almost_eq(s.energy, 70.0, 0.001)
@@ -45,8 +46,31 @@ func test_next_day_skipped_brush_penalty() -> void:
 	s.energy = 50.0
 	s.bedtime = "early"
 	s.brushed_today = false
+	s.showered_today = true
 	s.start_next_day(cfg)
 	assert_almost_eq(s.energy, 60.0, 0.001)
+
+
+func test_skip_shower_penalty_next_morning() -> void:
+	var a := GameState.new()
+	var b := GameState.new()
+	for s in [a, b]:
+		s.energy = 60.0
+		s.bedtime = "mid"
+		s.brushed_today = true
+	a.showered_today = true
+	b.showered_today = false
+	a.start_next_day(cfg)
+	b.start_next_day(cfg)
+	assert_almost_eq(a.energy - b.energy, cfg.skip_shower_penalty, 0.001)
+
+
+func test_showered_resets_daily() -> void:
+	var s := GameState.new()
+	s.showered_today = true
+	s.brushed_today = true
+	s.start_next_day(cfg)
+	assert_false(s.showered_today)
 
 
 func test_next_day_carryover_makes_a_sick_morning_reachable_in_normal_play() -> void:
@@ -57,6 +81,7 @@ func test_next_day_carryover_makes_a_sick_morning_reachable_in_normal_play() -> 
 	s.energy = 0.0
 	s.bedtime = "late"
 	s.brushed_today = false
+	s.showered_today = true
 	s.start_next_day(cfg)
 	assert_almost_eq(s.energy, 7.5, 0.001)
 	assert_lt(s.energy, cfg.sick_energy_threshold, "an exhausted late night should reach sick range")
@@ -69,6 +94,7 @@ func test_next_day_carryover_keeps_the_healthy_path_healthy() -> void:
 	s.energy = 50.0
 	s.bedtime = "mid"
 	s.brushed_today = true
+	s.showered_today = true
 	s.start_next_day(cfg)
 	assert_almost_eq(s.energy, 57.5, 0.001)
 	assert_gt(
@@ -93,10 +119,13 @@ func test_next_day_clears_daily_flags() -> void:
 
 
 func test_sick_recovery_overrides_bedtime_energy() -> void:
+	# The burrow's mash score IS tomorrow's energy — neither the skipped brush
+	# nor the skipped shower is charged on a day spent under a blanket.
 	var s := GameState.new()
 	s.sick_today = true
 	s.sick_recovery = 72.0
 	s.brushed_today = false
+	s.showered_today = false
 	s.bedtime = "late"
 	s.start_next_day(cfg)
 	assert_eq(s.energy, 72.0)

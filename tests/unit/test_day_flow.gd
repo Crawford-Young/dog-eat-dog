@@ -7,6 +7,11 @@ extends GutTest
 ## Wave 2: the day list is built fresh every morning (sick short-circuit, retire
 ## offer, warning beat, coffee cart), so every walk drives
 ## DaySchedule.build(state, cfg) — never a fixed slot list.
+##
+## Wave 3a: the morning is a triage run against a draining clock (shower,
+## clothes, breakfast, drive). The clock only moves in _process and in the fixed
+## skip costs, and a synchronous walk ticks no frames — so clock tests drive
+## main._process(delta) by hand or spend on main.clock directly.
 
 const FAKE_RESULTS := {
 	"coffee": {"score": 1.0, "skipped": false, "choice": "skip"},
@@ -17,6 +22,8 @@ const FAKE_RESULTS := {
 const BUY_COFFEE := {"score": 1.0, "skipped": false, "choice": "buy"}
 const RETIRE := {"score": 1.0, "skipped": false, "choice": "retire"}
 const BAD_WORK := {"score": 0.0, "skipped": false}
+const SKIPPED := {"score": 0.0, "skipped": true}
+const DONE := {"score": 1.0, "skipped": false}
 
 
 ## Last child, NOT child 0: game.gd queue_free()s the outgoing minigame, and
@@ -161,11 +168,16 @@ func test_both_day_end_panels_wrap_their_copy() -> void:
 
 
 func test_coffee_lifts_the_morning_typing_tier_only() -> void:
+	# Energy is seeded low so the morning's shower + breakfast refills leave the
+	# dog short of the top clarity tier — the coffee lift is only visible below
+	# the cap (clarity_tier maxes out at 4).
 	var buyer := _fresh_main()
 	buyer.state.wallet.savings = 20
+	buyer.state.energy = 30.0
 	_walk(buyer, {"coffee": BUY_COFFEE}, "coffee")
 	var sober := _fresh_main()
 	sober.state.wallet.savings = 20
+	sober.state.energy = 30.0
 	_walk(sober, {}, "coffee")
 	assert_eq(buyer.state.energy, sober.state.energy, "coffee costs money, not energy")
 	var clear := Difficulty.clarity_tier(sober.state.energy)
@@ -194,7 +206,8 @@ func test_a_sick_morning_is_one_unpaid_day_in_the_blanket() -> void:
 	assert_eq(main.state.day, 2, "the blanket costs exactly one day")
 	assert_eq(
 		DaySchedule.build(main.state, main.cfg),
-		["wake", "brush", "coffee", "work_am", "lunch", "work_pm", "dinner", "freetime", "sleep"],
+		["wake", "brush", "shower", "clothes", "breakfast", "drive", "coffee", "work_am",
+				"lunch", "work_pm", "dinner", "freetime", "sleep"],
 		"day two is an ordinary day again",
 	)
 
@@ -307,12 +320,13 @@ func test_a_sustained_promotion_announces_at_the_office_before_the_summary() -> 
 func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
 	# Wave-2 QA ruling (issue #5): next-day energy now blends leftover energy
 	# with the bedtime target (energy_carry_weight, default 0.5), so a wrecked
-	# bedtime target alone no longer guarantees a sick warning — it has to
-	# clear the threshold together with whatever energy is left at day's end
-	# (30.0 for this fixed walk: 0.5*30 + 0.5*late < sick_energy_threshold).
+	# bedtime target alone no longer guarantees a sick warning — it has to clear
+	# the threshold together with whatever energy is left at day's end (44.0 for
+	# this fixed walk, now that the wave-3a morning restores on shower and
+	# breakfast: 0.5*44 + 0.5*late < sick_energy_threshold).
 	var main := _fresh_main()
 	var wrecked := BalanceConfig.new()
-	wrecked.sleep_energy = {"early": 90.0, "mid": 65.0, "late": -10.0}
+	wrecked.sleep_energy = {"early": 90.0, "mid": 65.0, "late": -60.0}
 	main.cfg = wrecked
 	_walk(main)
 	assert_string_contains(_summary_text(main), "tomorrow might not happen")
@@ -321,4 +335,120 @@ func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
 	assert_false(
 		_summary_text(rested).contains("tomorrow might not happen"),
 		"a night that only ends tired says nothing",
+	)
+
+
+func test_the_new_morning_slots_each_get_their_own_difficulty_params() -> void:
+	var main := _fresh_main()
+	assert_true(main._params_for("shower").has("spots"), "the shower reads its spot count")
+	assert_true(main._params_for("clothes").has("fumble_chance"), "dressing reads its fumbles")
+	assert_true(main._params_for("breakfast").has("beats"), "breakfast reads its beat count")
+	assert_true(main._params_for("drive").has("car_count"), "the commute reads its traffic")
+
+
+func test_both_work_shifts_read_the_dogs_rank_for_their_par() -> void:
+	var main := _fresh_main()
+	main.state.rank = 2
+	assert_eq(main._params_for("work_am").par_units, main.cfg.typing_par_units[2])
+	assert_eq(main._params_for("work_pm").par_units, main.cfg.typing_par_units[2])
+
+
+func test_the_clock_runs_through_the_morning_and_stops_at_the_office() -> void:
+	# _process is the HUD's whole body and no engine frames tick inside a
+	# synchronous walk, so drive it by hand.
+	var main := _fresh_main()
+	var clock_label: Label = main.get_node("%ClockLabel")
+	main._process(0.0)
+	assert_true(clock_label.visible, "the clock is up from the first morning slot")
+	assert_eq(clock_label.text, main.clock.clock_text(main.cfg.morning_start_minutes))
+	assert_eq(
+		clock_label.get_theme_color("font_color"),
+		main.ZONE_COLORS["calm"],
+		"a fresh budget reads calm",
+	)
+	main.clock.spend(main.cfg.morning_budget_minutes)
+	main._process(0.0)
+	assert_eq(
+		clock_label.get_theme_color("font_color"),
+		main.ZONE_COLORS["red"],
+		"a spent budget reads red",
+	)
+	_walk(main, {}, "drive")
+	main._process(0.0)
+	assert_false(clock_label.visible, "the clock is gone once the dog is at work")
+
+
+func test_the_clock_burns_real_seconds_while_a_morning_slot_is_up() -> void:
+	var main := _fresh_main()
+	main._process(2.0)
+	assert_almost_eq(main.clock.elapsed, 2.0 * main.cfg.clock_scale, 0.001)
+
+
+func test_skipping_a_morning_chore_costs_clock_time() -> void:
+	var skipper := _fresh_main()
+	_walk(skipper, {"shower": SKIPPED}, "shower")
+	var washer := _fresh_main()
+	_walk(washer, {}, "shower")
+	assert_almost_eq(
+		skipper.clock.elapsed - washer.clock.elapsed,
+		skipper.cfg.skip_time_cost,
+		0.001,
+		"ducking out of the shower buys back nothing — it burns the budget",
+	)
+
+
+func test_the_summary_notices_a_day_spent_unwashed() -> void:
+	var skipper := _fresh_main()
+	_walk(skipper, {"shower": SKIPPED})
+	assert_string_contains(_summary_text(skipper), "the stink kept its own desk chair today")
+	var washer := _fresh_main()
+	_walk(washer)
+	assert_false(
+		_summary_text(washer).contains("stink"), "a washed dog gets no comment"
+	)
+
+
+## The late beat is hosted OUTSIDE the schedule, same shape as the rank news:
+## advance() never runs for it, so schedule.current() stays "drive" while it is
+## up. Its own finished signal resumes the day.
+func test_arriving_late_slinks_in_and_debits_the_day() -> void:
+	var main := _fresh_main()
+	var host: Control = main.get_node("%MinigameHost")
+	var clock_label: Label = main.get_node("%ClockLabel")
+	var before: float = main.state.performance
+	for slot in DaySchedule.build(main.state, main.cfg):
+		if slot == "drive":
+			main.clock.spend(999.0)
+		_current_minigame(host).finished.emit(_result_for(slot, {}))
+		if slot == "drive":
+			assert_eq(main.schedule.current(), "drive", "the late beat blocks advance()")
+			assert_almost_eq(
+				main.state.performance,
+				before - main.cfg.lateness_debit_cap,
+				0.001,
+				"a wildly late arrival takes the capped debit",
+			)
+			main._process(0.0)
+			assert_false(clock_label.visible, "the clock stops once the overrun is banked")
+			var beat := _current_minigame(host)
+			beat._typer.skip()
+			assert_string_contains((beat.get_node("%Line") as Label).text, "you slink in at ")
+			beat.finished.emit(DONE)
+		if slot == "work_pm":
+			_finish_rank_news_beat_if_pending(main, host)
+	assert_true(
+		(main.get_node("%Summary") as Panel).visible, "a late day still closes on a summary"
+	)
+
+
+func test_arriving_on_time_skips_the_late_beat_entirely() -> void:
+	var main := _fresh_main()
+	var host: Control = main.get_node("%MinigameHost")
+	_walk(main, {}, "drive")
+	assert_eq(main.schedule.current(), "coffee", "on time, the day just moves on")
+	assert_almost_eq(main.state.performance, 0.5, 0.001, "no debit for a punctual dog")
+	assert_eq(
+		_current_minigame(host).scene_file_path,
+		"res://scenes/minigames/coffee.tscn",
+		"the coffee cart is hosted next, not a late beat",
 	)
