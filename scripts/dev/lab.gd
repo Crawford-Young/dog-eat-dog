@@ -16,6 +16,10 @@ extends Control
 const SCENES := {
 	"wake": preload("res://scenes/minigames/wake.tscn"),
 	"brush": preload("res://scenes/minigames/brush.tscn"),
+	"shower": preload("res://scenes/minigames/shower.tscn"),
+	"clothes": preload("res://scenes/minigames/clothes.tscn"),
+	"breakfast": preload("res://scenes/minigames/breakfast.tscn"),
+	"drive": preload("res://scenes/minigames/drive.tscn"),
 	"typing": preload("res://scenes/minigames/typing.tscn"),
 	"listening": preload("res://scenes/minigames/listening.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
@@ -41,6 +45,7 @@ var _current_activity: String = ""
 @onready var _energy_row: HBoxContainer = %EnergyRow
 @onready var _habit_check: CheckBox = %HabitCheck
 @onready var _bedtime_option: OptionButton = %BedtimeOption
+@onready var _rank_option: OptionButton = %RankOption
 @onready var _host: Control = %Host
 @onready var _result_panel: Panel = %ResultPanel
 @onready var _result_label: Label = %ResultLabel
@@ -60,6 +65,9 @@ func _ready() -> void:
 	for bedtime in BEDTIMES:
 		_bedtime_option.add_item(bedtime.capitalize())
 	_bedtime_option.selected = BEDTIMES.find("mid")
+	for rank_name in RankLadder.RANK_NAMES:
+		_rank_option.add_item(rank_name.capitalize())
+	_rank_option.selected = 0
 	_result_panel.visible = false
 
 
@@ -88,6 +96,7 @@ func _launch_day(preset: String) -> void:
 	_result_panel.visible = false
 	var node := DAY_SCENE.instantiate()
 	node.state = _preset_state(preset)
+	node.cfg = _preset_cfg(preset)
 	_host.add_child(node)
 
 
@@ -115,6 +124,19 @@ func _preset_state(preset: String) -> GameState:
 	return state
 
 
+## Pure preset -> BalanceConfig mapping, kept separate from _launch_day so it
+## can be unit-tested without touching the scene tree (same reasoning as
+## _preset_state above). cfg is a preloaded SHARED .tres resource — mutating
+## it in place would poison every other launch this session, and worse, the
+## resource cache itself. duplicate() is load-bearing.
+func _preset_cfg(preset: String) -> BalanceConfig:
+	if preset == "late_morning":
+		var late_cfg: BalanceConfig = cfg.duplicate()
+		late_cfg.morning_budget_minutes = 20.0
+		return late_cfg
+	return cfg
+
+
 func _launch(activity: String) -> void:
 	_current_activity = activity
 	_menu.visible = false
@@ -132,8 +154,16 @@ func _params_for(activity: String) -> Dictionary:
 			return Difficulty.wake_params(energy, cfg)
 		"brush":
 			return Difficulty.brush_params(energy, cfg)
+		"shower":
+			return Difficulty.shower_params(energy, cfg)
+		"clothes":
+			return Difficulty.dress_params(energy, cfg)
+		"breakfast":
+			return Difficulty.breakfast_params(energy, cfg)
+		"drive":
+			return Difficulty.drive_params(energy, cfg)
 		"typing":
-			return Difficulty.typing_params(energy, cfg)
+			return Difficulty.typing_params(energy, cfg, 0, _rank_option.selected)
 		"listening":
 			return Difficulty.listening_params(energy, cfg)
 		"freetime":
