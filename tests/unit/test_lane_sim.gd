@@ -2,10 +2,14 @@ extends GutTest
 
 const _STEP := 1.0 / 60.0
 
-## The shipped commute numbers (BalanceConfig drive_*), so the skill properties
-## below are asserted against what the player actually drives.
-const _ROUTE_LENGTH := 400.0
-const _ROUTE_TOP_SPEED := 50.0
+## The shipped commute numbers, READ from BalanceConfig rather than copied into
+## constants, so the skill properties below are asserted against what the player
+## actually drives. They were copied once and drifted: the QA-R2e tuning loop
+## moved the route 400 -> 900 and three property tests went on measuring a
+## geometry that no longer ships, failing for the layout they still assumed
+## rather than for anything the change broke.
+var _route_length: float = BalanceConfig.new().drive_length
+var _route_top_speed: float = BalanceConfig.new().drive_top_speed
 
 
 func _params(cars: Array = []) -> Dictionary:
@@ -18,7 +22,7 @@ func _params(cars: Array = []) -> Dictionary:
 
 func _route_params(cars: Array = []) -> Dictionary:
 	return {
-		"length": _ROUTE_LENGTH, "top_speed": _ROUTE_TOP_SPEED, "accel": 40.0,
+		"length": _route_length, "top_speed": _route_top_speed, "accel": 40.0,
 		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
 		"car_min_gap": 20.0, "cars": cars,
 	}
@@ -37,7 +41,7 @@ func _run(sim: LaneSim, seconds: float) -> void:
 func _traffic_params(car_count: int, overrides: Dictionary = {}) -> Dictionary:
 	var cfg := BalanceConfig.new()
 	var p := {
-		"length": _ROUTE_LENGTH, "top_speed": _ROUTE_TOP_SPEED, "car_count": car_count,
+		"length": _route_length, "top_speed": _route_top_speed, "car_count": car_count,
 		# The generator separates same-lane cars by this at spawn, so it must be
 		# the gap _route_params then drives them against.
 		"car_min_gap": 20.0,
@@ -239,7 +243,7 @@ func test_make_traffic_builds_whole_waves_of_cars_ahead() -> void:
 	for car in cars:
 		assert_between(car.lane, 0, LaneSim.LANES - 1)
 		assert_gt(car.pos, 0.0)
-		assert_lt(car.speed, _ROUTE_TOP_SPEED, "traffic never outruns the dog")
+		assert_lt(car.speed, _route_top_speed, "traffic never outruns the dog")
 		assert_gt(car.speed, 0.0)
 
 
@@ -303,11 +307,11 @@ func test_a_commute_of_nothing_but_blocked_walls_still_finishes() -> void:
 
 func test_the_day_roll_keeps_every_car_slower_than_the_dog() -> void:
 	var cfg := BalanceConfig.new()
-	var floor_speed := _ROUTE_TOP_SPEED * cfg.drive_day_speed_min \
+	var floor_speed := _route_top_speed * cfg.drive_day_speed_min \
 			* (1.0 - cfg.drive_wave_speed_jitter) * (1.0 - cfg.drive_car_speed_jitter)
 	for seed_value in range(1, 40):
 		for car in _traffic(seed_value):
-			assert_lt(car.speed, _ROUTE_TOP_SPEED, "seed %d outruns the dog" % seed_value)
+			assert_lt(car.speed, _route_top_speed, "seed %d outruns the dog" % seed_value)
 			assert_gt(car.speed, floor_speed * 0.5, "seed %d rolled a parked car" % seed_value)
 
 
@@ -318,8 +322,8 @@ func test_every_wave_rides_the_days_roll_inside_the_configured_band() -> void:
 		var cars := _traffic(seed_value, 16, {"car_speed_jitter": 0.0})
 		for car in cars:
 			assert_between(car.speed,
-					_ROUTE_TOP_SPEED * cfg.drive_day_speed_min,
-					_ROUTE_TOP_SPEED * cfg.drive_day_speed_max,
+					_route_top_speed * cfg.drive_day_speed_min,
+					_route_top_speed * cfg.drive_day_speed_max,
 					"seed %d put a wave outside the day band" % seed_value)
 
 
@@ -336,12 +340,28 @@ func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> v
 	# keep cars from overlapping. A merged pair is one obstacle, not two walls
 	# arriving on schedule — the spec accepts that merge as on-intent — so the
 	# precision claim is asserted on the walls that still stand alone.
+	#
+	# The band is PINNED here rather than read from the shipped config, because
+	# this test verifies the SOLVE, not the feel. Merging scales with the roll —
+	# spacing is 260 * (1 - roll) / (waves - 1) while a wave's speed spread
+	# displaces its spawn by a fixed amount — so any retune toward faster traffic
+	# merges more walls and starves the stand-alone population. Reading the
+	# shipped band made this test fail the moment the QA-R2e round-1 retune
+	# landed (0.20-0.60 -> 0.40-0.65 dropped it to 53.9% against its own 60%
+	# floor), which is a feel value breaking a mechanism test. The pinned band is
+	# deliberately LOW and WIDE: low so walls stay clear of each other, wide so
+	# the per-wave clamp still admits genuinely different speeds and the per-wave
+	# solve stays distinguishable from the shared-speed one it replaced.
 	var cfg := BalanceConfig.new()
 	var gap: float = cfg.drive_car_min_gap
 	var checked := 0
 	var total := 0
 	for seed_value in range(1, 20):
-		var cars := _traffic(seed_value, 16, {"car_speed_jitter": 0.0})
+		var cars := _traffic(seed_value, 16, {
+			"car_speed_jitter": 0.0,
+			"day_speed_min": 0.15,
+			"day_speed_max": 0.40,
+		})
 		var count := _wave_count(cars)
 		var lows: Array[float] = []
 		var highs: Array[float] = []
@@ -373,10 +393,10 @@ func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> v
 			mean_pos /= wave.size()
 			var speed: float = wave[0].speed
 			# dog at top_speed and the wall at `speed` are level at this point.
-			var meet := mean_pos * _ROUTE_TOP_SPEED / (_ROUTE_TOP_SPEED - speed)
+			var meet := mean_pos * _route_top_speed / (_route_top_speed - speed)
 			var t := 0.0 if count < 2 else float(w) / float(count - 1)
-			var intended := _ROUTE_LENGTH * lerpf(LaneSim.FIRST_WAVE_MEET, LaneSim.LAST_WAVE_MEET, t)
-			assert_almost_eq(meet, intended, _ROUTE_LENGTH * 0.05,
+			var intended := _route_length * lerpf(LaneSim.FIRST_WAVE_MEET, LaneSim.LAST_WAVE_MEET, t)
+			assert_almost_eq(meet, intended, _route_length * 0.05,
 					"seed %d wave %d meets at %.0f, laid out for %.0f" % [seed_value, w, meet, intended])
 			assert_gt(meet, previous, "seed %d wave %d is not further down the route" % [seed_value, w])
 			previous = meet
