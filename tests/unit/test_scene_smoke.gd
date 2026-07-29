@@ -182,5 +182,30 @@ func test_drive_scene_instantiates() -> void:
 		"car_min_gap": 20.0, "car_count": 4,
 		"day_speed_min": 0.2, "day_speed_max": 0.6, "wave_speed_jitter": 0.25,
 		"car_speed_jitter": 0.12, "blocked_wave_chance": 0.25,
+		"route_miles": 9.0, "display_top_mph": 60.0,
 	})
 	assert_not_null(node)
+
+
+## The commute is the only slot whose cost is legible WHILE it happens: a pin
+## has to read as a pin. Miles and mph are display-only — the sim is untouched
+## by both — but without them a bad traffic roll is invisible until the clock
+## has already eaten the morning.
+func test_drive_shows_how_far_is_left_and_how_fast_the_dog_is_going() -> void:
+	var node: Minigame = load("res://scenes/minigames/drive.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({
+		"length": 100.0, "top_speed": 50.0, "accel": 40.0,
+		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
+		"car_min_gap": 20.0, "car_count": 0,
+		"day_speed_min": 0.2, "day_speed_max": 0.6, "wave_speed_jitter": 0.25,
+		"car_speed_jitter": 0.12, "blocked_wave_chance": 0.25,
+		"route_miles": 9.0, "display_top_mph": 60.0,
+	})
+	node._process(0.0)
+	assert_string_contains(node.get_node("%Miles").text, "9.0")
+	assert_string_contains(node.get_node("%Miles").text, "mi")
+	assert_string_contains(node.get_node("%Speedo").text, "0 mph")
+	node._process(1.0)  # empty road: one second of accel
+	assert_string_contains(node.get_node("%Speedo").text, "48 mph")
+	assert_false(node.get_node("%Miles").text.contains("9.0"), "the miles never counted down")

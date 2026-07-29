@@ -128,6 +128,10 @@ extends Resource
 ## pins to the wall until the shear opens a lane. Skill becomes reading the
 ## stagger early rather than threading a gap that is not there.
 @export var drive_blocked_wave_chance: float = 0.25
+## Display only. The sim works in its own 400 units; these map that to a trip
+## the player can read while a bad roll is happening to them.
+@export var drive_route_miles: float = 9.0
+@export var drive_display_top_mph: float = 60.0
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]
 

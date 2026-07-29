@@ -87,6 +87,8 @@ static func drive_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 		# whole number of walls — the wave count is what the deficit scales.
 		"car_count": roundi(lerpf(cfg.drive_waves_base, cfg.drive_waves_max, d))
 				* LaneSim.CARS_PER_WAVE,
+		"route_miles": cfg.drive_route_miles,
+		"display_top_mph": cfg.drive_display_top_mph,
 	}
 
 
