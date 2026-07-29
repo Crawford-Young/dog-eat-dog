@@ -165,6 +165,16 @@ func test_drive_traffic_and_lag_scale_with_deficit() -> void:
 	assert_almost_eq(fresh.car_min_gap, cfg.drive_car_min_gap, 0.001)
 
 
+func test_drive_params_carries_the_traffic_randomness_tunables() -> void:
+	var cfg := BalanceConfig.new()
+	var p := Difficulty.drive_params(90.0, cfg)
+	assert_eq(p.day_speed_min, cfg.drive_day_speed_min)
+	assert_eq(p.day_speed_max, cfg.drive_day_speed_max)
+	assert_eq(p.wave_speed_jitter, cfg.drive_wave_speed_jitter)
+	assert_eq(p.car_speed_jitter, cfg.drive_car_speed_jitter)
+	assert_eq(p.blocked_wave_chance, cfg.drive_blocked_wave_chance)
+
+
 func test_typing_params_carry_shift_and_rank_par() -> void:
 	var cfg := BalanceConfig.new()
 	var p := Difficulty.typing_params(80.0, cfg, 0, 2)

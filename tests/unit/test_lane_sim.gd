@@ -31,14 +31,84 @@ func _run(sim: LaneSim, seconds: float) -> void:
 		t += _STEP
 
 
-func _traffic(seed_value: int, car_count: int = 16) -> Array[Dictionary]:
+## Traffic params default to the SHIPPED numbers so every property below is
+## asserted against what the player actually drives; overrides isolate one
+## randomness layer at a time.
+func _traffic_params(car_count: int, overrides: Dictionary = {}) -> Dictionary:
+	var cfg := BalanceConfig.new()
+	var p := {
+		"length": _ROUTE_LENGTH, "top_speed": _ROUTE_TOP_SPEED, "car_count": car_count,
+		# The generator separates same-lane cars by this at spawn, so it must be
+		# the gap _route_params then drives them against.
+		"car_min_gap": 20.0,
+		"day_speed_min": cfg.drive_day_speed_min,
+		"day_speed_max": cfg.drive_day_speed_max,
+		"wave_speed_jitter": cfg.drive_wave_speed_jitter,
+		"car_speed_jitter": cfg.drive_car_speed_jitter,
+		"blocked_wave_chance": cfg.drive_blocked_wave_chance,
+	}
+	for key in overrides:
+		p[key] = overrides[key]
+	return p
+
+
+func _traffic(seed_value: int, car_count: int = 16,
+		overrides: Dictionary = {}) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	return LaneSim.make_traffic(car_count, _ROUTE_LENGTH, _ROUTE_TOP_SPEED, rng)
+	return LaneSim.make_traffic(_traffic_params(car_count, overrides), rng)
 
 
+## Waves no longer have a fixed size — a blocked wave carries LANES cars, not
+## CARS_PER_WAVE — so slicing by a constant is gone. The generator stamps each
+## car with its wave instead.
 func _wave(cars: Array[Dictionary], index: int) -> Array[Dictionary]:
-	return cars.slice(index * LaneSim.CARS_PER_WAVE, (index + 1) * LaneSim.CARS_PER_WAVE)
+	var wave: Array[Dictionary] = []
+	for car in cars:
+		if car.wave == index:
+			wave.append(car)
+	return wave
+
+
+func _wave_count(cars: Array[Dictionary]) -> int:
+	var highest := -1
+	for car in cars:
+		highest = maxi(highest, int(car.wave))
+	return highest + 1
+
+
+## Reads the shear: takes the neighbouring lane whose nearest car ahead is
+## furthest away, breaking ties toward the faster car. This is the skill a
+## fully blocked wall demands — there is no gap to thread, only a stagger.
+func _shear_reader(sim: LaneSim) -> int:
+	var best := sim.lane
+	var best_score := -INF
+	for lane in [sim.lane - 1, sim.lane, sim.lane + 1]:
+		if lane < 0 or lane >= LaneSim.LANES:
+			continue
+		var nearest := INF
+		var nearest_speed := 0.0
+		for car in sim.cars():
+			var gap: float = car.pos - sim.distance
+			if car.lane == lane and gap > 0.0 and gap < nearest:
+				nearest = gap
+				nearest_speed = car.speed
+		var score: float = (1000.0 if nearest == INF else nearest) + nearest_speed * 10.0
+		if score > best_score:
+			best_score = score
+			best = lane
+	return best
+
+
+func _drive_shear(sim: LaneSim, cap: float) -> float:
+	var t := 0.0
+	while t < cap and not sim.is_done():
+		var target := _shear_reader(sim)
+		if target != sim.lane:
+			sim.request_switch(signi(target - sim.lane))
+		sim.tick(_STEP)
+		t += _STEP
+	return t
 
 
 func _open_lane(wave: Array[Dictionary]) -> int:
@@ -163,37 +233,158 @@ func test_never_a_crash_speed_snaps_to_slower_car() -> void:
 
 func test_make_traffic_builds_whole_waves_of_cars_ahead() -> void:
 	var cars := _traffic(3)
-	assert_eq(cars.size(), 16, "16 cars is 4 waves of LANES - 1")
-	assert_eq(_traffic(3, 4).size(), LaneSim.CARS_PER_WAVE, "a wave is the smallest unit")
+	assert_eq(_wave_count(cars), 4, "16 cars is still 4 waves — car_count is the input contract")
+	assert_gte(cars.size(), 16, "a blocked wave adds a car, never removes one")
+	assert_eq(_wave_count(_traffic(3, 4)), 1, "a wave is the smallest unit")
 	for car in cars:
 		assert_between(car.lane, 0, LaneSim.LANES - 1)
 		assert_gt(car.pos, 0.0)
-		assert_lt(car.speed, _ROUTE_TOP_SPEED)
+		assert_lt(car.speed, _ROUTE_TOP_SPEED, "traffic never outruns the dog")
 		assert_gt(car.speed, 0.0)
 
 
-func test_every_wave_blocks_every_lane_but_one() -> void:
+func test_an_unblocked_wave_leaves_one_lane_open_and_a_blocked_one_leaves_none() -> void:
 	for seed_value in range(1, 40):
-		var cars := _traffic(seed_value)
-		for w in cars.size() / LaneSim.CARS_PER_WAVE:
-			var wave := _wave(cars, w)
-			var lanes := {}
-			for car in wave:
-				lanes[car.lane] = true
-			assert_eq(lanes.size(), LaneSim.CARS_PER_WAVE,
-					"seed %d wave %d doubles up a lane" % [seed_value, w])
-			assert_between(_open_lane(wave), 0, LaneSim.LANES - 1)
+		for car_count in [16, 20]:
+			var open_cars := _traffic(seed_value, car_count, {"blocked_wave_chance": 0.0})
+			for w in _wave_count(open_cars):
+				var wave := _wave(open_cars, w)
+				assert_eq(wave.size(), LaneSim.CARS_PER_WAVE,
+						"seed %d wave %d is not a one-gap wall" % [seed_value, w])
+				assert_between(_open_lane(wave), 0, LaneSim.LANES - 1)
+			var walled := _traffic(seed_value, car_count, {"blocked_wave_chance": 1.0})
+			for w in _wave_count(walled):
+				var wave := _wave(walled, w)
+				assert_eq(wave.size(), LaneSim.LANES,
+						"seed %d wave %d left a gap it was not supposed to" % [seed_value, w])
+				assert_eq(_open_lane(wave), -1,
+						"seed %d wave %d is not a full wall" % [seed_value, w])
 
 
-func test_the_open_lane_never_repeats_so_no_straight_line_survives() -> void:
+func test_consecutive_open_walls_never_open_the_same_lane_twice() -> void:
+	# The gap is no longer guaranteed to exist, but where it exists it still
+	# moves — a straight line through two READABLE walls stays impossible.
 	for seed_value in range(1, 40):
-		var cars := _traffic(seed_value)
+		var cars := _traffic(seed_value, 16, {"blocked_wave_chance": 0.0})
 		var previous := 2  # the lane the dog starts in
-		for w in cars.size() / LaneSim.CARS_PER_WAVE:
+		for w in _wave_count(cars):
 			var open_lane := _open_lane(_wave(cars, w))
 			assert_ne(open_lane, previous,
 					"seed %d wave %d opens where the dog already is" % [seed_value, w])
 			previous = open_lane
+
+
+func test_a_fully_blocked_wall_shears_apart_instead_of_pinning_the_whole_route() -> void:
+	# The roll the player can do nothing about: five lanes, no gap. Per-car
+	# speed spread is the ONLY escape — the wall staggers down the route and the
+	# dog rides the fastest car instead of the slowest. Without that spread this
+	# is a soft lock on fun, so this test is what makes the blocked roll legal.
+	var cars: Array = []
+	for lane in LaneSim.LANES:
+		cars.append({"lane": lane, "pos": 60.0, "speed": 10.0 + lane * 1.5})
+	var p := _route_params(cars)
+	p.length = 1000.0
+	var t := _drive_shear(LaneSim.new(p), 90.0)
+	var slowest_car_time := 1000.0 / 10.0  # riding the wall's slowest car the whole way
+	assert_lt(t, slowest_car_time * 0.85,
+			"the dog never got past the slowest car in the wall: %.1fs" % t)
+
+
+func test_a_commute_of_nothing_but_blocked_walls_still_finishes() -> void:
+	# Same property against GENERATED traffic at the worst roll the game can
+	# produce: every wave walled, at the densest shipped wave count.
+	var densest := BalanceConfig.new().drive_waves_max * LaneSim.CARS_PER_WAVE
+	for seed_value in range(1, 9):
+		var cars := _traffic(seed_value, densest, {"blocked_wave_chance": 1.0})
+		var sim := LaneSim.new(_route_params(cars))
+		_drive_shear(sim, 118.0)
+		assert_true(sim.is_done(), "seed %d walled the dog in for the whole route" % seed_value)
+
+
+func test_the_day_roll_keeps_every_car_slower_than_the_dog() -> void:
+	var cfg := BalanceConfig.new()
+	var floor_speed := _ROUTE_TOP_SPEED * cfg.drive_day_speed_min \
+			* (1.0 - cfg.drive_wave_speed_jitter) * (1.0 - cfg.drive_car_speed_jitter)
+	for seed_value in range(1, 40):
+		for car in _traffic(seed_value):
+			assert_lt(car.speed, _ROUTE_TOP_SPEED, "seed %d outruns the dog" % seed_value)
+			assert_gt(car.speed, floor_speed * 0.5, "seed %d rolled a parked car" % seed_value)
+
+
+func test_every_wave_rides_the_days_roll_inside_the_configured_band() -> void:
+	var cfg := BalanceConfig.new()
+	for seed_value in range(1, 40):
+		# car jitter off: each wave's cars then share exactly the wave's speed.
+		var cars := _traffic(seed_value, 16, {"car_speed_jitter": 0.0})
+		for car in cars:
+			assert_between(car.speed,
+					_ROUTE_TOP_SPEED * cfg.drive_day_speed_min,
+					_ROUTE_TOP_SPEED * cfg.drive_day_speed_max,
+					"seed %d put a wave outside the day band" % seed_value)
+
+
+func test_two_mornings_do_not_draw_the_same_traffic() -> void:
+	# "you were just late today" needs the roll to actually vary.
+	assert_ne(_traffic(1)[0].speed, _traffic(2)[0].speed)
+
+
+func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> void:
+	# Spawn used to be solved from one shared speed. Now every wave differs, so
+	# every wave gets its own solve. The claim holds per wave only while the wave
+	# is still a wave: a fast roll can back-compute a later wall onto an earlier
+	# one, and the generator's separation pass then spreads the merged pair to
+	# keep cars from overlapping. A merged pair is one obstacle, not two walls
+	# arriving on schedule — the spec accepts that merge as on-intent — so the
+	# precision claim is asserted on the walls that still stand alone.
+	var cfg := BalanceConfig.new()
+	var gap: float = cfg.drive_car_min_gap
+	var checked := 0
+	var total := 0
+	for seed_value in range(1, 20):
+		var cars := _traffic(seed_value, 16, {"car_speed_jitter": 0.0})
+		var count := _wave_count(cars)
+		var lows: Array[float] = []
+		var highs: Array[float] = []
+		for w in count:
+			var low := INF
+			var high := -INF
+			for car in _wave(cars, w):
+				low = minf(low, car.pos)
+				high = maxf(high, car.pos)
+			lows.append(low)
+			highs.append(high)
+		var previous := 0.0
+		for w in count:
+			total += 1
+			# Padded by the gap the separation pass enforces, so this is a
+			# superset of "the pass moved a car in this wave" — it can skip an
+			# untouched wave, never admit a touched one.
+			var merged := false
+			if w > 0 and lows[w] - gap <= highs[w - 1]:
+				merged = true
+			if w < count - 1 and lows[w + 1] - gap <= highs[w]:
+				merged = true
+			if merged:
+				continue
+			var wave := _wave(cars, w)
+			var mean_pos := 0.0
+			for car in wave:
+				mean_pos += car.pos
+			mean_pos /= wave.size()
+			var speed: float = wave[0].speed
+			# dog at top_speed and the wall at `speed` are level at this point.
+			var meet := mean_pos * _ROUTE_TOP_SPEED / (_ROUTE_TOP_SPEED - speed)
+			var t := 0.0 if count < 2 else float(w) / float(count - 1)
+			var intended := _ROUTE_LENGTH * lerpf(LaneSim.FIRST_WAVE_MEET, LaneSim.LAST_WAVE_MEET, t)
+			assert_almost_eq(meet, intended, _ROUTE_LENGTH * 0.05,
+					"seed %d wave %d meets at %.0f, laid out for %.0f" % [seed_value, w, meet, intended])
+			assert_gt(meet, previous, "seed %d wave %d is not further down the route" % [seed_value, w])
+			previous = meet
+			checked += 1
+	# A skip rule that quietly swallows everything is not a test. Merges are the
+	# rare case; if this ever trips, the layout changed, not the tolerance.
+	assert_gt(float(checked) / float(total), 0.6,
+			"only %d of %d waves stood alone — the skip rule is eating the test" % [checked, total])
 
 
 func test_a_wave_reads_as_a_wall_not_a_smear() -> void:
@@ -214,7 +405,7 @@ func test_waves_are_spread_down_the_route_with_room_to_read_the_first() -> void:
 	var first := _wave(cars, 0)
 	for car in first:
 		assert_gt(car.pos, 25.0, "the first wall starts beyond the block margin")
-	var last := _wave(cars, cars.size() / LaneSim.CARS_PER_WAVE - 1)
+	var last := _wave(cars, _wave_count(cars) - 1)
 	assert_gt(last[0].pos, first[0].pos, "later waves sit further down the route")
 
 
@@ -233,25 +424,39 @@ func test_holding_one_lane_never_holds_top_speed() -> void:
 
 
 func test_weaving_to_the_open_lane_beats_holding_a_lane() -> void:
+	# Skill only pays where there is room to use it. Wall spacing scales with
+	# (1 - the day roll), so a fast roll packs the walls tighter than clearing
+	# one costs — that morning is lost to luck by design, and asserting skill
+	# beats luck there would assert against the whole point of the round.
+	var cfg := BalanceConfig.new()
+	var light := {
+		"blocked_wave_chance": 0.0,
+		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
+	}
 	for seed_value in range(1, 9):
-		var straight := _drive_route(LaneSim.new(_route_params(_traffic(seed_value))), false)
-		var weaving := _drive_route(LaneSim.new(_route_params(_traffic(seed_value))), true)
+		var traffic := _traffic(seed_value, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE, light)
+		var straight := _drive_route(LaneSim.new(_route_params(traffic)), false)
+		var weaving := _drive_route(LaneSim.new(_route_params(traffic)), true)
 		assert_lt(weaving.time, straight.time,
 				"seed %d pays nothing for skill" % seed_value)
 
 
-func test_the_fresh_morning_commute_can_be_driven_flat_out() -> void:
-	# The shipped base wave count has to leave room to weave: read the walls
-	# right and the dog is never pinned, so the route costs open-road time.
-	# Raising drive_waves_base past what the block margin and pin gap allow
-	# between walls breaks this — deliberately, that is what a deficit does.
+func test_a_light_traffic_morning_can_still_be_driven_clean() -> void:
+	# Skill has to keep paying on the best roll the game deals. Light traffic is
+	# what leaves room: wall spacing is 260 * (1 - speed_fraction) / (waves - 1),
+	# so a SLOW day spreads the walls (104 units at 0.20) and a fast one packs
+	# them (52 at 0.60) — under the ~67 units clearing a wall costs.
 	var cfg := BalanceConfig.new()
+	var light := {
+		"blocked_wave_chance": 0.0, "car_speed_jitter": 0.0,
+		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
+	}
 	var open_road := _drive_route(LaneSim.new(_route_params()), false)
 	for seed_value in range(1, 9):
-		var cars := _traffic(seed_value, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE)
+		var cars := _traffic(seed_value, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE, light)
 		var run := _drive_route(LaneSim.new(_route_params(cars)), true)
 		assert_almost_eq(run.time, open_road.time, 0.5,
-				"seed %d cannot be driven clean at the base wave count" % seed_value)
+				"seed %d cannot be driven clean on the lightest roll" % seed_value)
 
 
 func test_a_faster_car_settles_behind_a_slower_one_instead_of_passing_through() -> void:

@@ -180,5 +180,7 @@ func test_drive_scene_instantiates() -> void:
 		"length": 100.0, "top_speed": 50.0, "accel": 40.0,
 		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
 		"car_min_gap": 20.0, "car_count": 4,
+		"day_speed_min": 0.2, "day_speed_max": 0.6, "wave_speed_jitter": 0.25,
+		"car_speed_jitter": 0.12, "blocked_wave_chance": 0.25,
 	})
 	assert_not_null(node)
