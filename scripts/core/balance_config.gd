@@ -70,7 +70,10 @@ extends Resource
 
 # --- wave 3a: day clock + morning minigames ---
 @export var morning_start_minutes: int = 420
-@export var morning_budget_minutes: float = 120.0
+## Work starts at 8:30. The morning is whatever is left between waking up and
+## being at the desk, so the deadline is the ONE tunable — there is no separate
+## budget to keep in sync with it. Primary playtest lever for this round.
+@export var work_start_minutes: int = 510
 @export var clock_scale: float = 1.5
 @export var skip_time_cost: float = 8.0
 @export var clock_amber_fraction: float = 0.4
@@ -109,3 +112,9 @@ extends Resource
 @export var drive_car_min_gap: float = 20.0
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]
+
+
+## The morning's game-minute budget, derived. game.gd builds every DayClock
+## from this; nothing stores it.
+func morning_budget() -> float:
+	return maxf(work_start_minutes - morning_start_minutes, 0.0)

@@ -353,6 +353,22 @@ func test_both_work_shifts_read_the_dogs_rank_for_their_par() -> void:
 	assert_eq(main._params_for("work_pm").par_units, main.cfg.typing_par_units[2])
 
 
+func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
+	var cfg := BalanceConfig.new()
+	assert_eq(cfg.work_start_minutes, 510, "work starts at 8:30")
+	assert_eq(cfg.morning_budget(), 90.0, "the morning is the gap to the deadline")
+	assert_eq(_fresh_main().clock.budget, cfg.morning_budget(),
+			"the clock is built from the derived budget, not a standalone tunable")
+
+
+func test_the_clock_hud_states_the_deadline_the_dog_is_racing() -> void:
+	# The whole point of the round: an abstract budget becomes a stated time.
+	var main := _fresh_main()
+	var clock_label: Label = main.get_node("%ClockLabel")
+	main._process(0.0)
+	assert_string_contains(clock_label.text, "in by 8:30")
+
+
 func test_the_clock_runs_through_the_morning_and_stops_at_the_office() -> void:
 	# _process is the HUD's whole body and no engine frames tick inside a
 	# synchronous walk, so drive it by hand.
@@ -360,13 +376,13 @@ func test_the_clock_runs_through_the_morning_and_stops_at_the_office() -> void:
 	var clock_label: Label = main.get_node("%ClockLabel")
 	main._process(0.0)
 	assert_true(clock_label.visible, "the clock is up from the first morning slot")
-	assert_eq(clock_label.text, main.clock.clock_text(main.cfg.morning_start_minutes))
+	assert_string_contains(clock_label.text, main.clock.clock_text(main.cfg.morning_start_minutes))
 	assert_eq(
 		clock_label.get_theme_color("font_color"),
 		main.ZONE_COLORS["calm"],
 		"a fresh budget reads calm",
 	)
-	main.clock.spend(main.cfg.morning_budget_minutes)
+	main.clock.spend(main.cfg.morning_budget())
 	main._process(0.0)
 	assert_eq(
 		clock_label.get_theme_color("font_color"),

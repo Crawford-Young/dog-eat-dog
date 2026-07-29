@@ -151,13 +151,13 @@ func test_late_morning_preset_launches_the_main_scene() -> void:
 func test_preset_cfg_late_morning_duplicates_with_a_tiny_budget() -> void:
 	var lab := _fresh_lab()
 	var day_cfg: BalanceConfig = lab._preset_cfg("late_morning")
-	assert_eq(day_cfg.morning_budget_minutes, 20.0, "the duplicate carries the tight budget")
-	assert_eq(lab.cfg.morning_budget_minutes, 120.0, "the shared cfg resource is untouched")
+	assert_eq(day_cfg.morning_budget(), 20.0, "the duplicate carries the tight morning")
+	assert_eq(lab.cfg.morning_budget(), 90.0, "the shared cfg resource is untouched")
 
 
 func test_preset_cfg_other_presets_return_cfg_unchanged() -> void:
 	var lab := _fresh_lab()
 	var day_cfg: BalanceConfig = lab._preset_cfg("flush")
 	assert_eq(
-		day_cfg.morning_budget_minutes, 120.0, "non-late-morning presets pass cfg through untouched"
+		day_cfg.morning_budget(), 90.0, "non-late-morning presets pass cfg through untouched"
 	)
