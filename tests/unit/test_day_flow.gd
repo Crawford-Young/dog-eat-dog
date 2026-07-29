@@ -355,8 +355,14 @@ func test_both_work_shifts_read_the_dogs_rank_for_their_par() -> void:
 
 func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
 	var cfg := BalanceConfig.new()
-	assert_eq(cfg.work_start_minutes, 510, "work starts at 8:30")
-	assert_eq(cfg.morning_budget(), 90.0, "the morning is the gap to the deadline")
+	assert_eq(cfg.work_start_minutes, 480, "work starts at 8:00")
+	# Asserted as the RELATION, not as a literal. The deadline is the round's
+	# primary feel lever and has moved three times (510 -> 525 -> 480); what must
+	# never change is that the budget is derived from it rather than stored
+	# beside it.
+	assert_eq(cfg.morning_budget(), float(cfg.work_start_minutes - cfg.morning_start_minutes),
+			"the morning is the gap to the deadline")
+	assert_eq(cfg.morning_budget(), 60.0, "and that gap is currently 60 minutes")
 	assert_eq(_fresh_main().clock.budget, cfg.morning_budget(),
 			"the clock is built from the derived budget, not a standalone tunable")
 
@@ -366,7 +372,23 @@ func test_the_clock_hud_states_the_deadline_the_dog_is_racing() -> void:
 	var main := _fresh_main()
 	var clock_label: Label = main.get_node("%ClockLabel")
 	main._process(0.0)
-	assert_string_contains(clock_label.text, "in by 8:30")
+	assert_string_contains(clock_label.text, "in by 8:00")
+
+
+## The clock is the whole point of the morning and the commute is where it bites
+## hardest — and the commute is also the ONLY slot that paints a full-height
+## opaque road straight down the middle of the screen, through exactly the strip
+## the clock sits in. Sibling draw order is the single thing keeping it visible;
+## it shipped the wrong way round and the clock was invisible for the entire
+## drive, with every other clock test passing because the label was updating
+## correctly the whole time — it was just behind the road.
+func test_the_clock_draws_on_top_of_whatever_minigame_is_up() -> void:
+	var main := _fresh_main()
+	assert_gt(
+		main.get_node("%ClockLabel").get_index(),
+		main.get_node("%MinigameHost").get_index(),
+		"the minigame host draws after the clock, so it paints over it"
+	)
 
 
 func test_the_clock_runs_through_the_morning_and_stops_at_the_office() -> void:

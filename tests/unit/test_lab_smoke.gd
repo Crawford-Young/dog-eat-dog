@@ -152,12 +152,17 @@ func test_preset_cfg_late_morning_duplicates_with_a_tiny_budget() -> void:
 	var lab := _fresh_lab()
 	var day_cfg: BalanceConfig = lab._preset_cfg("late_morning")
 	assert_eq(day_cfg.morning_budget(), 20.0, "the duplicate carries the tight morning")
-	assert_eq(lab.cfg.morning_budget(), 90.0, "the shared cfg resource is untouched")
+	# The claim is "the shared resource was not mutated", so it is asserted
+	# against a pristine config rather than against the shipped number — the
+	# deadline is a live feel lever and this test is not about its value.
+	assert_eq(lab.cfg.morning_budget(), BalanceConfig.new().morning_budget(),
+			"the shared cfg resource is untouched")
 
 
 func test_preset_cfg_other_presets_return_cfg_unchanged() -> void:
 	var lab := _fresh_lab()
 	var day_cfg: BalanceConfig = lab._preset_cfg("flush")
 	assert_eq(
-		day_cfg.morning_budget(), 90.0, "non-late-morning presets pass cfg through untouched"
+		day_cfg.morning_budget(), BalanceConfig.new().morning_budget(),
+		"non-late-morning presets pass cfg through untouched"
 	)
