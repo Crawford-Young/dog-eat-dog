@@ -97,7 +97,7 @@ func _ready() -> void:
 	_ending_typer.bind(_ending_label)
 	_summary.visible = false
 	_ending.visible = false
-	clock = DayClock.new(cfg.morning_budget_minutes)
+	clock = DayClock.new(cfg.morning_budget())
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
@@ -109,7 +109,10 @@ func _process(delta: float) -> void:
 	if not _clock_running:
 		return
 	clock.spend(delta * cfg.clock_scale)
-	_clock_label.text = clock.clock_text(cfg.morning_start_minutes)
+	_clock_label.text = "%s · in by %s" % [
+		clock.clock_text(cfg.morning_start_minutes),
+		DayClock.format_minutes(cfg.work_start_minutes),
+	]
 	_clock_label.add_theme_color_override(
 		"font_color",
 		ZONE_COLORS[clock.zone(cfg.clock_amber_fraction, cfg.clock_red_fraction)],
@@ -343,7 +346,7 @@ func _performance_word() -> String:
 func _on_next_day_pressed() -> void:
 	_summary.visible = false
 	state.start_next_day(cfg)
-	clock = DayClock.new(cfg.morning_budget_minutes)
+	clock = DayClock.new(cfg.morning_budget())
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
@@ -353,7 +356,7 @@ func _on_restart_pressed() -> void:
 	_ending_typer.skip()
 	_ending_label.text = ""
 	state = GameState.new()
-	clock = DayClock.new(cfg.morning_budget_minutes)
+	clock = DayClock.new(cfg.morning_budget())
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_ending.visible = false
 	_start_slot()

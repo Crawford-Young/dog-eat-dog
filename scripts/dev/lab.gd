@@ -132,7 +132,7 @@ func _preset_state(preset: String) -> GameState:
 func _preset_cfg(preset: String) -> BalanceConfig:
 	if preset == "late_morning":
 		var late_cfg: BalanceConfig = cfg.duplicate()
-		late_cfg.morning_budget_minutes = 20.0
+		late_cfg.work_start_minutes = cfg.morning_start_minutes + 20
 		return late_cfg
 	return cfg
 

@@ -67,3 +67,15 @@ func test_clock_text_pads_minutes_and_rolls_hour() -> void:
 func test_zero_budget_is_red_immediately() -> void:
 	var c := DayClock.new(0.0)
 	assert_eq(c.zone(0.4, 0.15), "red")
+
+
+func test_format_minutes_renders_a_wall_clock_time() -> void:
+	assert_eq(DayClock.format_minutes(510), "8:30")
+	assert_eq(DayClock.format_minutes(420), "7:00")
+	assert_eq(DayClock.format_minutes(485), "8:05")
+
+
+func test_clock_text_still_renders_through_the_shared_formatter() -> void:
+	var c := DayClock.new(90.0)
+	c.spend(42.0)
+	assert_eq(c.clock_text(420), DayClock.format_minutes(462))

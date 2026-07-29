@@ -36,7 +36,12 @@ func zone(amber_fraction: float, red_fraction: float) -> String:
 	return "calm"
 
 
+## Wall-clock rendering for any absolute game-minute value — the current time,
+## or the deadline the HUD prints beside it.
+static func format_minutes(total_minutes: int) -> String:
+	var hours := int(total_minutes / 60.0) % 24
+	return "%d:%02d" % [hours, total_minutes % 60]
+
+
 func clock_text(start_minutes: int) -> String:
-	var total := start_minutes + int(elapsed)
-	var hours := int(total / 60.0) % 24
-	return "%d:%02d" % [hours, total % 60]
+	return format_minutes(start_minutes + int(elapsed))
