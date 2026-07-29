@@ -76,7 +76,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 |---|---|---|
 | 1 | Vertical slice — one playable day, placeholder art, web export | done |
 | 2 | Ranks + economy — salary and living costs, rank ladder with warning-first demotion, coffee cart, sick days, retirement ending, energy carryover, lab day presets | done |
-| 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | in playtest |
+| 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
 
 ## Credits
 
