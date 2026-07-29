@@ -17,10 +17,17 @@ const START_LANE := LANES / 2
 const FIRST_WAVE_MEET := 0.20
 const LAST_WAVE_MEET := 0.85
 
-## Position jitter inside a wave, as a fraction of the route: ±6 units on the
-## shipped 400-unit route, well under the 30-unit pin gap, so a wave still reads
+## Position jitter inside a wave, as a fraction of the route: ±6.3 units on the
+## shipped 900-unit route, well under the 30-unit pin gap, so a wave still reads
 ## as a wall rather than a smear.
-const WAVE_JITTER := 0.015
+##
+## Retuned 0.015 -> 0.007 when the route went 400 -> 900. This is a fraction of
+## the route, but the thing it has to stay under — pin_gap — is ABSOLUTE, so
+## lengthening the route silently doubled the smear toward the gap it is meant
+## to stay clear of. The fraction was re-solved to hold the same ±6 units it had
+## at 400; a future route change has to do the same, or walls stop reading as
+## walls without any tunable having been touched.
+const WAVE_JITTER := 0.007
 
 var distance: float = 0.0
 var lane: int = START_LANE
@@ -93,9 +100,15 @@ static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Arra
 			cars.append({
 				"lane": wave_lane,
 				"pos": spawn + rng.randf_range(-jitter, jitter),
-				# Never zero, or a wall becomes a parked barricade.
-				"speed": maxf(wave_speed * (1.0 + rng.randf_range(-car_jitter, car_jitter)),
-						top_speed * 0.05),
+				# Clamped at BOTH ends, and both ends are load-bearing. Never
+				# zero, or a wall becomes a parked barricade. Never at or past
+				# top_speed, or the car stops being an obstacle at all — it just
+				# drives away and can never pin the dog. The ceiling is NOT
+				# implied by the band: a 0.75 day roll times a 1.35 per-car draw
+				# solves to 1.0125 of top speed, which is how a car outran the
+				# dog the moment the band was raised for feel.
+				"speed": clampf(wave_speed * (1.0 + rng.randf_range(-car_jitter, car_jitter)),
+						top_speed * 0.05, top_speed * 0.95),
 				# Generation metadata only — _init never copies it into the sim.
 				"wave": w,
 			})
