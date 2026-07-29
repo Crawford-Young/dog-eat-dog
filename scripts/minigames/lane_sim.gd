@@ -4,9 +4,9 @@ extends RefCounted
 ## Subway-surfers commute with no fail state: 5 lanes, traffic you can NEVER
 ## crash into. A car ahead inside pin_gap clamps your speed to its speed; a
 ## car alongside in the target lane blocks the switch. Traffic arrives as waves
-## that fill every lane but one, and no wave leaves the same lane open as the
-## one before it — so no straight line survives the route. Weaving to hold top
-## speed is the whole skill — time to cover the route is the only cost.
+## with per-wave and per-car speed variance — a wave usually leaves one lane
+## open, but a bad roll walls off all five, and walls shear apart as they roll.
+## Reading the shear is the skill; time to cover the route is the only cost.
 
 const LANES := 5
 const CARS_PER_WAVE := LANES - 1
@@ -16,12 +16,6 @@ const START_LANE := LANES / 2
 ## route — nominal because a dog that gets pinned meets everything later.
 const FIRST_WAVE_MEET := 0.20
 const LAST_WAVE_MEET := 0.85
-
-## Every wave rolls at the same share of top speed. Uniform is load-bearing: it
-## holds the walls exactly as far apart as they were laid out for the whole
-## route, so no wave ever rear-ends the one ahead and the room left to weave
-## between two walls is the room the wave count gave it.
-const WAVE_SPEED := 0.40
 
 ## Position jitter inside a wave, as a fraction of the route: ±6 units on the
 ## shipped 400-unit route, well under the 30-unit pin gap, so a wave still reads
@@ -57,32 +51,70 @@ func _init(params: Dictionary) -> void:
 		_cars.append({"lane": car.lane, "pos": car.pos, "speed": car.speed})
 
 
-## Traffic as a series of walls down the route. car_count is rounded down to
-## whole waves of CARS_PER_WAVE. Each wave fills every lane but one; the first
-## never opens the lane the dog starts in and no wave repeats the one before it,
-## so holding a lane always ends up pinned — weaving is mandatory by
-## construction, not by tuning a density knob.
-static func make_traffic(car_count: int, length: float, top_speed: float,
-		rng: RandomNumberGenerator) -> Array[Dictionary]:
+## Traffic as a series of walls down the route, with three layers of speed
+## randomness stacked on it: one roll for the whole commute (the "you were just
+## late today"), one per wave (so a morning is not a flat grind), and one per
+## car — the last is what makes a fully blocked wall SHEAR APART as it rolls,
+## instead of pinning the dog for the rest of the route.
+##
+## car_count is still the input contract and is rounded down to whole waves of
+## CARS_PER_WAVE, but a blocked wave emits LANES cars rather than CARS_PER_WAVE,
+## so the returned array can be LARGER than car_count. Callers size themselves
+## off the returned array, never off the product.
+static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Array[Dictionary]:
 	var cars: Array[Dictionary] = []
-	var waves := car_count / CARS_PER_WAVE
+	var length: float = params.length
+	var top_speed: float = params.top_speed
+	var waves: int = int(params.car_count) / CARS_PER_WAVE
 	var jitter := length * WAVE_JITTER
-	var speed := top_speed * WAVE_SPEED
+	var band_low: float = top_speed * params.day_speed_min
+	var band_high: float = top_speed * params.day_speed_max
+	var wave_jitter: float = params.wave_speed_jitter
+	var car_jitter: float = params.car_speed_jitter
+	var blocked_chance: float = params.blocked_wave_chance
+	# One roll for the whole commute. The player never sees it coming.
+	var day_speed := rng.randf_range(band_low, band_high)
 	var open_lane := START_LANE
 	for w in waves:
 		var t := 0.0 if waves < 2 else float(w) / float(waves - 1)
-		# Spawned back from where the dog meets it, by however far the wave
-		# itself travels on the way there.
-		var spawn := length * lerpf(FIRST_WAVE_MEET, LAST_WAVE_MEET, t) * (1.0 - WAVE_SPEED)
-		open_lane = (open_lane + 1 + rng.randi_range(0, LANES - 2)) % LANES
+		var wave_speed := clampf(
+				day_speed * (1.0 + rng.randf_range(-wave_jitter, wave_jitter)),
+				band_low, band_high)
+		# Spawned back from where the dog meets it, by however far THIS wave
+		# travels on the way there — per wave, now that every wave differs.
+		var spawn := length * lerpf(FIRST_WAVE_MEET, LAST_WAVE_MEET, t) \
+				* (1.0 - wave_speed / top_speed)
+		var blocked := rng.randf() < blocked_chance
+		if not blocked:
+			open_lane = (open_lane + 1 + rng.randi_range(0, LANES - 2)) % LANES
 		for wave_lane in LANES:
-			if wave_lane == open_lane:
+			if not blocked and wave_lane == open_lane:
 				continue
 			cars.append({
 				"lane": wave_lane,
 				"pos": spawn + rng.randf_range(-jitter, jitter),
-				"speed": speed,
+				# Never zero, or a wall becomes a parked barricade.
+				"speed": maxf(wave_speed * (1.0 + rng.randf_range(-car_jitter, car_jitter)),
+						top_speed * 0.05),
+				# Generation metadata only — _init never copies it into the sim.
+				"wave": w,
 			})
+	# Per-wave speeds break the old guarantee that spawn position rose with the
+	# wave index: a later wave that rolls faster is back-computed to a SMALLER
+	# spawn and can land on top of an earlier wave in the same lane. The
+	# following clamp in _advance_cars cannot rescue that — a car already inside
+	# the gap freezes rather than separating — so the overlap would last the
+	# whole route. Separate at generation instead, pushing the rear car back so
+	# the front car stays exactly where its own back-computation put it.
+	var min_gap: float = params.car_min_gap
+	for lane in LANES:
+		var in_lane: Array[Dictionary] = []
+		for car in cars:
+			if car.lane == lane:
+				in_lane.append(car)
+		in_lane.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.pos > b.pos)
+		for i in range(1, in_lane.size()):
+			in_lane[i].pos = minf(in_lane[i].pos, in_lane[i - 1].pos - min_gap)
 	return cars
 
 

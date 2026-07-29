@@ -20,8 +20,7 @@ func setup(params: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	var sim_params := params.duplicate()
-	sim_params["cars"] = LaneSim.make_traffic(
-			params.car_count, params.length, params.top_speed, rng)
+	sim_params["cars"] = LaneSim.make_traffic(params, rng)
 	_sim = LaneSim.new(sim_params)
 	_route_length = params.length
 	for car in _sim.cars():

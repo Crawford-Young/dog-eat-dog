@@ -110,6 +110,24 @@ extends Resource
 ## How far behind the car ahead of it a car settles, in its own lane. 20 units
 ## is 80px — wider than a 72px car, so traffic never overlaps on screen.
 @export var drive_car_min_gap: float = 20.0
+## Traffic speed as a fraction of the dog's top speed, rolled ONCE per commute.
+## This is the "you were just late today" knob: a gridlock roll costs minutes no
+## amount of weaving recovers, and the player gets no signal before the drive.
+## Note the layout coupling — wall spacing scales with (1 - the roll), so a FAST
+## roll packs the walls tighter, not looser.
+@export var drive_day_speed_min: float = 0.20
+@export var drive_day_speed_max: float = 0.60
+## Symmetric spread around the day roll, per wave, clamped back into the band —
+## so one commute is a crawler then a wall you barely notice, not a flat grind.
+@export var drive_wave_speed_jitter: float = 0.25
+## Symmetric spread around the wave's speed, per car. Small and load-bearing:
+## this is what makes a fully blocked wall SHEAR APART as it rolls down the
+## route instead of pinning the dog to the horizon. Do not set it to zero.
+@export var drive_car_speed_jitter: float = 0.12
+## Odds that a wave fills all five lanes with no gap at all. No crash — the dog
+## pins to the wall until the shear opens a lane. Skill becomes reading the
+## stagger early rather than threading a gap that is not there.
+@export var drive_blocked_wave_chance: float = 0.25
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]
 
