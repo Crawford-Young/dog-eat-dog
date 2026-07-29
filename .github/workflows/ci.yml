@@ -24,6 +24,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # Binary assets (fonts, sprites) go through Git LFS. Without this the
+          # checkout lands 130-byte pointer stubs, Godot cannot build a font
+          # cache, and every scene-smoke test fails on font rasterization.
+          lfs: true
 
       - name: Install just
         uses: extractions/setup-just@v4
