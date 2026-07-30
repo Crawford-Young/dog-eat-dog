@@ -58,14 +58,15 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 		"lunch":
 			state.apply_energy(cfg.lunch_restore)
 		"dinner":
-			var gain := cfg.dinner_cook_energy if result.get("choice") == "cook" \
-					else cfg.dinner_takeout_energy
-			state.apply_energy(gain)
+			# Stub only — T8 replaces this with cooking's real per-verb score.
+			# cook_energy_min (2.0) < dinner_takeout_energy (3.0) by default, which
+			# would flip "cook beats takeout"; cook_energy_max preserves it as a
+			# placeholder until the cooking session provides a real gain.
+			state.apply_energy(cfg.dinner_takeout_energy if result.get("choice") == "takeout" else cfg.cook_energy_max)
 			if result.get("choice") == "takeout":
 				state.wallet.spend(cfg.takeout_price)
 		"freetime":
 			var games: int = result.get("games_played", 0)
-			state.apply_energy(-cfg.late_game_drain * games)
 			state.played_late = games > 0
 			state.bedtime = derive_bedtime(games)
 		"sleep":

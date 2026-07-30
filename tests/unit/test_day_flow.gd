@@ -367,6 +367,57 @@ func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
 			"the clock is built from the derived budget, not a standalone tunable")
 
 
+func test_the_evening_budget_is_derived_from_the_last_band_line() -> void:
+	# Same rule as morning_budget: the LINE is the stored design intent and the
+	# span is computed. A stored evening_budget_minutes would split the
+	# authority — the retired morning_budget_minutes is the precedent.
+	var cfg := BalanceConfig.new()
+	assert_eq(
+		cfg.evening_budget(),
+		float(cfg.bed_mid_line_minutes - cfg.evening_start_minutes),
+		"the evening's span is the gap between leaving the office and the last band",
+	)
+
+
+func test_the_band_lines_are_offsets_from_the_evenings_start() -> void:
+	var cfg := BalanceConfig.new()
+	var lines := cfg.bed_band_lines()
+	assert_eq(lines.size(), 2, "three bands are cut by two lines")
+	assert_eq(lines[0], float(cfg.bed_early_line_minutes - cfg.evening_start_minutes))
+	assert_eq(lines[1], float(cfg.bed_mid_line_minutes - cfg.evening_start_minutes))
+	assert_eq(lines[1], cfg.evening_budget(), "the last line IS the budget")
+
+
+func test_the_band_names_are_the_sleep_energy_keys() -> void:
+	# One vocabulary for the bands. If these ever diverge, start_next_day
+	# indexes sleep_energy with a key it does not have and the day crashes.
+	var cfg := BalanceConfig.new()
+	assert_eq(BalanceConfig.BANDS.size(), 3)
+	for band in BalanceConfig.BANDS:
+		assert_true(cfg.sleep_energy.has(band), "sleep_energy is missing the '%s' band" % band)
+
+
+func test_a_maxed_debt_ceiling_can_reach_the_sick_cliff() -> void:
+	# The whole point of the ceiling. Today sleep_energy["late"] is 35 and the
+	# carry blend trends toward it, so a permanently-late dog never reaches the
+	# threshold of 12 — chronic lateness is currently free.
+	var cfg := BalanceConfig.new()
+	assert_lt(
+		cfg.sleep_ceiling_min,
+		cfg.sick_energy_threshold,
+		"a fully-indebted dog has to be ABLE to get sick or the mechanic is inert",
+	)
+
+
+func test_the_drive_home_is_shorter_than_the_morning_commute() -> void:
+	# Wave-3b invariant, held as data. Two full commutes a day is the failure
+	# mode this exists to prevent — the 3a reflect measured the morning commute
+	# at ~33 of the morning's ~44 minutes already.
+	var cfg := BalanceConfig.new()
+	assert_lt(cfg.drive_home_length, cfg.drive_length)
+	assert_lt(cfg.drive_home_route_miles, cfg.drive_route_miles)
+
+
 func test_the_clock_hud_states_the_deadline_the_dog_is_racing() -> void:
 	# The whole point of the round: an abstract budget becomes a stated time.
 	var main := _fresh_main()
