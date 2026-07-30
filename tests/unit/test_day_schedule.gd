@@ -14,7 +14,7 @@ func test_build_normal_day_includes_coffee_before_morning_work() -> void:
 	var s := GameState.new()
 	var slots := DaySchedule.build(s, BalanceConfig.new())
 	assert_eq(slots, ["wake", "brush", "shower", "clothes", "breakfast", "drive",
-			"coffee", "work_am", "lunch", "work_pm", "dinner", "freetime", "sleep"])
+			"coffee", "work_am", "lunch", "work_pm", "drive_home", "dinner", "freetime", "sleep"])
 
 
 func test_default_morning_order_wave3a() -> void:
@@ -74,3 +74,10 @@ func test_set_slots_resets_the_walk() -> void:
 	d.set_slots(["sick"] as Array[String])
 	assert_eq(d.current(), "sick")
 	assert_false(d.advance())
+
+
+func test_the_drive_home_sits_between_afternoon_work_and_dinner() -> void:
+	var slots := DaySchedule.build(GameState.new(), BalanceConfig.new())
+	var home := slots.find("drive_home")
+	assert_gt(home, slots.find("work_pm"), "you leave the office after the office")
+	assert_lt(home, slots.find("dinner"), "and you cook after you get there")
