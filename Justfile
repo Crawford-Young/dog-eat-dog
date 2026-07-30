@@ -16,6 +16,10 @@ lab:
 test:
     "{{godot}}" --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=.gutconfig.json
 
+# headless unit tests for one script — just test-one tests/unit/test_day_clock.gd
+test-one file:
+    "{{godot}}" --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://{{file}} -gexit
+
 # import assets headlessly (after adding/editing scenes or assets)
 import:
     "{{godot}}" --headless --path . --import
