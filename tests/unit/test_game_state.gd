@@ -157,6 +157,55 @@ func test_the_ceiling_clamps_the_overnight_blend() -> void:
 	assert_eq(s.energy, cfg.sleep_ceiling_min, "an early night cannot outrun the week")
 
 
+func test_a_sick_day_is_exactly_one_day_even_at_a_maxed_debt() -> void:
+	# The loop this closes: a sick day's schedule collapses to ["sick"], so no
+	# freetime slot runs, so nothing records a night and the debt freezes at the
+	# cap. The ceiling then pins energy under the sick threshold and
+	# DaySchedule.build hands back ["sick"] again the next morning, forever —
+	# breaking both "no firing, no death" and "sick day = exactly 1 day".
+	#
+	# Driven with the WORST mash score, so escaping cannot depend on playing the
+	# burrow beat well: the tail clamp lands on the ceiling either way.
+	var s := GameState.new()
+	s.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	s.refresh_ceiling(cfg)
+	StatEffects.apply("sick", {"score": 0.0, "skipped": false}, s, cfg)
+	s.start_next_day(cfg)
+	assert_gt(
+		s.energy,
+		cfg.sick_energy_threshold,
+		"a day spent asleep has to be able to break the pin",
+	)
+	assert_false(
+		DaySchedule.build(s, cfg).has("sick"),
+		"and the next morning is an ordinary morning",
+	)
+
+
+func test_the_sick_pin_breaks_because_the_debt_moves() -> void:
+	# The outcome above is not enough on its own — a frozen debt is the
+	# mechanism, so the escape has to be the debt actually moving. Bounded loop
+	# rather than a fixed count: the bound catches a regression that re-freezes
+	# it, and the assertion pins the design rule (exactly one day) rather than
+	# an accrual rate that T11 may retune.
+	var s := GameState.new()
+	s.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	s.refresh_ceiling(cfg)
+	var pinned := s.energy
+	var days_sick := 0
+	while Difficulty.is_sick_morning(s.energy, cfg) and days_sick < 5:
+		StatEffects.apply("sick", {"score": 0.0, "skipped": false}, s, cfg)
+		s.start_next_day(cfg)
+		days_sick += 1
+	assert_eq(days_sick, 1, "one day under a blanket is enough — a sick day is exactly one day")
+	assert_eq(
+		s.ledger.debt_minutes,
+		cfg.sleep_debt_cap_minutes + cfg.sleep_need_minutes - cfg.sick_sleep_minutes,
+		"960 owed, 720 slept against a 480 need, so 720 still owed",
+	)
+	assert_gt(s.energy, pinned, "the ceiling lifted instead of staying pinned")
+
+
 func test_no_debt_leaves_the_old_behaviour_untouched() -> void:
 	# 0.5*50 + 0.5*90 = 70.0 — the wave-2 carry blend, unchanged.
 	var cfg := BalanceConfig.new()
