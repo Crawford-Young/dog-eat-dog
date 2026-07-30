@@ -33,6 +33,19 @@ func record_night(bed_minute: float, wake_minute: float, cfg: BalanceConfig) -> 
 	return slept
 
 
+## A sick day's accounting. There is no evening and so no bedtime — the schedule
+## collapses to the sick beat — which left the debt frozen at whatever it was;
+## frozen at the cap, the ceiling pinned energy under the sick threshold and the
+## next morning built another sick day, forever. Being sick IS sleeping all day,
+## so the day banks one long night, and that is the only thing able to pay debt
+## down when there is no bedtime to have. The bed minute is synthesized backwards
+## from sick_sleep_minutes and handed to record_night, so the wrap and both caps
+## stay in exactly one place.
+func record_sick_day(cfg: BalanceConfig) -> float:
+	var wake := float(cfg.morning_start_minutes)
+	return record_night(wake + 1440.0 - maxf(cfg.sick_sleep_minutes, 0.0), wake, cfg)
+
+
 ## The ceiling debt puts on energy. A banked surplus buys no headroom above
 ## 100 — it buys the ABSENCE of a ceiling, which is already the best case.
 func max_energy(cfg: BalanceConfig) -> float:

@@ -47,6 +47,12 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 			state.sick_today = true
 			state.sick_recovery = lerpf(cfg.sick_reset_min, cfg.sick_reset_max,
 					clampf(result.get("score", 0.0), 0.0, 1.0))
+			# A sick day has no freetime slot to record a night, so the day banks
+			# its own long one. Without this the debt freezes, and a ledger at the
+			# cap pins the dog under the sick threshold every morning after —
+			# "sick day = exactly 1 day" depends on this line.
+			state.ledger.record_sick_day(cfg)
+			state.refresh_ceiling(cfg)
 		"work_am":
 			state.record_work_score(result.score)
 			state.apply_energy(-cfg.work_drain)

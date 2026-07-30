@@ -131,3 +131,43 @@ func test_nonsense_bed_minutes_never_produce_negative_sleep() -> void:
 	# negative night would pay off debt for staying up later.
 	var ledger := SleepLedger.new()
 	assert_eq(ledger.record_night(5000.0, 420.0, _cfg()), 0.0)
+
+
+func test_a_sick_day_banks_a_long_night() -> void:
+	# A sick day has no evening, so no freetime slot records a night and the debt
+	# would freeze. Being sick IS sleeping all day, so the day banks one long
+	# night — the only thing that can pay debt down with no bedtime to have.
+	var cfg := _cfg()
+	var ledger := SleepLedger.new()
+	ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	var slept: float = ledger.record_sick_day(cfg)
+	assert_eq(slept, cfg.sick_sleep_minutes)
+	assert_eq(
+		ledger.debt_minutes,
+		cfg.sleep_debt_cap_minutes + cfg.sleep_need_minutes - cfg.sick_sleep_minutes,
+		"720 slept against a 480 need pays 240 off a maxed 960",
+	)
+	assert_gt(
+		ledger.max_energy(cfg),
+		cfg.sick_energy_threshold,
+		"and the lifted ceiling has to clear the cliff, or the sick day cannot end",
+	)
+
+
+func test_a_sick_day_has_to_out_sleep_the_need_or_the_loop_never_ends() -> void:
+	# Held as data, in this wave's style. A retune that drops sick_sleep_minutes
+	# to or below sleep_need_minutes silently restores the permanent-sickness
+	# loop — the sick day would accrue debt instead of paying it down, and the
+	# outcome tests above would be the only witnesses.
+	var cfg := _cfg()
+	assert_gt(cfg.sick_sleep_minutes, cfg.sleep_need_minutes)
+
+
+func test_a_sick_day_still_respects_the_bank_cap() -> void:
+	# The escape hatch may not double as a surplus farm. record_sick_day routes
+	# through record_night for exactly this — one place owns the caps.
+	var cfg := _cfg()
+	var ledger := SleepLedger.new()
+	ledger.debt_minutes = -cfg.sleep_bank_cap_minutes
+	ledger.record_sick_day(cfg)
+	assert_eq(ledger.debt_minutes, -cfg.sleep_bank_cap_minutes)

@@ -197,6 +197,14 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## The energy ceiling at a fully maxed debt. BELOW sick_energy_threshold on
 ## purpose — chronic lateness has to be able to make the dog sick.
 @export var sleep_ceiling_min: float = 8.0
+## How long a sick day sleeps. This is the sick loop's ESCAPE HATCH, not
+## flavour. A sick day's schedule collapses to the sick beat, so no freetime slot
+## records a night and the debt would freeze — and a debt frozen at the cap pins
+## energy under sick_energy_threshold, which builds another sick day tomorrow,
+## forever. That breaks both "no firing, no death" and "sick day = exactly 1
+## day". It must therefore stay comfortably ABOVE sleep_need_minutes, so one
+## sick day always pays debt down rather than accruing more.
+@export var sick_sleep_minutes: float = 720.0
 ## Cooking's energy payoff, scaled by how few steps got spoiled. Replaces the
 ## flat dinner_cook_energy: the meal is a minigame now, so its value is earned.
 @export var cook_energy_min: float = 2.0
