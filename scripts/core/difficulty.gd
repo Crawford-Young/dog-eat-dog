@@ -105,11 +105,14 @@ static func listening_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
-static func temptation_params(energy: float, cfg: BalanceConfig, played_late: bool) -> Dictionary:
+## The habit spiral, re-sourced. played_late was one bit — late yesterday or
+## not. Debt gives the same spiral depth: five late nights pull harder than one,
+## and a maxed debt pulls exactly as hard as the old bool did.
+static func temptation_params(energy: float, cfg: BalanceConfig, debt_minutes: float) -> Dictionary:
 	var d := _deficit(energy)
 	var pull := lerpf(cfg.temptation_pull_base, cfg.temptation_pull_max, d)
-	if played_late:
-		pull += cfg.temptation_habit_bonus
+	var habit := clampf(debt_minutes / maxf(cfg.sleep_debt_cap_minutes, 1.0), 0.0, 1.0)
+	pull += cfg.temptation_habit_bonus * habit
 	return {
 		"pull_strength": pull,
 		"dwell_time": cfg.temptation_dwell_time,

@@ -130,3 +130,41 @@ func test_sick_recovery_overrides_bedtime_energy() -> void:
 	s.start_next_day(cfg)
 	assert_eq(s.energy, 72.0)
 	assert_false(s.sick_today)
+
+
+func test_the_ceiling_clamps_apply_energy() -> void:
+	# Load-bearing. Without this clamp, coffee or breakfast refills a
+	# sleep-deprived dog back to full and the debt has no daytime presence at
+	# all — it would only ever show up for one frame at dawn.
+	var cfg := BalanceConfig.new()
+	var s := GameState.new()
+	s.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	s.refresh_ceiling(cfg)
+	s.apply_energy(500.0)
+	assert_eq(s.energy, cfg.sleep_ceiling_min, "no meal outruns a sleep debt")
+
+
+func test_the_ceiling_clamps_the_overnight_blend() -> void:
+	var cfg := BalanceConfig.new()
+	var s := GameState.new()
+	s.bedtime = "early"
+	s.energy = 90.0
+	s.brushed_today = true
+	s.showered_today = true
+	s.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	s.refresh_ceiling(cfg)
+	s.start_next_day(cfg)
+	assert_eq(s.energy, cfg.sleep_ceiling_min, "an early night cannot outrun the week")
+
+
+func test_no_debt_leaves_the_old_behaviour_untouched() -> void:
+	# 0.5*50 + 0.5*90 = 70.0 — the wave-2 carry blend, unchanged.
+	var cfg := BalanceConfig.new()
+	var s := GameState.new()
+	s.bedtime = "early"
+	s.energy = 50.0
+	s.brushed_today = true
+	s.showered_today = true
+	s.start_next_day(cfg)
+	assert_eq(s.energy, 70.0)
+	assert_eq(s.energy_ceiling, 100.0)

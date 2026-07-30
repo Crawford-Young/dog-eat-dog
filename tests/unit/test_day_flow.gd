@@ -96,13 +96,6 @@ func test_a_whole_day_runs_through_to_the_summary() -> void:
 	assert_true(summary.visible, "the day ends on the summary panel")
 
 
-func test_freetime_games_decide_the_bedtime_the_sleep_beat_narrates() -> void:
-	var main := _fresh_main()
-	_walk(main)
-	assert_eq(main.state.bedtime, "late", "two games played means a late night")
-	assert_true(main.state.played_late)
-
-
 func test_a_full_day_pays_the_days_salary() -> void:
 	# QA ruling (issue #8): close_day nets the margin over living costs, not
 	# the raw salary. This fixed walk buys no coffee/takeout (coffee "skip",
@@ -323,10 +316,14 @@ func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
 	# bedtime target alone no longer guarantees a sick warning — it has to clear
 	# the threshold together with whatever energy is left at day's end (44.0 for
 	# this fixed walk, now that the wave-3a morning restores on shower and
-	# breakfast: 0.5*44 + 0.5*late < sick_energy_threshold).
+	# breakfast: 0.5*44 + 0.5*wrecked < sick_energy_threshold).
+	#
+	# Wave 3b: bedtime comes from the evening clock's band, not the game count,
+	# so a synchronous walk's band is no longer this test's business — every
+	# band is wrecked, and the telegraph is what is under test either way.
 	var main := _fresh_main()
 	var wrecked := BalanceConfig.new()
-	wrecked.sleep_energy = {"early": 90.0, "mid": 65.0, "late": -60.0}
+	wrecked.sleep_energy = {"early": -60.0, "mid": -60.0, "late": -60.0}
 	main.cfg = wrecked
 	_walk(main)
 	assert_string_contains(_summary_text(main), "tomorrow might not happen")
@@ -336,6 +333,36 @@ func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
 		_summary_text(rested).contains("tomorrow might not happen"),
 		"a night that only ends tired says nothing",
 	)
+
+
+func test_the_tomorrow_projection_matches_what_the_next_day_actually_does() -> void:
+	# The mirror invariant (repo CLAUDE.md), asserted against itself rather than
+	# reviewed by eye. Nothing else in the suite catches a projection that is
+	# merely WRONG: the wobble telegraph would warn on mornings the dog wakes
+	# fine, or stay quiet on the morning it cannot get up, and every assertion
+	# still passes. Both branches and both ends of the debt range, because the
+	# sick branch returns through a clamp of its own.
+	var main := _fresh_main()
+	for sick in [false, true]:
+		for debt in [0.0, main.cfg.sleep_debt_cap_minutes]:
+			var s := GameState.new()
+			s.bedtime = "late"
+			s.energy = 40.0
+			s.brushed_today = false
+			s.showered_today = true
+			s.sick_today = sick
+			s.sick_recovery = 72.0
+			s.ledger.debt_minutes = debt
+			s.refresh_ceiling(main.cfg)
+			main.state = s
+			var projected: float = main._tomorrow_energy()
+			s.start_next_day(main.cfg)
+			assert_almost_eq(
+				s.energy,
+				projected,
+				0.001,
+				"projection drifted from the real morning at sick=%s debt=%s" % [sick, debt],
+			)
 
 
 func test_the_new_morning_slots_each_get_their_own_difficulty_params() -> void:
