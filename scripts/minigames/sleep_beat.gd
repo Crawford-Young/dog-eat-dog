@@ -4,10 +4,12 @@ extends Minigame
 ## happened at freetime. This beat is non-interactive: it just types out what
 ## the night turned into, holds a moment, and ends the day.
 
+## The band's FEEL, with no hour in it. The evening clock states the time now,
+## and a hardcoded "3am" contradicts a 23:41 bedtime the player just watched.
 const LINES := {
-	"early": "10pm. the ceiling gets twenty solid minutes of your attention, and then you are out.",
-	"mid": "midnight. one last scroll, you promise yourself. it is not the last scroll.",
-	"late": "3am. the room is blue with screen light. the alarm is in four hours.",
+	"early": "the ceiling is still boring and you are already gone.",
+	"mid": "one last scroll, you promise yourself. it is not the last scroll.",
+	"late": "the room is blue with screen light. the alarm is closer than it should be.",
 }
 
 var _hold: float = 1.4
@@ -28,8 +30,13 @@ func _ready() -> void:
 func setup(params: Dictionary) -> void:
 	_hold = params.get("hold", _hold)
 	var bedtime: String = params.get("bedtime", "mid")
-	var line: String = LINES.get(bedtime, LINES["mid"])
-	_typer.play(line, params.get("text_speed", Typewriter.DEFAULT_CHARS_PER_SEC))
+	var lines: Array[String] = [
+		"%s. %s" % [params.get("bed_clock", "23:30"), LINES.get(bedtime, LINES["mid"])],
+	]
+	var ledger: String = params.get("ledger", "")
+	if not ledger.is_empty():
+		lines.append(ledger)
+	_typer.play("\n".join(lines), params.get("text_speed", Typewriter.DEFAULT_CHARS_PER_SEC))
 
 
 func _on_line_finished() -> void:
