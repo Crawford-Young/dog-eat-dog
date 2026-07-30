@@ -3,6 +3,11 @@ extends Resource
 
 ## All wave-1 tunables. Feel iteration edits this (or balance_default.tres), not code.
 
+## The bedtime bands, in order. This is also the key set `sleep_energy` is
+## indexed by and the name list `DayClock.set_bands` receives — one vocabulary,
+## so a rename cannot desync the refill table from the clock.
+const BANDS: PackedStringArray = ["early", "mid", "late"]
+
 @export var wake_mash_base: int = 12
 @export var wake_mash_max: int = 40
 @export var wake_decay_max: float = 6.0
@@ -38,9 +43,7 @@ extends Resource
 @export var work_drain: float = 12.0
 @export var selfcare_restore: float = 6.0
 @export var lunch_restore: float = 3.0
-@export var dinner_cook_energy: float = 10.0
 @export var dinner_takeout_energy: float = 3.0
-@export var late_game_drain: float = 15.0
 @export var skip_brush_penalty: float = 10.0
 @export var sleep_energy: Dictionary = {"early": 90.0, "mid": 65.0, "late": 35.0}
 # Wave-2 QA ruling (issue #5): a night's rest is a blend of leftover energy and
@@ -174,8 +177,55 @@ extends Resource
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]
 
+## The evening block's absolute start — the minute the dog leaves the office.
+## This is the wave's PRIMARY playtest lever: moving it moves every band's
+## effective margin without touching a single band threshold.
+@export var evening_start_minutes: int = 1200
+## Absolute wall-clock lines the bedtime bands are cut at. Stored absolute for
+## the same reason work_start_minutes is — the deadline is the design intent,
+## the span is derived.
+@export var bed_early_line_minutes: int = 1320
+@export var bed_mid_line_minutes: int = 1410
+## What a night is supposed to be. Sleep shorter and the difference accrues.
+@export var sleep_need_minutes: float = 480.0
+## A good week buys one late night, not immunity — this is how far below zero
+## the ledger may bank.
+@export var sleep_bank_cap_minutes: float = 240.0
+## And how far above zero it may rot. Uncapped debt is a death spiral: the
+## ceiling bottoms out and no reachable number of good nights climbs back.
+@export var sleep_debt_cap_minutes: float = 960.0
+## The energy ceiling at a fully maxed debt. BELOW sick_energy_threshold on
+## purpose — chronic lateness has to be able to make the dog sick.
+@export var sleep_ceiling_min: float = 8.0
+## Cooking's energy payoff, scaled by how few steps got spoiled. Replaces the
+## flat dinner_cook_energy: the meal is a minigame now, so its value is earned.
+@export var cook_energy_min: float = 2.0
+@export var cook_energy_max: float = 14.0
+## The drive home. Shorter than the morning commute BY DESIGN (wave-3b
+## invariant) — evening time belongs in cooking and freetime, where the choices
+## are. Everything else about the road is shared with the morning.
+@export var drive_home_length: float = 450.0
+@export var drive_home_route_miles: float = 4.5
+@export var drive_home_waves_base: float = 2.0
+@export var drive_home_waves_max: float = 3.0
+
 
 ## The morning's game-minute budget, derived. game.gd builds every DayClock
 ## from this; nothing stores it.
 func morning_budget() -> float:
 	return maxf(work_start_minutes - morning_start_minutes, 0.0)
+
+
+## The evening's game-minute budget, derived — same rule as morning_budget().
+## The last band line is the stored value; nothing stores this.
+func evening_budget() -> float:
+	return maxf(bed_mid_line_minutes - evening_start_minutes, 0.0)
+
+
+## The band lines as offsets from the evening's start, which is the form
+## DayClock.set_bands takes.
+func bed_band_lines() -> PackedFloat32Array:
+	return PackedFloat32Array([
+		maxf(bed_early_line_minutes - evening_start_minutes, 0.0),
+		maxf(bed_mid_line_minutes - evening_start_minutes, 0.0),
+	])

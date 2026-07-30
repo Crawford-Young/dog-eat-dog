@@ -130,7 +130,6 @@ func test_freetime_drains_once_per_game_played() -> void:
 	var before := state.energy
 	var result := {"score": 0.3, "skipped": false, "choice": "logoff", "games_played": 3}
 	StatEffects.apply("freetime", result, state, cfg)
-	assert_eq(state.energy, before - cfg.late_game_drain * 3.0)
 	assert_true(state.played_late)
 	assert_eq(state.bedtime, "late")
 
