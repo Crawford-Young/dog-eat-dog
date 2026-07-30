@@ -209,3 +209,32 @@ func test_drive_shows_how_far_is_left_and_how_fast_the_dog_is_going() -> void:
 	node._process(1.0)  # empty road: one second of accel
 	assert_string_contains(node.get_node("%Speedo").text, "48 mph")
 	assert_false(node.get_node("%Miles").text.contains("9.0"), "the miles never counted down")
+
+
+func test_the_sleep_beat_states_the_real_bed_time_and_the_ledger() -> void:
+	# The band copy used to hardcode "10pm" / "midnight" / "3am". Once the bed
+	# minute is real those contradict the clock the player just watched, so the
+	# beat takes the time as a param instead of asserting one.
+	var node: Minigame = load("res://scenes/minigames/sleep.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({
+		"bedtime": "late",
+		"bed_clock": "23:41",
+		"ledger": "7h19 tonight. a night behind.",
+		"text_speed": 99999.0,
+		"hold": 0.01,
+	})
+	await wait_physics_frames(2)
+	var text: String = node.get_node("%Line").text
+	assert_string_contains(text, "23:41")
+	assert_string_contains(text, "a night behind")
+
+
+func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:
+	for band in BalanceConfig.BANDS:
+		var line: String = load("res://scripts/minigames/sleep_beat.gd").LINES[band]
+		for stamp in ["pm", "am", "midnight", "noon"]:
+			assert_false(
+				line.to_lower().contains(stamp),
+				"the '%s' line hardcodes '%s' — the clock states the time now" % [band, stamp],
+			)

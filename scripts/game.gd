@@ -82,6 +82,12 @@ var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var clock: DayClock
 var _clock_running := false
 var _evening := false
+## The evening's till, mirrored off the freetime stamp so the sleep beat can
+## still read it after the slot boundary. Seeded to bed_mid_line_minutes (also
+## setup()'s own bed_clock default) at each day reset — not 0.0 — because a
+## schedule that reaches "sleep" without passing through freetime (the lab,
+## T9) would otherwise print "0:00" and hand the ledger a 31-hour night.
+var _bed_minute := 0.0
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -202,8 +208,14 @@ func _params_for(slot: String) -> Dictionary:
 					[] if state.wallet.savings >= cfg.takeout_price else ["takeout"],
 			}
 		"sleep":
+			# The night was recorded when freetime ended, so both of these
+			# read a ledger that already moved. Debt is stated ONCE, here,
+			# in clock-minutes — never as a persistent gauge.
+			var slept := float(cfg.morning_start_minutes) + 1440.0 - _bed_minute
 			return {
 				"bedtime": state.bedtime,
+				"bed_clock": DayClock.format_minutes(int(_bed_minute)),
+				"ledger": state.ledger.ledger_text(slept, cfg),
 				"text_speed": cfg.typewriter_chars_per_sec,
 				"hold": cfg.sleep_hold_time,
 			}
@@ -247,7 +259,8 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		# Freetime is the evening's till, exactly as the commute is the
 		# morning's: the clock stops here and what it reads becomes the night.
 		result["band"] = clock.band_name()
-		result["bed_minute"] = float(cfg.evening_start_minutes) + clock.elapsed
+		_bed_minute = float(cfg.evening_start_minutes) + clock.elapsed
+		result["bed_minute"] = _bed_minute
 		_clock_running = false
 	StatEffects.apply(slot, result, state, cfg)
 	if slot == "drive" and clock.overrun() > 0.0:
@@ -391,6 +404,7 @@ func _on_next_day_pressed() -> void:
 	state.start_next_day(cfg)
 	clock = DayClock.new(cfg.morning_budget())
 	_evening = false
+	_bed_minute = float(cfg.bed_mid_line_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
@@ -402,6 +416,7 @@ func _on_restart_pressed() -> void:
 	state = GameState.new()
 	clock = DayClock.new(cfg.morning_budget())
 	_evening = false
+	_bed_minute = float(cfg.bed_mid_line_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_ending.visible = false
 	_start_slot()
