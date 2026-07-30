@@ -119,35 +119,49 @@ func test_dinner_cook_beats_takeout() -> void:
 	assert_gt(state.energy, s2.energy)
 
 
-func test_bedtime_derives_from_games_played() -> void:
-	assert_eq(StatEffects.derive_bedtime(0), "early")
-	assert_eq(StatEffects.derive_bedtime(1), "mid")
-	assert_eq(StatEffects.derive_bedtime(2), "late")
-	assert_eq(StatEffects.derive_bedtime(9), "late")
+func test_freetime_takes_its_bedtime_from_the_clock_not_the_game_count() -> void:
+	# Bedtime derives from the evening clock now. game.gd stamps the band and
+	# the bed minute onto the result, exactly as it stamps the morning's overrun
+	# onto the drive result — StatEffects never touches a clock itself.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	StatEffects.apply(
+		"freetime", {"games_played": 0, "band": "late", "bed_minute": 1421.0}, state, cfg
+	)
+	assert_eq(state.bedtime, "late", "zero games can still be a late night if you dawdled")
 
 
-func test_freetime_drains_once_per_game_played() -> void:
-	var before := state.energy
-	var result := {"score": 0.3, "skipped": false, "choice": "logoff", "games_played": 3}
-	StatEffects.apply("freetime", result, state, cfg)
-	assert_true(state.played_late)
-	assert_eq(state.bedtime, "late")
+func test_freetime_records_the_night_on_the_ledger() -> void:
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	StatEffects.apply(
+		"freetime", {"games_played": 4, "band": "late", "bed_minute": 1421.0}, state, cfg
+	)
+	assert_eq(state.ledger.debt_minutes, 41.0, "480 needed, 439 slept")
+	assert_lt(state.energy_ceiling, 100.0, "and the ceiling drops the same night")
 
 
-func test_freetime_with_no_games_is_an_early_night() -> void:
-	state.played_late = true
-	var before := state.energy
-	var result := {"score": 1.0, "skipped": false, "choice": "logoff", "games_played": 0}
-	StatEffects.apply("freetime", result, state, cfg)
-	assert_eq(state.energy, before)
-	assert_false(state.played_late)
-	assert_eq(state.bedtime, "early")
+func test_a_long_evening_of_games_no_longer_drains_energy_directly() -> void:
+	# late_game_drain is retired. Games cost CLOCK now, and the clock costs
+	# sleep, and the sleep costs energy — one chain, one authority.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	state.energy = 60.0
+	StatEffects.apply(
+		"freetime", {"games_played": 6, "band": "late", "bed_minute": 1421.0}, state, cfg
+	)
+	assert_eq(state.energy, 60.0, "the games themselves take nothing")
 
 
-func test_freetime_one_game_is_a_mid_bedtime() -> void:
-	var result := {"score": 0.5, "skipped": false, "choice": "logoff", "games_played": 1}
-	StatEffects.apply("freetime", result, state, cfg)
-	assert_eq(state.bedtime, "mid")
+func test_derive_bedtime_is_gone() -> void:
+	# A tunable or helper that reintroduces game-count authority over bedtime
+	# splits it — same class as the retired morning_budget_minutes.
+	# Godot 4.7.1 rejects has_method() called on the class directly ("Make an
+	# instance instead"), so the probe goes through an instance.
+	assert_false(
+		StatEffects.new().has_method("derive_bedtime"),
+		"game count is not a bedtime authority any more",
+	)
 
 
 func test_sleep_is_a_no_op_because_bedtime_is_already_derived() -> void:

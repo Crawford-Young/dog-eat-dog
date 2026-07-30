@@ -92,14 +92,32 @@ func test_typing_params_carry_the_wrong_buffer_cap() -> void:
 	assert_eq(Difficulty.typing_params(50.0, cfg).wrong_cap, cfg.typing_wrong_cap)
 
 
-func test_temptation_pull_grows_with_habit() -> void:
-	var sober := Difficulty.temptation_params(50.0, cfg, false)
-	var hooked := Difficulty.temptation_params(50.0, cfg, true)
-	assert_gt(hooked.pull_strength, sober.pull_strength)
+func test_the_temptation_pull_scales_with_sleep_debt() -> void:
+	# The habit spiral survives the retirement of played_late, with depth
+	# instead of one bit: a late night makes the next one harder to resist, and
+	# five late nights harder still.
+	var cfg := BalanceConfig.new()
+	var rested := Difficulty.temptation_params(65.0, cfg, 0.0)
+	var behind := Difficulty.temptation_params(65.0, cfg, cfg.sleep_debt_cap_minutes * 0.5)
+	var wrecked := Difficulty.temptation_params(65.0, cfg, cfg.sleep_debt_cap_minutes)
+	assert_lt(rested.pull_strength, behind.pull_strength)
+	assert_lt(behind.pull_strength, wrecked.pull_strength)
+	assert_almost_eq(
+		wrecked.pull_strength - rested.pull_strength, cfg.temptation_habit_bonus, 0.001,
+		"a maxed debt pulls exactly as hard as the old played_late bool did",
+	)
+
+
+func test_a_banked_surplus_pulls_no_harder_than_square() -> void:
+	var cfg := BalanceConfig.new()
+	assert_eq(
+		Difficulty.temptation_params(65.0, cfg, -240.0).pull_strength,
+		Difficulty.temptation_params(65.0, cfg, 0.0).pull_strength,
+	)
 
 
 func test_temptation_params_carry_the_loop_tunables() -> void:
-	var p := Difficulty.temptation_params(50.0, cfg, false)
+	var p := Difficulty.temptation_params(50.0, cfg, 0.0)
 	assert_almost_eq(p.dwell_time, cfg.temptation_dwell_time, 0.001)
 	assert_almost_eq(p.pull_growth, cfg.temptation_pull_growth, 0.001)
 	assert_almost_eq(p.pull_ceiling, cfg.temptation_pull_ceiling, 0.001)
@@ -108,7 +126,7 @@ func test_temptation_params_carry_the_loop_tunables() -> void:
 func test_temptation_ceiling_clears_the_worst_starting_pull() -> void:
 	# the ceiling has to sit above the hardest pull the energy lerp + habit
 	# bonus can hand out, or a tired repeat offender starts already capped
-	var worst := Difficulty.temptation_params(0.0, cfg, true)
+	var worst := Difficulty.temptation_params(0.0, cfg, cfg.sleep_debt_cap_minutes)
 	assert_gt(cfg.temptation_pull_ceiling, worst.pull_strength)
 
 

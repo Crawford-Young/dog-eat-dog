@@ -161,7 +161,7 @@ func _params_for(slot: String) -> Dictionary:
 		"lunch":
 			return Difficulty.listening_params(state.energy, cfg)
 		"freetime":
-			return Difficulty.temptation_params(state.energy, cfg, state.played_late)
+			return Difficulty.temptation_params(state.energy, cfg, state.ledger.debt_minutes)
 		"dinner":
 			return {
 				"text_speed": cfg.typewriter_chars_per_sec,
@@ -307,7 +307,11 @@ func _show_summary() -> void:
 ## formula exactly — any drift between the two is a bug.
 func _tomorrow_energy() -> float:
 	if state.sick_today:
-		return clampf(state.sick_recovery, 0.0, 100.0)
+		# The ceiling catches a sick recovery too — start_next_day clamps at its
+		# tail, past both branches, so an absolute reset is still capped by the
+		# week's debt (wave-3b). Mirroring only the OTHER clamp would leave the
+		# telegraph silent on exactly the morning a sick dog cannot get up.
+		return clampf(state.sick_recovery, 0.0, state.energy_ceiling)
 	var leftover: float = state.energy
 	var energy: float = cfg.energy_carry_weight * leftover \
 			+ (1.0 - cfg.energy_carry_weight) * cfg.sleep_energy[state.bedtime]
@@ -315,7 +319,7 @@ func _tomorrow_energy() -> float:
 		energy -= cfg.skip_brush_penalty
 	if not state.showered_today:
 		energy -= cfg.skip_shower_penalty
-	return clampf(energy, 0.0, 100.0)
+	return clampf(energy, 0.0, state.energy_ceiling)
 
 
 func _show_ending() -> void:

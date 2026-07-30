@@ -66,21 +66,18 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 			if result.get("choice") == "takeout":
 				state.wallet.spend(cfg.takeout_price)
 		"freetime":
-			var games: int = result.get("games_played", 0)
-			state.played_late = games > 0
-			state.bedtime = derive_bedtime(games)
+			# game.gd stamps the band and the bed minute onto the result before
+			# this runs — same shape as the overrun it stamps onto the drive.
+			# StatEffects never touches a clock (wave-3a invariant).
+			state.bedtime = result.get("band", "mid")
+			state.ledger.record_night(
+				result.get("bed_minute", float(cfg.bed_mid_line_minutes)),
+				float(cfg.morning_start_minutes),
+				cfg,
+			)
+			state.refresh_ceiling(cfg)
 		"sleep":
-			pass  # bedtime was already decided by the freetime loop
-
-
-## Bedtime is not a choice any more — it falls out of how many "one more
-## game"s happened at freetime.
-static func derive_bedtime(games_played: int) -> String:
-	if games_played <= 0:
-		return "early"
-	if games_played == 1:
-		return "mid"
-	return "late"
+			pass  # the night was recorded at freetime; this beat only reads it out
 
 
 static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:

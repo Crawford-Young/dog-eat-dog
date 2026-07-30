@@ -6,9 +6,14 @@ var performance: float = 0.5
 var day: int = 1
 var brushed_today: bool = false
 var showered_today: bool = false
-var played_late: bool = false
 var bedtime: String = "mid"
 var wallet := Wallet.new()
+var ledger := SleepLedger.new()
+## Cached from ledger.max_energy(cfg) — a DERIVED value, refreshed whenever the
+## ledger moves. apply_energy needs it every frame and has no cfg to hand, and
+## threading cfg through every caller would put a resource in every minigame's
+## reach. Nothing else may write it.
+var energy_ceiling: float = 100.0
 var rank: int = 0
 var warning: bool = false
 var promote_streak: int = 0
@@ -18,15 +23,23 @@ var sick_recovery: float = 65.0
 
 
 func apply_energy(delta: float) -> void:
-	energy = clampf(energy + delta, 0.0, 100.0)
+	energy = clampf(energy + delta, 0.0, energy_ceiling)
 
 
 func record_work_score(score: float) -> void:
 	performance = clampf(performance * 0.7 + score * 0.3, 0.0, 1.0)
 
 
+## Recomputes the ceiling and pulls current energy down under it. Called
+## wherever the ledger moves — StatEffects at bedtime, start_next_day at dawn.
+func refresh_ceiling(cfg: BalanceConfig) -> void:
+	energy_ceiling = ledger.max_energy(cfg)
+	energy = clampf(energy, 0.0, energy_ceiling)
+
+
 func start_next_day(cfg: BalanceConfig) -> void:
 	day += 1
+	refresh_ceiling(cfg)
 	if sick_today:
 		# Sick recovery replaces the bedtime formula: the burrow's mash score
 		# already decided tomorrow's energy. No brush or shower penalty on a
@@ -42,7 +55,7 @@ func start_next_day(cfg: BalanceConfig) -> void:
 			energy -= cfg.skip_brush_penalty
 		if not showered_today:
 			energy -= cfg.skip_shower_penalty
-	energy = clampf(energy, 0.0, 100.0)
+	energy = clampf(energy, 0.0, energy_ceiling)
 	brushed_today = false
 	showered_today = false
 	coffee_today = false
