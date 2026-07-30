@@ -92,6 +92,20 @@ static func drive_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
+## The same road with the same rules, deliberately shorter. Two full commutes a
+## day is the failure mode this exists to prevent — the morning's commute is
+## already ~33 of its ~44 minutes (wave-3a reflect), and evening time belongs in
+## cooking and freetime, where the choices are.
+static func drive_home_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var params := drive_params(energy, cfg)
+	params["length"] = cfg.drive_home_length
+	params["route_miles"] = cfg.drive_home_route_miles
+	params["car_count"] = roundi(
+		lerpf(cfg.drive_home_waves_base, cfg.drive_home_waves_max, _deficit(energy))
+	) * LaneSim.CARS_PER_WAVE
+	return params
+
+
 static func is_sick_morning(energy: float, cfg: BalanceConfig) -> bool:
 	return energy < cfg.sick_energy_threshold
 

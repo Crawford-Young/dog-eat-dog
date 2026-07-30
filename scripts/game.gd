@@ -20,6 +20,7 @@ const SCENES := {
 	"work_am": preload("res://scenes/minigames/typing.tscn"),
 	"lunch": preload("res://scenes/minigames/listening.tscn"),
 	"work_pm": preload("res://scenes/minigames/typing.tscn"),
+	"drive_home": preload("res://scenes/minigames/drive.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
 	"freetime": preload("res://scenes/minigames/freetime.tscn"),
 	"sleep": preload("res://scenes/minigames/sleep.tscn"),
@@ -39,6 +40,7 @@ const SLOT_LABELS := {
 	"work_am": "work, morning",
 	"lunch": "lunch",
 	"work_pm": "work, afternoon",
+	"drive_home": "the drive home",
 	"dinner": "dinner",
 	"freetime": "free time",
 	"sleep": "bed",
@@ -62,6 +64,9 @@ const STINK_COPY := "the stink kept its own desk chair today"
 ## The slots the morning clock runs during — everything from waking up to
 ## parking the car. Once the dog is at the office, time stops mattering.
 const MORNING_TIMED := ["wake", "brush", "shower", "clothes", "breakfast", "drive"]
+## The slots the evening clock runs during. Sleep is NOT one of them: the bed
+## minute is settled the moment freetime ends, so the beat is a readout.
+const EVENING_TIMED := ["drive_home", "dinner", "cooking", "freetime"]
 ## Chores that can be ducked out of. Skipping buys no time back — it costs a
 ## flat penalty, so ducking out is a stat trade, never a clock trade.
 const SKIP_SLOTS := ["brush", "shower", "breakfast"]
@@ -76,6 +81,7 @@ var schedule := DaySchedule.new()
 var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var clock: DayClock
 var _clock_running := false
+var _evening := false
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -109,7 +115,7 @@ func _process(delta: float) -> void:
 	if not _clock_running:
 		return
 	clock.spend(delta * cfg.clock_scale)
-	_clock_label.text = "%s · in by %s" % [
+	_clock_label.text = _evening_hud() if _evening else "%s · in by %s" % [
 		clock.clock_text(cfg.morning_start_minutes),
 		DayClock.format_minutes(cfg.work_start_minutes),
 	]
@@ -119,9 +125,34 @@ func _process(delta: float) -> void:
 	)
 
 
+## The evening always states the best night still available and when it runs
+## out — "21:47 · early until 22:00". In the last band there is nothing left to
+## be late for, so the deadline half drops away.
+func _evening_hud() -> String:
+	var now := clock.clock_text(cfg.evening_start_minutes)
+	var line := clock.next_line()
+	if line < 0.0:
+		return "%s · %s" % [now, clock.band_name()]
+	return "%s · %s until %s" % [
+		now,
+		clock.band_name(),
+		DayClock.format_minutes(cfg.evening_start_minutes + int(line)),
+	]
+
+
 func _start_slot() -> void:
 	var slot := schedule.current()
-	_clock_running = slot in MORNING_TIMED
+	if slot in EVENING_TIMED and not _evening:
+		# One fresh clock per block, built from the derived span — game.gd is
+		# still the only place a DayClock is constructed or spent. Keyed on
+		# ENTERING the block rather than on drive_home specifically: a lab
+		# launch or any reshaped schedule that starts mid-evening would
+		# otherwise run the evening against a morning-shaped, band-less clock,
+		# and band_name() would return "" into the HUD.
+		clock = DayClock.new(cfg.evening_budget())
+		clock.set_bands(BalanceConfig.BANDS, cfg.bed_band_lines())
+		_evening = true
+	_clock_running = slot in MORNING_TIMED or slot in EVENING_TIMED
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS[slot]]
 	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
 	_poster_label.text = "%s · savings %d / %d" % [
@@ -158,6 +189,8 @@ func _params_for(slot: String) -> Dictionary:
 			)
 		"work_pm":
 			return Difficulty.typing_params(state.energy, cfg, 0, state.rank)
+		"drive_home":
+			return Difficulty.drive_home_params(state.energy, cfg)
 		"lunch":
 			return Difficulty.listening_params(state.energy, cfg)
 		"freetime":
@@ -210,6 +243,12 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		# The commute is the morning's till: whatever the clock overran by is
 		# stamped on the result here, and StatEffects charges it below.
 		result["overrun"] = clock.overrun()
+	if slot == "freetime":
+		# Freetime is the evening's till, exactly as the commute is the
+		# morning's: the clock stops here and what it reads becomes the night.
+		result["band"] = clock.band_name()
+		result["bed_minute"] = float(cfg.evening_start_minutes) + clock.elapsed
+		_clock_running = false
 	StatEffects.apply(slot, result, state, cfg)
 	if slot == "drive" and clock.overrun() > 0.0:
 		_show_late_beat()
@@ -351,6 +390,7 @@ func _on_next_day_pressed() -> void:
 	_summary.visible = false
 	state.start_next_day(cfg)
 	clock = DayClock.new(cfg.morning_budget())
+	_evening = false
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_start_slot()
 
@@ -361,6 +401,7 @@ func _on_restart_pressed() -> void:
 	_ending_label.text = ""
 	state = GameState.new()
 	clock = DayClock.new(cfg.morning_budget())
+	_evening = false
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	_ending.visible = false
 	_start_slot()

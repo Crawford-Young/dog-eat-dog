@@ -193,6 +193,17 @@ func test_drive_params_carries_the_traffic_randomness_tunables() -> void:
 	assert_eq(p.blocked_wave_chance, cfg.drive_blocked_wave_chance)
 
 
+func test_the_drive_home_is_the_morning_road_but_shorter() -> void:
+	var cfg := BalanceConfig.new()
+	var morning := Difficulty.drive_params(65.0, cfg)
+	var evening := Difficulty.drive_home_params(65.0, cfg)
+	assert_lt(evening.length, morning.length)
+	assert_lt(evening.route_miles, morning.route_miles)
+	assert_lt(evening.car_count, morning.car_count, "fewer walls on a shorter road")
+	assert_eq(evening.top_speed, morning.top_speed, "same car, same road rules")
+	assert_eq(evening.keys().size(), morning.keys().size(), "and the same param contract")
+
+
 func test_typing_params_carry_shift_and_rank_par() -> void:
 	var cfg := BalanceConfig.new()
 	var p := Difficulty.typing_params(80.0, cfg, 0, 2)

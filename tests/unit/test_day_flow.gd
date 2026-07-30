@@ -49,7 +49,11 @@ func _reseed(main: Control) -> void:
 
 
 func _result_for(slot: String, overrides: Dictionary) -> Dictionary:
-	return overrides.get(slot, FAKE_RESULTS.get(slot, {"score": 1.0, "skipped": false}))
+	# .duplicate() is load-bearing now that T5 stamps onto the freetime result
+	# in place (game.gd's "band"/"bed_minute" write): FAKE_RESULTS is a const,
+	# and GDScript freezes const dictionary VALUES read-only too, so handing
+	# back the frozen entry directly makes game.gd's write fail.
+	return overrides.get(slot, FAKE_RESULTS.get(slot, {"score": 1.0, "skipped": false})).duplicate()
 
 
 ## Drive the day game.gd actually built, one faked finish per slot. Stops after
@@ -200,7 +204,7 @@ func test_a_sick_morning_is_one_unpaid_day_in_the_blanket() -> void:
 	assert_eq(
 		DaySchedule.build(main.state, main.cfg),
 		["wake", "brush", "shower", "clothes", "breakfast", "drive", "coffee", "work_am",
-				"lunch", "work_pm", "dinner", "freetime", "sleep"],
+				"lunch", "work_pm", "drive_home", "dinner", "freetime", "sleep"],
 		"day two is an ordinary day again",
 	)
 
@@ -265,7 +269,7 @@ func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
 		"the office delivers the news same-day now",
 	)
 	beat.finished.emit({"score": 1.0, "skipped": false})
-	for slot in ["dinner", "freetime", "sleep"]:
+	for slot in ["drive_home", "dinner", "freetime", "sleep"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_false(
 		_summary_text(main).contains("the cat glanced at your screen today. twice."),
@@ -303,7 +307,7 @@ func test_a_sustained_promotion_announces_at_the_office_before_the_summary() -> 
 	)
 	beat.finished.emit({"score": 1.0, "skipped": false})
 	assert_eq(main.state.rank, 1, "the promotion actually landed")
-	for slot in ["dinner", "freetime", "sleep"]:
+	for slot in ["drive_home", "dinner", "freetime", "sleep"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_true(
 		(main.get_node("%Summary") as Panel).visible, "the day still closes on a summary afterward"
@@ -568,3 +572,44 @@ func test_arriving_on_time_skips_the_late_beat_entirely() -> void:
 		"res://scenes/minigames/coffee.tscn",
 		"the coffee cart is hosted next, not a late beat",
 	)
+
+
+func test_the_evening_clock_runs_from_the_drive_home_to_bed() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	assert_eq(main.clock.budget, main.cfg.evening_budget(), "a fresh clock for the evening")
+	assert_eq(main.clock.band_name(), "early", "which starts with every band still available")
+	assert_true(main._clock_running)
+
+
+func test_the_evening_clock_is_hidden_at_the_sleep_beat() -> void:
+	# The night is already decided by the time the beat plays — letting the HUD
+	# tick behind that copy would be a lie, same reasoning as the late beat.
+	var main := _fresh_main()
+	main.schedule.set_slots(["sleep"] as Array[String])
+	main._start_slot()
+	assert_false(main._clock_running)
+
+
+func test_the_band_the_clock_lands_on_becomes_the_bedtime() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main.clock.spend(main.cfg.evening_budget())
+	main._on_finished(
+		{"score": 1.0, "skipped": false, "games_played": 3}, "freetime", autofree(Node.new())
+	)
+	assert_eq(main.state.bedtime, "late", "a burned evening is a late night")
+	assert_gt(main.state.ledger.debt_minutes, 0.0, "and a late night owes sleep")
+
+
+func test_an_early_evening_banks_sleep() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main._on_finished(
+		{"score": 1.0, "skipped": false, "games_played": 0}, "freetime", autofree(Node.new())
+	)
+	assert_eq(main.state.bedtime, "early")
+	assert_lt(main.state.ledger.debt_minutes, 0.0, "straight to bed banks the surplus")

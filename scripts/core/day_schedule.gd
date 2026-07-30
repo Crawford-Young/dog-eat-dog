@@ -8,8 +8,8 @@ extends RefCounted
 ## dog has actually arrived.
 
 const DEFAULT_SLOTS: Array[String] = ["wake", "brush", "shower", "clothes",
-		"breakfast", "drive", "work_am", "lunch", "work_pm", "dinner",
-		"freetime", "sleep"]
+		"breakfast", "drive", "work_am", "lunch", "work_pm", "drive_home",
+		"dinner", "freetime", "sleep"]
 
 ## Wave-1 name kept as an alias — test_day_flow.gd's scene smoke walk still
 ## reads DaySchedule.SLOTS to drive main.tscn through a default day.
@@ -35,8 +35,8 @@ static func build(state: GameState, cfg: BalanceConfig) -> Array[String]:
 	# the bathroom.
 	if state.warning:
 		slots.append("warning")
-	slots.append_array(["coffee", "work_am", "lunch", "work_pm", "dinner",
-			"freetime", "sleep"])
+	slots.append_array(["coffee", "work_am", "lunch", "work_pm", "drive_home",
+			"dinner", "freetime", "sleep"])
 	return slots
 
 
