@@ -264,23 +264,43 @@ func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:
 
 
 ## issue #11 round 4, user ruling: "space should be the button. click should be
-## everywhere. similar to breakfast." The four gesture recognizers retire in
-## favor of breakfast's press contract — a click anywhere or SPACE, graded by
-## the running BeatTimer. Seven presses total (chop 3, transfer 1, stir 2,
-## pour 1) should carry the whole recipe to completion.
-func test_the_cooking_scene_finishes_after_seven_presses() -> void:
+## everywhere. similar to breakfast" — the four gesture recognizers retired in
+## favor of a click-anywhere/SPACE press contract.
+## issue #11 round 5, user ruling: "stirring a pot should not be rhythm."
+## Chop/transfer stay press-graded (BeatTimer); stir/pour become hold-graded
+## (HoldMeter) — press starts the hold, release commits. window: 1.0 makes
+## every beat/band accept, same simplification test_the_cooking_scene_
+## walks_its_recipe_and_finishes already uses via tolerance: 1.0 — this test
+## is about the input chain reaching finished, not grading precision.
+func test_the_cooking_scene_completes_the_diegetic_walk() -> void:
 	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
 	add_child_autofree(node)
 	var got: Array = []
 	node.finished.connect(func(r: Dictionary) -> void: got.append(r))
-	node.setup({"tolerance": 1.0, "text_speed": 300.0})
+	node.setup({"tolerance": 1.0, "window": 1.0, "text_speed": 300.0})
 	await wait_physics_frames(2)
 	var space := InputEventKey.new()
 	space.pressed = true
 	space.echo = false
 	space.physical_keycode = KEY_SPACE
-	for _i in range(7):
+	var release := InputEventKey.new()
+	release.pressed = false
+	release.physical_keycode = KEY_SPACE
+	# chop: 3 presses
+	for _i in range(3):
 		node._unhandled_input(space)
+	# transfer: 1 press
+	node._unhandled_input(space)
+	# stir: press starts the hold, tick the meter partway, release commits
+	node._unhandled_input(space)
+	for _i in range(10):
+		node._process(0.1)
+	node._unhandled_input(release)
+	# pour: same hold/release shape
+	node._unhandled_input(space)
+	for _i in range(10):
+		node._process(0.1)
+	node._unhandled_input(release)
 	await wait_physics_frames(2)
 	assert_eq(got.size(), 1, "the pan finished exactly once")
 
@@ -322,7 +342,7 @@ func test_the_cooking_scene_has_visible_gesture_targets() -> void:
 	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
 	add_child_autofree(node)
 	for unique_name in ["%Pan", "%PanFill", "%Board", "%Carrots", "%Ladle", "%LadleFill",
-			"%GestureBar", "%StirSpot", "%PanGlow", "%RhythmLane", "%RhythmMarker", "%RhythmZone"]:
+			"%GestureBar", "%StirSpot", "%PanGlow", "%Knife", "%FillLine"]:
 		assert_not_null(node.get_node(unique_name), "%s is missing" % unique_name)
 
 
