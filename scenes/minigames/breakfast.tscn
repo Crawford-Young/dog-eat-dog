@@ -24,6 +24,67 @@ anchor_right = 0.55
 anchor_bottom = 0.38
 horizontal_alignment = 1
 
+[node name="Toast" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.42
+anchor_top = 0.39
+anchor_right = 0.58
+anchor_bottom = 0.47
+mouse_filter = 2
+color = Color(0.85, 0.65, 0.25, 1)
+visible = false
+
+[node name="Egg" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.42
+anchor_top = 0.39
+anchor_right = 0.58
+anchor_bottom = 0.47
+mouse_filter = 2
+color = Color(0.95, 0.95, 0.9, 1)
+visible = false
+
+[node name="Yolk" type="ColorRect" parent="Egg"]
+anchor_left = 0.35
+anchor_top = 0.3
+anchor_right = 0.65
+anchor_bottom = 0.7
+mouse_filter = 2
+color = Color(0.95, 0.75, 0.15, 1)
+
+[node name="Cakes" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.42
+anchor_top = 0.39
+anchor_right = 0.58
+anchor_bottom = 0.47
+mouse_filter = 2
+visible = false
+
+[node name="Cake0" type="ColorRect" parent="Cakes"]
+anchor_left = 0.05
+anchor_top = 0.6
+anchor_right = 0.95
+anchor_bottom = 0.85
+mouse_filter = 2
+color = Color(0.75, 0.55, 0.3, 1)
+
+[node name="Cake1" type="ColorRect" parent="Cakes"]
+anchor_left = 0.1
+anchor_top = 0.3
+anchor_right = 0.9
+anchor_bottom = 0.55
+mouse_filter = 2
+color = Color(0.75, 0.55, 0.3, 1)
+
+[node name="Cake2" type="ColorRect" parent="Cakes"]
+anchor_left = 0.15
+anchor_top = 0.0
+anchor_right = 0.85
+anchor_bottom = 0.25
+mouse_filter = 2
+color = Color(0.75, 0.55, 0.3, 1)
+
 [node name="Lane" type="ColorRect" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.2

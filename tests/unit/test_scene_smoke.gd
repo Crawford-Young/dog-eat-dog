@@ -150,6 +150,29 @@ func test_breakfast_lets_the_mouse_reach_the_game() -> void:
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
+func test_the_breakfast_scene_has_visible_props() -> void:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"window": 0.3, "speed": 1.6, "beats": 3})
+	for unique_name in ["%Toast", "%Egg", "%Cakes"]:
+		assert_not_null(node.get_node(unique_name), "%s is missing" % unique_name)
+
+
+## The prop-parity pass only ever exercised beat 1 (setup() calls _start_beat()
+## once) — nothing drove the cakes beat, the one whose prop is a Control
+## container rather than a ColorRect. Same absence class as the draw-order
+## lesson: a correct-looking suite that never reaches the third beat at all.
+func test_breakfast_survives_all_three_beats() -> void:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"window": 0.3, "speed": 1.6, "beats": 3})
+	watch_signals(node)
+	node._press()
+	node._press()
+	node._press()
+	assert_signal_emitted(node, "finished")
+
+
 ## Breakfast takes a click OR space, but advertised only the click — and the click
 ## was the affordance issue #6 had broken, so the prompt named the one input that
 ## did not work. Copy states every accepted input. (issue #8)
