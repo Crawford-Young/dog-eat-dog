@@ -6,6 +6,11 @@ extends Minigame
 ## that is the point — and each game pulls harder. Only a deliberate left-click
 ## on the logoff button gets you out.
 
+## Fired the instant a game finishes. This scene never touches a clock —
+## game.gd is the only spender (DayClock invariant) — so it only REPORTS that
+## a game happened; game.gd decides what that costs.
+signal game_played
+
 var _session: FreetimeSession
 var _cursor_pos: Vector2
 var _running: bool = false
@@ -59,6 +64,7 @@ func _tick_dwell(delta: float) -> void:
 		# the game finished and dumped you back at the desktop
 		_recenter_cursor()
 		_update_counter()
+		game_played.emit()
 	_game_btn.modulate = Color.WHITE.lerp(Color(1.0, 0.55, 0.3), _session.dwell_ratio())
 
 

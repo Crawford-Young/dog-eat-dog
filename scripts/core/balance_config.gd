@@ -31,6 +31,9 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var temptation_habit_bonus: float = 120.0
 @export var temptation_dwell_time: float = 0.25
 @export var temptation_pull_growth: float = 90.0
+## The game-shaped hole in the evening — what one more round actually costs
+## in clock minutes. game.gd spends this per game_played signal.
+@export var freetime_game_minutes: float = 45.0
 # Hard ceiling on the drift, in px/sec. Logoff is the loop's only exit, so an
 # uncapped pull eventually outruns any mouse and softlocks the night. 600 sits
 # just above the worst uncapped start (pull_max 420 + habit_bonus 120) and well

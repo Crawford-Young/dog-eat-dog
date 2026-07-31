@@ -171,6 +171,11 @@ func _start_slot() -> void:
 	var node: Minigame = SCENES[slot].instantiate()
 	_host.add_child(node)
 	node.finished.connect(_on_finished.bind(slot, node), CONNECT_ONE_SHOT)
+	if slot == "freetime":
+		# String form: node is typed Minigame here, and game_played lives only
+		# on the freetime subclass, so a typed `node.game_played.connect(...)`
+		# would not resolve against the base class.
+		node.connect("game_played", _on_game_played)
 	node.setup(_params_for(slot))
 
 
@@ -244,6 +249,15 @@ func _params_for(slot: String) -> Dictionary:
 			}
 		_:
 			return {}
+
+
+## The minigame only reports that a game finished — game.gd is the single
+## spender of any DayClock (wave-3a invariant), same shape as skip_time_cost
+## charging the fixed penalty for a ducked chore. Without this, a game's only
+## cost was its ~1s dwell hover, so more games never moved the bed minute and
+## the whole debt thesis was inert (issue #12).
+func _on_game_played() -> void:
+	clock.spend(cfg.freetime_game_minutes)
 
 
 func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
