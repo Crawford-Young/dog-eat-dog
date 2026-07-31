@@ -216,6 +216,11 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## wrecked dog gets more slack per step, not fewer steps.
 @export var cook_tolerance_base: float = 0.2
 @export var cook_tolerance_max: float = 0.55
+## The timing axis: the rhythm window narrows when tired, while tolerance
+## (above) widens to forgive what the narrower window costs.
+@export var cook_window_base: float = 0.3
+@export var cook_window_min: float = 0.15
+@export var cook_beat_speed: float = 1.2
 ## The drive home. Shorter than the morning commute BY DESIGN (wave-3b
 ## invariant) — evening time belongs in cooking and freetime, where the choices
 ## are. Everything else about the road is shared with the morning.

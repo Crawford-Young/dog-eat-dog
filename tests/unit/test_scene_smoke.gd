@@ -277,7 +277,7 @@ func test_the_cooking_scene_has_visible_gesture_targets() -> void:
 	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
 	add_child_autofree(node)
 	for unique_name in ["%Pan", "%PanFill", "%Board", "%Carrots", "%Ladle", "%LadleFill",
-			"%GestureBar", "%StirSpot", "%PanGlow"]:
+			"%GestureBar", "%StirSpot", "%PanGlow", "%RhythmLane", "%RhythmMarker", "%RhythmZone"]:
 		assert_not_null(node.get_node(unique_name), "%s is missing" % unique_name)
 
 

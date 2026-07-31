@@ -111,6 +111,8 @@ static func drive_home_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 static func cooking_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"tolerance": lerpf(cfg.cook_tolerance_base, cfg.cook_tolerance_max, _deficit(energy)),
+		"window": lerpf(cfg.cook_window_base, cfg.cook_window_min, _deficit(energy)),
+		"beat_speed": cfg.cook_beat_speed,
 		"text_speed": cfg.typewriter_chars_per_sec,
 	}
 
