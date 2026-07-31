@@ -18,8 +18,14 @@ func _init(speed: float, band_center: float, band_width: float) -> void:
 	_band_width = band_width
 
 
+## Direct fill, for gestures measured in something other than held seconds —
+## stir advances by revolutions fed through a CircleTracker, not by ticking.
+func advance(amount: float) -> void:
+	value = clampf(value + amount, 0.0, 1.0)
+
+
 func tick(delta: float) -> void:
-	value = minf(value + _speed * delta, 1.0)
+	advance(_speed * delta)
 
 
 func release() -> bool:

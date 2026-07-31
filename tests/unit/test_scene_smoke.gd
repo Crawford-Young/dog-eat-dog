@@ -286,17 +286,31 @@ func test_the_cooking_scene_completes_the_diegetic_walk() -> void:
 	var release := InputEventKey.new()
 	release.pressed = false
 	release.physical_keycode = KEY_SPACE
+	var mouse_press := InputEventMouseButton.new()
+	mouse_press.pressed = true
+	mouse_press.button_index = MOUSE_BUTTON_LEFT
+	var mouse_release := InputEventMouseButton.new()
+	mouse_release.pressed = false
+	mouse_release.button_index = MOUSE_BUTTON_LEFT
 	# chop: 3 presses
 	for _i in range(3):
 		node._unhandled_input(space)
 	# transfer: 1 press
 	node._unhandled_input(space)
-	# stir: press starts the hold, tick the meter partway, release commits
-	node._unhandled_input(space)
-	for _i in range(10):
-		node._process(0.1)
-	node._unhandled_input(release)
-	# pour: same hold/release shape
+	# stir (issue #11 round 6: mouse-only) — press starts the hold, circle
+	# the pan three full turns (well past STIR_MIN_RADIUS) to feed the
+	# tracker, mouse release commits.
+	node._unhandled_input(mouse_press)
+	var pan_center: Vector2 = node.get_node("%Pan").get_global_rect().get_center()
+	var steps := 24
+	var turns := 3
+	for i in range(steps * turns + 1):
+		var angle := TAU * float(i) / float(steps)
+		var motion := InputEventMouseMotion.new()
+		motion.position = pan_center + Vector2.RIGHT.rotated(angle) * 40.0
+		node._unhandled_input(motion)
+	node._unhandled_input(mouse_release)
+	# pour: same hold/release shape, SPACE still fine
 	node._unhandled_input(space)
 	for _i in range(10):
 		node._process(0.1)

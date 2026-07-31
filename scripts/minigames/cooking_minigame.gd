@@ -1,21 +1,24 @@
 extends Minigame
 
-## Dinner's four verbs, on screen — fully diegetic timing now (issue #11
-## round 5, user ruling: "stirring a pot should not be rhythm"). Each verb
-## shows its own fiction for the same underlying timing skill:
+## Dinner's four verbs, on screen — fully diegetic timing (issue #11 round 5,
+## user ruling: "stirring a pot should not be rhythm"). Each verb shows its
+## own fiction for the same underlying timing skill:
 ##   chop: a knife bobs over the carrots — press at contact.
 ##   transfer: the board rocks — press at the level angle.
-##   stir: the pot's sheen shifts as you hold — let go when it's glossy.
+##   stir: the pot's sheen shifts as you circle the mouse — let go glossy.
 ##   pour: the ladle fill rises as you hold — let go at the line.
-## Chop and transfer are still graded by a BeatTimer (a press-timing skill);
-## stir and pour are graded by a HoldMeter (a hold-and-release skill). All
-## recipe economics stay in CookingSession — this script only turns input into
-## (verb, quality) pairs, prints the prompt, and shows the fiction.
+## Chop and transfer are graded by a BeatTimer (a press-timing skill); pour is
+## graded by a HoldMeter driven by held time. Stir (issue #11 round 6, user
+## ruling: "stir should be the mouse stirring") drives that SAME HoldMeter
+## through actual circular mouse motion (CircleTracker revolutions) instead
+## of hold time — the sheen fiction is unchanged, only what advances it is.
+## All recipe economics stay in CookingSession — this script only turns input
+## into (verb, quality) pairs, prints the prompt, and shows the fiction.
 
 const PROMPTS := {
 	"chop": "chop — press when the knife falls",
 	"transfer": "tip the board in — press when it's level",
-	"stir": "stir — hold, let go when it shines",
+	"stir": "stir — hold and circle the pan, let go when it shines",
 	"pour": "pour — hold, let go at the line",
 }
 ## How many presses chop/transfer want before they commit.
@@ -40,6 +43,12 @@ const SHEEN_OVERWORKED := Color(0.8, 0.7, 0.6)
 ## resolution-independent without referencing a sibling's computed rect.
 const KNIFE_RAISED_FRAC := 0.36
 const KNIFE_CONTACT_FRAC := 0.44
+## Same dead-zone shower.tscn's %Spot uses. The round-2 bug was a ~115px
+## radius derived from the pan's own size — do not re-derive it that way.
+const STIR_MIN_RADIUS := 12.0
+## The meter fills to 1.0 over this many revolutions — the 0.75 band center
+## lands at 2.25 revolutions, a stir and a quarter past two.
+const STIR_FULL_REVOLUTIONS := 3.0
 
 var _session: CookingSession
 var _text_speed: float = Typewriter.DEFAULT_CHARS_PER_SEC
@@ -50,7 +59,8 @@ var _meter: HoldMeter
 var _presses: int = 0
 var _hits: int = 0
 var _holding: bool = false
-var _orbit_angle: float = 0.0
+var _tracker: CircleTracker
+var _last_revs: float = 0.0
 var _pulse_t: float = 0.0
 var _flash_t: float = 0.0
 var _flash_color: Color = Color.WHITE
@@ -119,10 +129,17 @@ func _announce() -> void:
 	_presses = 0
 	_hits = 0
 	_holding = false
-	_orbit_angle = 0.0
+	_tracker = null
+	_last_revs = 0.0
 	if verb == "chop" or verb == "transfer":
 		_beat = BeatTimer.new(_beat_speed, _window)
 		_meter = null
+	elif verb == "stir":
+		_beat = null
+		# Speed is irrelevant here — stir never ticks. Mouse circling feeds
+		# the meter through advance() instead (issue #11 round 6: "stir
+		# should be the mouse stirring", not a hold timer).
+		_meter = HoldMeter.new(0.0, HOLD_BAND_CENTER, _window)
 	else:
 		_beat = null
 		# Half beat speed: a full fill takes ~1.7s at the default 1.2, leaving
@@ -198,6 +215,26 @@ func _start_hold() -> void:
 	_holding = true
 
 
+## Stir's own press-start: mouse only (SPACE can't stir a pot), and a fresh
+## CircleTracker centered on the pan — same shape shower.tscn uses for its
+## scrub spots.
+func _start_stir() -> void:
+	_holding = true
+	_tracker = CircleTracker.new(_pan.get_global_rect().get_center(), STIR_MIN_RADIUS)
+	_last_revs = 0.0
+
+
+## Mouse motion while stirring: feed the tracker, advance the meter by the
+## revolutions gained since the last feed (not the running total — advance()
+## accumulates, so re-feeding the whole total would double-count), and the
+## stir spot follows the cursor — the spoon IS the mouse now.
+func _feed_stir(pos: Vector2) -> void:
+	_tracker.feed(pos)
+	_meter.advance((_tracker.revolutions - _last_revs) / STIR_FULL_REVOLUTIONS)
+	_last_revs = _tracker.revolutions
+	_stir_spot.global_position = pos - _stir_spot.size / 2.0
+
+
 ## Stir/pour: the hold ends here. Guarded against a stray release that never
 ## had a matching press (nothing upstream guarantees one-press-then-release
 ## pairing for raw input events).
@@ -212,8 +249,8 @@ func _release_hold() -> void:
 
 
 ## Copied from breakfast_minigame.gd:120-128 — a left-click anywhere or SPACE
-## is a press. Chop/transfer act on the press; stir/pour start a hold on
-## press and commit on release, so the release edge is needed too.
+## is a press, for chop/transfer/pour. Stir is mouse-only (issue #11 round 6:
+## "stir should be the mouse stirring") — it does not accept SPACE at all.
 func _unhandled_input(event: InputEvent) -> void:
 	if _session == null or _session.is_done():
 		return
@@ -221,20 +258,27 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT
 	var spaced: bool = event is InputEventKey and event.pressed and not event.echo \
 			and event.physical_keycode == KEY_SPACE
-	var released: bool = (
-		event is InputEventMouseButton and not event.pressed
-				and event.button_index == MOUSE_BUTTON_LEFT
-	) or (
-		event is InputEventKey and not event.pressed and event.physical_keycode == KEY_SPACE
-	)
+	var released_click: bool = event is InputEventMouseButton and not event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT
+	var released_space: bool = event is InputEventKey and not event.pressed \
+			and event.physical_keycode == KEY_SPACE
 	var verb := CookingSession.VERBS[_session.index]
-	if verb == "chop" or verb == "transfer":
-		if clicked or spaced:
-			_press()
-	elif clicked or spaced:
-		_start_hold()
-	elif released:
-		_release_hold()
+	match verb:
+		"chop", "transfer":
+			if clicked or spaced:
+				_press()
+		"stir":
+			if clicked:
+				_start_stir()
+			elif event is InputEventMouseMotion and _holding:
+				_feed_stir(event.position)
+			elif released_click:
+				_release_hold()
+		"pour":
+			if clicked or spaced:
+				_start_hold()
+			elif released_click or released_space:
+				_release_hold()
 
 
 func _process(delta: float) -> void:
@@ -253,10 +297,8 @@ func _process(delta: float) -> void:
 			_beat.tick(delta)
 			_board.rotation_degrees = (_beat.position - 0.5) * 40.0
 		"stir":
-			if _holding:
-				_meter.tick(delta)
-				_orbit_angle += 4.0 * delta
-				_stir_spot.position = _pan.size / 2.0 + Vector2.RIGHT.rotated(_orbit_angle) * 40.0
+			# Motion-driven now — the meter only advances from mouse circling
+			# (_feed_stir), never from ticking. Sheen still reads every frame.
 			_update_pan_sheen()
 		"pour":
 			if _holding:

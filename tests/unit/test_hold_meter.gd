@@ -45,3 +45,24 @@ func test_a_zero_width_band_accepts_only_the_exact_center() -> void:
 	var off_center := HoldMeter.new(1.0, 0.75, 0.0)
 	off_center.tick(0.751)
 	assert_false(off_center.release())
+
+
+func test_advance_accumulates() -> void:
+	var meter := HoldMeter.new(0.0, 0.75, 0.2)
+	meter.advance(0.3)
+	meter.advance(0.2)
+	assert_almost_eq(meter.value, 0.5, 0.001)
+
+
+func test_advance_clamps_at_one() -> void:
+	var meter := HoldMeter.new(0.0, 0.75, 0.2)
+	meter.advance(1.5)
+	assert_eq(meter.value, 1.0)
+
+
+func test_advance_clamps_at_zero() -> void:
+	# Revolutions can't reverse in practice, but the clamp holds regardless —
+	# a negative advance never pushes the meter below empty.
+	var meter := HoldMeter.new(0.0, 0.75, 0.2)
+	meter.advance(-0.5)
+	assert_eq(meter.value, 0.0)
