@@ -211,3 +211,15 @@ func test_the_day_readout_starts_hidden_and_shows_the_morning_clock() -> void:
 	await wait_physics_frames(1)
 	assert_true(readout.visible, "a day preset is riding, so the readout shows")
 	assert_true(readout.text.begins_with("morning"), "a fresh day preset opens on the morning")
+
+
+func test_preset_start_slot_post_work_fast_forwards_to_drive_home() -> void:
+	var lab := _fresh_lab()
+	assert_eq(lab._preset_start_slot("post_work"), "drive_home")
+	assert_eq(lab._preset_start_slot("flush"), "", "every other preset starts from the morning")
+
+
+func test_preset_state_post_work_seeds_an_ordinary_after_work_energy() -> void:
+	var lab := _fresh_lab()
+	var state: GameState = lab._preset_state("post_work")
+	assert_eq(state.energy, 55.0)

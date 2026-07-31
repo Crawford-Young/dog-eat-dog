@@ -781,3 +781,25 @@ func test_a_finished_game_announces_itself() -> void:
 	node._cursor_pos = node._game_btn.get_rect().get_center()
 	node._tick_dwell(10.0)
 	assert_signal_emitted(node, "game_played")
+
+
+## T11 round-1 instrument (user request): a lab preset that starts the day at
+## post-work, so the five measurement evenings don't need a whole morning
+## ridden first. start_from_slot is set BEFORE the node enters the tree, so
+## _ready() sees it already set.
+func test_start_from_slot_fast_forwards_past_the_morning() -> void:
+	var main: Control = load("res://scenes/main.tscn").instantiate()
+	main.start_from_slot = "drive_home"
+	add_child_autofree(main)
+	assert_eq(main.schedule.current(), "drive_home", "the day fast-forwards past the morning")
+	assert_true(main._evening, "entering an evening slot flips the evening clock")
+
+
+## No guard on an unmatched name — pinned as the accepted dev-surface
+## behaviour rather than silently fixed: the while loop walks to advance()
+## returning false, which is the schedule's last slot.
+func test_an_unmatched_start_from_slot_walks_to_the_last_slot() -> void:
+	var main: Control = load("res://scenes/main.tscn").instantiate()
+	main.start_from_slot = "not_a_real_slot"
+	add_child_autofree(main)
+	assert_eq(main.schedule.current(), "sleep", "no match walks to the schedule's end")
