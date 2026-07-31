@@ -201,3 +201,13 @@ func test_the_in_debt_day_preset_starts_a_dog_near_the_cliff() -> void:
 	assert_lt(state.energy_ceiling, 100.0, "and the ceiling is already down")
 	assert_gt(state.energy_ceiling, lab.cfg.sick_energy_threshold,
 		"but not sick yet — one more late night should be what does it")
+
+
+func test_the_day_readout_starts_hidden_and_shows_the_morning_clock() -> void:
+	var lab := _fresh_lab()
+	var readout: Label = lab.get_node("%DayReadout")
+	assert_false(readout.visible, "nothing day-shaped is hosted yet")
+	lab._launch_day("flush")
+	await wait_physics_frames(1)
+	assert_true(readout.visible, "a day preset is riding, so the readout shows")
+	assert_true(readout.text.begins_with("morning"), "a fresh day preset opens on the morning")
