@@ -650,3 +650,98 @@ func test_picking_cook_hosts_the_pan_and_the_day_resumes() -> void:
 		"res://scenes/minigames/freetime.tscn",
 		"the day resumes at the next slot once the pan finishes",
 	)
+
+
+func test_chronic_lateness_eventually_makes_the_dog_sick() -> void:
+	# The live gap this wave closes. sleep_energy["late"] is 35 and the carry
+	# blend trends toward it, so before the ceiling existed a permanently-late
+	# dog never reached the threshold of 12 — only a single catastrophic day
+	# did. Chronic lateness was free.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	var nights := 0
+	# Bounded, not a magic count. "Eventually" is the claim, and a fixed 10 would
+	# make this test a hidden assertion about the accrual RATE — it would go red
+	# on any legitimate T11 retune of sleep_debt_cap_minutes rather than on a
+	# real regression. 20 is comfortably past the cap at any sane seed.
+	while nights < 20 and not Difficulty.is_sick_morning(state.energy, cfg):
+		state.bedtime = "late"
+		state.brushed_today = true
+		state.showered_today = true
+		state.ledger.record_night(float(cfg.bed_mid_line_minutes) + 45.0,
+				float(cfg.morning_start_minutes), cfg)
+		state.refresh_ceiling(cfg)
+		state.start_next_day(cfg)
+		nights += 1
+	assert_true(
+		Difficulty.is_sick_morning(state.energy, cfg),
+		"a fortnight of late nights running has to land the dog in bed",
+	)
+	assert_gt(nights, 3, "but not so fast that one bad week is a death spiral")
+	assert_eq(
+		DaySchedule.build(state, cfg), ["sick"], "and the schedule collapses to the sick beat"
+	)
+	gut.p("chronic-debt sick day reached at night %d — carry this into T11" % nights)
+
+
+func test_the_wobble_telegraphs_the_debt_sick_day_a_night_early() -> void:
+	# Every ladder/sick consequence telegraphs one day ahead. The ceiling adds a
+	# new ROUTE to the sick morning, so the existing telegraph has to cover it —
+	# it does, for free, because game.gd:379 already runs is_sick_morning over
+	# _tomorrow_energy and _tomorrow_energy now clamps to the ceiling.
+	var cfg := BalanceConfig.new()
+	var main := _fresh_main()
+	main.state.bedtime = "late"
+	main.state.energy = 30.0
+	main.state.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	main.state.refresh_ceiling(cfg)
+	assert_true(Difficulty.is_sick_morning(main._tomorrow_energy(), cfg))
+
+
+func test_a_banked_week_absorbs_one_late_night_without_a_sick_day() -> void:
+	# A good week buys ONE late night, not immunity — the other half of the cap.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	for _night in range(6):
+		state.bedtime = "early"
+		# INSIDE the loop: start_next_day resets brushed_today/showered_today at
+		# its tail, so setting them once before the loop silently charges the
+		# skip penalties on every iteration after the first and the bank never
+		# gets a clean week to build from.
+		state.brushed_today = true
+		state.showered_today = true
+		state.ledger.record_night(float(cfg.bed_early_line_minutes) - 60.0,
+				float(cfg.morning_start_minutes), cfg)
+		state.refresh_ceiling(cfg)
+		state.start_next_day(cfg)
+	assert_eq(state.energy_ceiling, 100.0, "a rested week carries no ceiling at all")
+	state.bedtime = "late"
+	state.brushed_today = true
+	state.showered_today = true
+	state.ledger.record_night(float(cfg.bed_mid_line_minutes) + 45.0,
+			float(cfg.morning_start_minutes), cfg)
+	state.refresh_ceiling(cfg)
+	state.start_next_day(cfg)
+	assert_false(
+		Difficulty.is_sick_morning(state.energy, cfg), "one late night off a bank is survivable"
+	)
+	assert_lt(state.ledger.debt_minutes, 0.0, "and the bank absorbed it rather than going to debt")
+
+
+func test_the_debt_never_shows_up_as_a_number_outside_the_sleep_beat() -> void:
+	# Debt is minutes, and the game prints minutes, so the sleep beat's line is
+	# legal. A persistent gauge is not — it violates the intent of the
+	# energy-is-never-a-number rule even while obeying its letter.
+	var cfg := BalanceConfig.new()
+	var main := _fresh_main()
+	main.state.ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	main.state.refresh_ceiling(cfg)
+	main.schedule.set_slots(["freetime"] as Array[String])
+	main._start_slot()
+	await wait_physics_frames(2)
+	for label_name in ["%ClockLabel", "%DogLabel", "%PosterLabel", "%DayLabel"]:
+		var text: String = main.get_node(label_name).text
+		assert_false(
+			text.contains("behind") or text.contains("debt"),
+			"%s is leaking the ledger into the HUD" % label_name,
+		)

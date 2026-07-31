@@ -268,3 +268,18 @@ func test_cooking_lets_the_mouse_reach_the_game() -> void:
 	add_child_autofree(node)
 	var blockers: Array = _mouse_blockers(node)
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
+
+
+func test_the_clock_hud_draws_over_the_minigame_host() -> void:
+	# The wave-3a reflect's closing lesson: a correct node drawn BEHIND an
+	# opaque one passes every test the suite can express. Visibility is not
+	# draw order. main.tscn is already correct — nothing held it there.
+	var main: Control = load("res://scenes/main.tscn").instantiate()
+	add_child_autofree(main)
+	var host: Node = main.get_node("%MinigameHost")
+	var clock: Node = main.get_node("%ClockLabel")
+	assert_gt(
+		clock.get_index(),
+		host.get_index(),
+		"ClockLabel must be declared after MinigameHost or minigames paint over it",
+	)
