@@ -22,7 +22,17 @@ unique_name_in_owner = true
 anchor_left = 0.3
 anchor_top = 0.3
 anchor_right = 0.7
-anchor_bottom = 0.35
+anchor_bottom = 0.34
+mouse_filter = 2
+max_value = 1.0
+show_percentage = false
+
+[node name="GestureBar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.3
+anchor_top = 0.36
+anchor_right = 0.7
+anchor_bottom = 0.4
 mouse_filter = 2
 max_value = 1.0
 show_percentage = false
@@ -30,18 +40,42 @@ show_percentage = false
 [node name="Board" type="ColorRect" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.25
-anchor_top = 0.4
+anchor_top = 0.46
 anchor_right = 0.75
-anchor_bottom = 0.48
+anchor_bottom = 0.54
 mouse_filter = 2
 color = Color(0.5, 0.35, 0.2, 1)
+
+[node name="BoardBit0" type="ColorRect" parent="Board"]
+anchor_left = 0.1
+anchor_top = 0.3
+anchor_right = 0.3
+anchor_bottom = 0.7
+mouse_filter = 2
+color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="BoardBit1" type="ColorRect" parent="Board"]
+anchor_left = 0.4
+anchor_top = 0.3
+anchor_right = 0.6
+anchor_bottom = 0.7
+mouse_filter = 2
+color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="BoardBit2" type="ColorRect" parent="Board"]
+anchor_left = 0.7
+anchor_top = 0.3
+anchor_right = 0.9
+anchor_bottom = 0.7
+mouse_filter = 2
+color = Color(0.9, 0.45, 0.1, 1)
 
 [node name="Carrots" type="Control" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.25
-anchor_top = 0.4
+anchor_top = 0.46
 anchor_right = 0.75
-anchor_bottom = 0.48
+anchor_bottom = 0.54
 mouse_filter = 2
 
 [node name="Carrot0" type="ColorRect" parent="Carrots"]
@@ -71,9 +105,9 @@ color = Color(0.95, 0.5, 0.15, 1)
 [node name="Ladle" type="ColorRect" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.4
-anchor_top = 0.4
+anchor_top = 0.46
 anchor_right = 0.6
-anchor_bottom = 0.48
+anchor_bottom = 0.54
 mouse_filter = 2
 color = Color(0.8, 0.8, 0.85, 1)
 visible = false
@@ -90,10 +124,22 @@ color = Color(0.9, 0.6, 0.2, 1)
 [node name="Pan" type="Control" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.25
-anchor_top = 0.55
+anchor_top = 0.6
 anchor_right = 0.75
-anchor_bottom = 0.9
+anchor_bottom = 0.92
 mouse_filter = 2
+
+[node name="PanGlow" type="ColorRect" parent="Pan"]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+mouse_filter = 2
+color = Color(0.5, 0.65, 0.85, 1)
+visible = false
 
 [node name="PanFill" type="ColorRect" parent="Pan"]
 unique_name_in_owner = true
@@ -101,3 +147,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.55, 0.55, 0.6, 1)
+
+[node name="StirSpot" type="ColorRect" parent="Pan"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.55, 0.45, 0.3, 1)
+visible = false
