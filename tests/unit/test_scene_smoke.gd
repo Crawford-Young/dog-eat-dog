@@ -270,6 +270,16 @@ func test_cooking_lets_the_mouse_reach_the_game() -> void:
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
+## issue #11: the scene worked mechanically but drew nothing to interact
+## with. Every gesture target now has a visible node — pin that they exist,
+## on top of the generic mouse-filter scan above.
+func test_the_cooking_scene_has_visible_gesture_targets() -> void:
+	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
+	add_child_autofree(node)
+	for unique_name in ["%Pan", "%PanFill", "%Board", "%Carrots", "%Ladle", "%LadleFill"]:
+		assert_not_null(node.get_node(unique_name), "%s is missing" % unique_name)
+
+
 func test_the_clock_hud_draws_over_the_minigame_host() -> void:
 	# The wave-3a reflect's closing lesson: a correct node drawn BEHIND an
 	# opaque one passes every test the suite can express. Visibility is not
