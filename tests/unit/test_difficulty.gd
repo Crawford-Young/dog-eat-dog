@@ -169,6 +169,14 @@ func test_breakfast_window_narrows_with_deficit() -> void:
 	assert_eq(Difficulty.breakfast_params(50.0, cfg).beats, cfg.breakfast_beats)
 
 
+func test_cooking_rhythm_window_narrows_with_deficit_and_carries_the_beat() -> void:
+	var cfg := BalanceConfig.new()
+	assert_almost_eq(Difficulty.cooking_params(100.0, cfg).window, cfg.cook_window_base, 0.001)
+	assert_almost_eq(Difficulty.cooking_params(0.0, cfg).window, cfg.cook_window_min, 0.001)
+	assert_almost_eq(Difficulty.cooking_params(100.0, cfg).beat_speed, cfg.cook_beat_speed, 0.001)
+	assert_almost_eq(Difficulty.cooking_params(0.0, cfg).beat_speed, cfg.cook_beat_speed, 0.001)
+
+
 func test_drive_traffic_and_lag_scale_with_deficit() -> void:
 	var cfg := BalanceConfig.new()
 	var fresh := Difficulty.drive_params(100.0, cfg)
