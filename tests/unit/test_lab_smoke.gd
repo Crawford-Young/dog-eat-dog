@@ -166,3 +166,38 @@ func test_preset_cfg_other_presets_return_cfg_unchanged() -> void:
 		day_cfg.morning_budget(), BalanceConfig.new().morning_budget(),
 		"non-late-morning presets pass cfg through untouched"
 	)
+
+
+func test_every_evening_activity_has_a_launcher() -> void:
+	var lab := _fresh_lab()
+	for activity in ["cooking", "drive_home", "dinner", "freetime", "sleep"]:
+		assert_true(lab.SCENES.has(activity), "the lab cannot reach '%s'" % activity)
+
+
+func test_the_debt_preset_drives_the_freetime_pull() -> void:
+	# played_late is gone. The habit checkbox that fed it has to go with it, or
+	# the lab's freetime launch is measuring a field that no longer exists.
+	var lab := _fresh_lab()
+	assert_false("_habit_check" in lab, "the habit checkbox retired with played_late")
+	var square: Dictionary = lab._params_for_debt("freetime", 0.0)
+	var behind: Dictionary = lab._params_for_debt("freetime", lab.cfg.sleep_debt_cap_minutes)
+	assert_lt(square.pull_strength, behind.pull_strength)
+
+
+func test_the_debt_preset_writes_the_sleep_beats_ledger_line() -> void:
+	var lab := _fresh_lab()
+	var params: Dictionary = lab._params_for_debt("sleep", lab.cfg.sleep_need_minutes * 3.0)
+	assert_string_contains(params.ledger, "3 nights behind")
+	assert_true(params.has("bed_clock"), "the beat needs a time to state")
+
+
+func test_the_in_debt_day_preset_starts_a_dog_near_the_cliff() -> void:
+	# Without this the playtest gate cannot reach chronic debt without playing a
+	# real week, and the tuning question the whole mechanic hangs on — how far
+	# the ceiling must fall — is unanswerable in one sitting.
+	var lab := _fresh_lab()
+	var state: GameState = lab._preset_state("in_debt")
+	assert_gt(state.ledger.debt_minutes, 0.0)
+	assert_lt(state.energy_ceiling, 100.0, "and the ceiling is already down")
+	assert_gt(state.energy_ceiling, lab.cfg.sick_energy_threshold,
+		"but not sick yet — one more late night should be what does it")

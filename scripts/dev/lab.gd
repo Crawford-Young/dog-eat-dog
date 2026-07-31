@@ -1,11 +1,11 @@
 extends Control
 
 ## Dev-only playtest lab: launches any single minigame in isolation with a
-## chosen energy preset (+ habit toggle for freetime, + bedtime override for
-## sleep), then shows the raw finished(result) dict verbatim. This is a dev
-## diagnostic surface, not player-facing UI — the "energy is never shown as a
-## number" rule does NOT bind here; presets and result values are shown raw
-## on purpose so feel can be judged per activity.
+## chosen energy preset (+ sleep-debt preset for freetime and sleep, +
+## bedtime override for sleep), then shows the raw finished(result) dict
+## verbatim. This is a dev diagnostic surface, not player-facing UI — the
+## "energy is never shown as a number" rule does NOT bind here; presets and
+## result values are shown raw on purpose so feel can be judged per activity.
 ##
 ## Minigame launches never touch GameState, StatEffects, or DaySchedule. The
 ## day presets below are a different class: they construct a fresh GameState
@@ -20,6 +20,8 @@ const SCENES := {
 	"clothes": preload("res://scenes/minigames/clothes.tscn"),
 	"breakfast": preload("res://scenes/minigames/breakfast.tscn"),
 	"drive": preload("res://scenes/minigames/drive.tscn"),
+	"drive_home": preload("res://scenes/minigames/drive.tscn"),
+	"cooking": preload("res://scenes/minigames/cooking.tscn"),
 	"typing": preload("res://scenes/minigames/typing.tscn"),
 	"listening": preload("res://scenes/minigames/listening.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
@@ -30,7 +32,7 @@ const SCENES := {
 # still renders coworker text (and where speech runs fastest) — so the mid
 # preset must land inside it or the listening speed scaling is untestable here.
 const ENERGY_PRESETS := {"fresh": 90.0, "okay": 65.0, "wrecked": 20.0}
-const BEDTIMES := ["early", "mid", "late"]
+const DEBT_PRESETS := {"square": 0.0, "behind": 240.0, "wrecked": 960.0}
 
 ## Full-day presets: each seeds a fresh GameState and rides res://scenes/main.tscn
 ## from an engineered morning instead of hosting a single minigame.
@@ -43,7 +45,7 @@ var _current_activity: String = ""
 @onready var _activities: VBoxContainer = %Activities
 @onready var _day_presets: VBoxContainer = %DayPresets
 @onready var _energy_row: HBoxContainer = %EnergyRow
-@onready var _habit_check: CheckBox = %HabitCheck
+@onready var _debt_option: OptionButton = %DebtOption
 @onready var _bedtime_option: OptionButton = %BedtimeOption
 @onready var _rank_option: OptionButton = %RankOption
 @onready var _host: Control = %Host
@@ -62,9 +64,12 @@ func _ready() -> void:
 			child.pressed.connect(_on_day_preset_pressed.bind(String(child.name).to_lower()))
 	_replay_button.pressed.connect(_on_replay_pressed)
 	_back_button.pressed.connect(_on_back_pressed)
-	for bedtime in BEDTIMES:
+	for bedtime in BalanceConfig.BANDS:
 		_bedtime_option.add_item(bedtime.capitalize())
-	_bedtime_option.selected = BEDTIMES.find("mid")
+	_bedtime_option.selected = BalanceConfig.BANDS.find("mid")
+	for preset in DEBT_PRESETS:
+		_debt_option.add_item(preset.capitalize())
+	_debt_option.selected = 0
 	for rank_name in RankLadder.RANK_NAMES:
 		_rank_option.add_item(rank_name.capitalize())
 	_rank_option.selected = 0
@@ -121,6 +126,13 @@ func _preset_state(preset: String) -> GameState:
 		"coffee_morning":
 			state.wallet.savings = 20
 			state.energy = 45.0
+		"in_debt":
+			# Three-plus nights behind: the ceiling is down but not yet
+			# under the sick threshold, so ONE more late night should tip
+			# it. This is the only way to playtest the chronic case without
+			# playing a real week.
+			state.ledger.debt_minutes = cfg.sleep_debt_cap_minutes * 0.6
+			state.refresh_ceiling(cfg)
 	return state
 
 
@@ -162,22 +174,47 @@ func _params_for(activity: String) -> Dictionary:
 			return Difficulty.breakfast_params(energy, cfg)
 		"drive":
 			return Difficulty.drive_params(energy, cfg)
+		"drive_home":
+			return Difficulty.drive_home_params(energy, cfg)
+		"cooking":
+			return Difficulty.cooking_params(energy, cfg)
 		"typing":
 			return Difficulty.typing_params(energy, cfg, 0, _rank_option.selected)
 		"listening":
 			return Difficulty.listening_params(energy, cfg)
-		"freetime":
-			return Difficulty.temptation_params(energy, cfg, _habit_check.button_pressed)
+		"freetime", "sleep":
+			return _params_for_debt(activity, _selected_debt())
 		"dinner":
 			return {"text_speed": cfg.typewriter_chars_per_sec}
-		"sleep":
-			return {
-				"bedtime": BEDTIMES[_bedtime_option.selected],
-				"text_speed": cfg.typewriter_chars_per_sec,
-				"hold": cfg.sleep_hold_time,
-			}
 		_:
 			return {}
+
+
+## Pure debt -> params mapping for the two activities a sleep debt changes,
+## kept out of _params_for so it can be unit-tested without a scene tree.
+func _params_for_debt(activity: String, debt_minutes: float) -> Dictionary:
+	if activity == "freetime":
+		return Difficulty.temptation_params(_selected_energy(), cfg, debt_minutes)
+	var ledger := SleepLedger.new()
+	ledger.debt_minutes = debt_minutes
+	var band: String = BalanceConfig.BANDS[_bedtime_option.selected]
+	var bed_minute: int = (
+		cfg.bed_early_line_minutes if band == "early"
+		else cfg.bed_mid_line_minutes if band == "mid"
+		else cfg.bed_mid_line_minutes + 30
+	)
+	var slept := float(cfg.morning_start_minutes) + 1440.0 - float(bed_minute)
+	return {
+		"bedtime": band,
+		"bed_clock": DayClock.format_minutes(bed_minute),
+		"ledger": ledger.ledger_text(slept, cfg),
+		"text_speed": cfg.typewriter_chars_per_sec,
+		"hold": cfg.sleep_hold_time,
+	}
+
+
+func _selected_debt() -> float:
+	return DEBT_PRESETS.values()[maxi(_debt_option.selected, 0)]
 
 
 func _selected_energy() -> float:
