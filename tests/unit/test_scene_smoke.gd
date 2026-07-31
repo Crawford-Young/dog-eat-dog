@@ -263,6 +263,28 @@ func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:
 			)
 
 
+## issue #11 round 4, user ruling: "space should be the button. click should be
+## everywhere. similar to breakfast." The four gesture recognizers retire in
+## favor of breakfast's press contract — a click anywhere or SPACE, graded by
+## the running BeatTimer. Seven presses total (chop 3, transfer 1, stir 2,
+## pour 1) should carry the whole recipe to completion.
+func test_the_cooking_scene_finishes_after_seven_presses() -> void:
+	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
+	add_child_autofree(node)
+	var got: Array = []
+	node.finished.connect(func(r: Dictionary) -> void: got.append(r))
+	node.setup({"tolerance": 1.0, "text_speed": 300.0})
+	await wait_physics_frames(2)
+	var space := InputEventKey.new()
+	space.pressed = true
+	space.echo = false
+	space.physical_keycode = KEY_SPACE
+	for _i in range(7):
+		node._unhandled_input(space)
+	await wait_physics_frames(2)
+	assert_eq(got.size(), 1, "the pan finished exactly once")
+
+
 func test_the_cooking_scene_walks_its_recipe_and_finishes() -> void:
 	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
 	add_child_autofree(node)
