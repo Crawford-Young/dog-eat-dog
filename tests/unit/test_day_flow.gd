@@ -745,3 +745,39 @@ func test_the_debt_never_shows_up_as_a_number_outside_the_sleep_beat() -> void:
 			text.contains("behind") or text.contains("debt"),
 			"%s is leaking the ledger into the HUD" % label_name,
 		)
+
+
+func test_playing_a_game_costs_the_evening_clock_its_price() -> void:
+	# issue #12: a game's only cost was its ~1s dwell hover through
+	# clock_scale, so more games never moved the bed minute and the whole
+	# debt thesis was inert. game.gd spends the clock — the minigame only
+	# reports that a game finished.
+	var main := _fresh_main()
+	main.schedule.set_slots(["freetime"] as Array[String])
+	main._start_slot()
+	var host: Control = main.get_node("%MinigameHost")
+	var node := _current_minigame(host)
+	var before: float = main.clock.elapsed
+	node.emit_signal("game_played")
+	node.emit_signal("game_played")
+	assert_eq(
+		main.clock.elapsed,
+		before + 2 * main.cfg.freetime_game_minutes,
+		"two games played costs two game_played charges, no more no less",
+	)
+
+
+func test_a_finished_game_announces_itself() -> void:
+	var scene: PackedScene = load("res://scenes/minigames/freetime.tscn")
+	var node := scene.instantiate()
+	add_child_autofree(node)
+	node.setup({
+		"pull_strength": 60.0,
+		"dwell_time": 0.25,
+		"pull_growth": 90.0,
+		"pull_ceiling": 600.0,
+	})
+	watch_signals(node)
+	node._cursor_pos = node._game_btn.get_rect().get_center()
+	node._tick_dwell(10.0)
+	assert_signal_emitted(node, "game_played")
