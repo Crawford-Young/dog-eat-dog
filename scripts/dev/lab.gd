@@ -49,6 +49,7 @@ var _current_activity: String = ""
 @onready var _bedtime_option: OptionButton = %BedtimeOption
 @onready var _rank_option: OptionButton = %RankOption
 @onready var _host: Control = %Host
+@onready var _day_readout: Label = %DayReadout
 @onready var _result_panel: Panel = %ResultPanel
 @onready var _result_label: Label = %ResultLabel
 @onready var _replay_button: Button = %ReplayButton
@@ -103,6 +104,48 @@ func _launch_day(preset: String) -> void:
 	node.state = _preset_state(preset)
 	node.cfg = _preset_cfg(preset)
 	_host.add_child(node)
+
+
+## T11 round-1 instrument: a live readout of the evening clock while a day
+## preset rides, so the measurement evenings can be read off the screen
+## instead of divined. Raw numbers are fine here — the lab's own header rule
+## says the energy-never-a-number rule does not bind on this dev surface.
+## READS the hosted scene only — never spends, never mutates.
+func _update_day_readout() -> void:
+	if _host.get_child_count() == 0:
+		_day_readout.visible = false
+		return
+	# Untyped on purpose: a single-minigame launch hosts a Minigame, which has
+	# no `clock` — the "clock" in child guard needs child treated as Variant,
+	# not statically typed Node, or the dynamic member reads below would not
+	# compile against a scene that legitimately doesn't have them.
+	var child = _host.get_child(_host.get_child_count() - 1)
+	if not ("clock" in child):
+		_day_readout.visible = false
+		return
+	_day_readout.visible = true
+	var clock: DayClock = child.clock
+	var text: String
+	if not child._evening:
+		text = "morning · %.0f elapsed" % clock.elapsed
+	else:
+		text = "evening · %.0f elapsed · %s · bed-if-now %s" % [
+			clock.elapsed,
+			clock.band_name(),
+			DayClock.format_minutes(cfg.evening_start_minutes + int(clock.elapsed)),
+		]
+	if child._bed_minute > 0.0:
+		# Freetime already ended and stamped the real bed minute — freeze the
+		# measurement on screen through the sleep beat rather than let
+		# "bed-if-now" keep drifting on a clock nothing spends anymore.
+		text += " · FINAL bed %s (elapsed %.0f)" % [
+			DayClock.format_minutes(int(child._bed_minute)), clock.elapsed,
+		]
+	_day_readout.text = text
+
+
+func _process(_delta: float) -> void:
+	_update_day_readout()
 
 
 ## Pure preset -> GameState mapping, kept separate from _launch_day so it can
