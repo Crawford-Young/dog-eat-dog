@@ -64,13 +64,16 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 		"lunch":
 			state.apply_energy(cfg.lunch_restore)
 		"dinner":
-			# Stub only — T8 replaces this with cooking's real per-verb score.
-			# cook_energy_min (2.0) < dinner_takeout_energy (3.0) by default, which
-			# would flip "cook beats takeout"; cook_energy_max preserves it as a
-			# placeholder until the cooking session provides a real gain.
-			state.apply_energy(cfg.dinner_takeout_energy if result.get("choice") == "takeout" else cfg.cook_energy_max)
+			# Takeout buys CLOCK with money — the first and only place in the
+			# game where that trade exists. The morning is the inverse: skipping
+			# a chore costs time there, never saves it (wave-3a invariant).
 			if result.get("choice") == "takeout":
+				state.apply_energy(cfg.dinner_takeout_energy)
 				state.wallet.spend(cfg.takeout_price)
+		"cooking":
+			state.apply_energy(
+				lerpf(cfg.cook_energy_min, cfg.cook_energy_max, result.get("score", 0.0))
+			)
 		"freetime":
 			# game.gd stamps the band and the bed minute onto the result before
 			# this runs — same shape as the overrun it stamps onto the drive.

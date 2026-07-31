@@ -22,6 +22,7 @@ const SCENES := {
 	"work_pm": preload("res://scenes/minigames/typing.tscn"),
 	"drive_home": preload("res://scenes/minigames/drive.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
+	"cooking": preload("res://scenes/minigames/cooking.tscn"),
 	"freetime": preload("res://scenes/minigames/freetime.tscn"),
 	"sleep": preload("res://scenes/minigames/sleep.tscn"),
 	"retire_offer": preload("res://scenes/minigames/retire_offer.tscn"),
@@ -42,6 +43,7 @@ const SLOT_LABELS := {
 	"work_pm": "work, afternoon",
 	"drive_home": "the drive home",
 	"dinner": "dinner",
+	"cooking": "the kitchen",
 	"freetime": "free time",
 	"sleep": "bed",
 	"retire_offer": "morning",
@@ -266,6 +268,9 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 	if slot == "drive" and clock.overrun() > 0.0:
 		_show_late_beat()
 		return
+	if slot == "dinner" and result.get("choice") == "cook":
+		_show_cooking()
+		return
 	if slot == "work_pm":
 		# QA ruling (issue #10 / finding 1): rank news lands right after
 		# afternoon work, same day, at the office — not as morning-in-bed news
@@ -307,6 +312,29 @@ func _show_rank_news(rank_events: Array[String]) -> void:
 ## slot walk left off.
 func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 	node.queue_free()
+	if schedule.advance():
+		_start_slot()
+	else:
+		_show_summary()
+
+
+## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
+## schedule.current() stays "dinner" while the pan is up. Its own tail applies
+## StatEffects, which the shared beat tail does not: a beat has nothing to
+## bank and a dinner does. The clock keeps running, which IS the point —
+## cooking is what takeout buys you out of.
+func _show_cooking() -> void:
+	_clock_running = true
+	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS["cooking"]]
+	var node: Minigame = SCENES["cooking"].instantiate()
+	_host.add_child(node)
+	node.finished.connect(_on_cooking_finished.bind(node), CONNECT_ONE_SHOT)
+	node.setup(Difficulty.cooking_params(state.energy, cfg))
+
+
+func _on_cooking_finished(result: Dictionary, node: Node) -> void:
+	node.queue_free()
+	StatEffects.apply("cooking", result, state, cfg)
 	if schedule.advance():
 		_start_slot()
 	else:

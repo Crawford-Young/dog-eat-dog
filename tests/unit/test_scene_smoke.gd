@@ -238,3 +238,33 @@ func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:
 				line.to_lower().contains(stamp),
 				"the '%s' line hardcodes '%s' — the clock states the time now" % [band, stamp],
 			)
+
+
+func test_the_cooking_scene_walks_its_recipe_and_finishes() -> void:
+	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
+	add_child_autofree(node)
+	var got: Array = []
+	node.finished.connect(func(r: Dictionary) -> void: got.append(r))
+	node.setup({"tolerance": 1.0, "text_speed": 300.0})
+	await wait_physics_frames(2)
+	for verb in CookingSession.VERBS:
+		node._commit(verb, 1.0)
+	await wait_physics_frames(2)
+	assert_eq(got.size(), 1, "the pan finished exactly once")
+	assert_eq(got[0].score, 1.0)
+
+
+func test_the_cooking_progress_bar_reads_a_zero_to_one_fraction() -> void:
+	# Range nodes default to 0..100, and this scene writes a 0..1 fraction into
+	# it. The default would render 4% for a finished pan and no test would
+	# notice — the bar is display-only.
+	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
+	add_child_autofree(node)
+	assert_eq(node.get_node("%Progress").max_value, 1.0)
+
+
+func test_cooking_lets_the_mouse_reach_the_game() -> void:
+	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()
+	add_child_autofree(node)
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))

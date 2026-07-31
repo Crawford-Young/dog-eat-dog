@@ -106,6 +106,15 @@ static func drive_home_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return params
 
 
+## A wrecked dog gets more slack per step, not fewer steps — the recipe's shape
+## is constant across every energy tier, only the sloppiness allowance moves.
+static func cooking_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	return {
+		"tolerance": lerpf(cfg.cook_tolerance_base, cfg.cook_tolerance_max, _deficit(energy)),
+		"text_speed": cfg.typewriter_chars_per_sec,
+	}
+
+
 static func is_sick_morning(energy: float, cfg: BalanceConfig) -> bool:
 	return energy < cfg.sick_energy_threshold
 

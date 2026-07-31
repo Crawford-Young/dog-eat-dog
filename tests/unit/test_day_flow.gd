@@ -68,6 +68,8 @@ func _walk(main: Control, overrides: Dictionary = {}, until: String = "") -> voi
 			return
 		if slot == "work_pm":
 			_finish_rank_news_beat_if_pending(main, host)
+		if slot == "dinner":
+			_finish_cooking_beat_if_pending(main, host)
 
 
 ## QA ruling (issue #10 / finding 1): promotion/demotion/warning news is now a
@@ -77,6 +79,16 @@ func _walk(main: Control, overrides: Dictionary = {}, until: String = "") -> voi
 ## caller stopped exactly at "work_pm" to inspect the pending beat itself.
 func _finish_rank_news_beat_if_pending(main: Control, host: Control) -> void:
 	if main.schedule.current() != "work_pm":
+		return
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false})
+
+
+## Same shape as the rank-news helper: T8's cooking pan is out-of-band the same
+## way, so schedule.current() stays "dinner" (advance() never ran) while the
+## pan is up. A no-op for takeout — that branch advances the schedule itself,
+## so current() has already moved past "dinner" by the time this checks.
+func _finish_cooking_beat_if_pending(main: Control, host: Control) -> void:
+	if main.schedule.current() != "dinner":
 		return
 	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false})
 
@@ -271,6 +283,7 @@ func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
 	beat.finished.emit({"score": 1.0, "skipped": false})
 	for slot in ["drive_home", "dinner", "freetime", "sleep"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
+		_finish_cooking_beat_if_pending(main, host)
 	assert_false(
 		_summary_text(main).contains("the cat glanced at your screen today. twice."),
 		"rank news no longer repeats in the day-end summary",
@@ -309,6 +322,7 @@ func test_a_sustained_promotion_announces_at_the_office_before_the_summary() -> 
 	assert_eq(main.state.rank, 1, "the promotion actually landed")
 	for slot in ["drive_home", "dinner", "freetime", "sleep"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
+		_finish_cooking_beat_if_pending(main, host)
 	assert_true(
 		(main.get_node("%Summary") as Panel).visible, "the day still closes on a summary afterward"
 	)
@@ -556,6 +570,8 @@ func test_arriving_late_slinks_in_and_debits_the_day() -> void:
 			beat.finished.emit(DONE)
 		if slot == "work_pm":
 			_finish_rank_news_beat_if_pending(main, host)
+		if slot == "dinner":
+			_finish_cooking_beat_if_pending(main, host)
 	assert_true(
 		(main.get_node("%Summary") as Panel).visible, "a late day still closes on a summary"
 	)
@@ -613,3 +629,24 @@ func test_an_early_evening_banks_sleep() -> void:
 	)
 	assert_eq(main.state.bedtime, "early")
 	assert_lt(main.state.ledger.debt_minutes, 0.0, "straight to bed banks the surplus")
+
+
+## The integration the day-reaches-summary tests only imply: picking cook
+## actually hosts the pan out-of-band, and finishing the pan actually resumes
+## the day at the next slot — not just "the day eventually ends".
+func test_picking_cook_hosts_the_pan_and_the_day_resumes() -> void:
+	var main := _fresh_main()
+	var host: Control = main.get_node("%MinigameHost")
+	_walk(main, {}, "dinner")
+	assert_eq(main.schedule.current(), "dinner", "the pan blocks advance() until it finishes")
+	assert_eq(
+		_current_minigame(host).scene_file_path,
+		"res://scenes/minigames/cooking.tscn",
+		"picking cook hosts the pan, not the next slot",
+	)
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false})
+	assert_eq(
+		_current_minigame(host).scene_file_path,
+		"res://scenes/minigames/freetime.tscn",
+		"the day resumes at the next slot once the pan finishes",
+	)

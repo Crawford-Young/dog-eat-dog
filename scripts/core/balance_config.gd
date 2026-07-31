@@ -209,6 +209,10 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## flat dinner_cook_energy: the meal is a minigame now, so its value is earned.
 @export var cook_energy_min: float = 2.0
 @export var cook_energy_max: float = 14.0
+## Per-verb gesture tolerance, 0..1 — widens with the energy deficit so a
+## wrecked dog gets more slack per step, not fewer steps.
+@export var cook_tolerance_base: float = 0.2
+@export var cook_tolerance_max: float = 0.55
 ## The drive home. Shorter than the morning commute BY DESIGN (wave-3b
 ## invariant) — evening time belongs in cooking and freetime, where the choices
 ## are. Everything else about the road is shared with the morning.

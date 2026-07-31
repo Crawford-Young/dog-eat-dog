@@ -112,11 +112,47 @@ func test_lunch_does_not_touch_performance() -> void:
 	assert_almost_eq(state.performance, 0.5, 0.001)
 
 
-func test_dinner_cook_beats_takeout() -> void:
-	var s2 := GameState.new()
-	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "cook"}, state, cfg)
-	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "takeout"}, s2, cfg)
-	assert_gt(state.energy, s2.energy)
+## Retired: "cook" used to grant dinner_cook_energy/cook_energy_max directly
+## from the dinner card, so cook always outscored takeout by construction. T8
+## moves that energy to the pan itself, scaled by how the cooking session
+## actually went — a bad cook can now score below takeout's flat gain. See
+## test_the_dinner_card_itself_pays_no_cooking_energy below, which pins the
+## opposite of what this test used to assert.
+func test_cooking_pays_energy_by_how_well_it_went() -> void:
+	var cfg := BalanceConfig.new()
+	var clean := GameState.new()
+	var burnt := GameState.new()
+	clean.energy = 50.0
+	burnt.energy = 50.0
+	StatEffects.apply("cooking", {"score": 1.0, "skipped": false}, clean, cfg)
+	StatEffects.apply("cooking", {"score": 0.0, "skipped": false}, burnt, cfg)
+	assert_eq(clean.energy, 50.0 + cfg.cook_energy_max)
+	assert_eq(burnt.energy, 50.0 + cfg.cook_energy_min)
+	assert_gt(clean.energy, burnt.energy, "a good meal is worth more than a bad one")
+
+
+func test_takeout_costs_money_and_cooking_costs_none() -> void:
+	# The first time the wallet buys TIME. The morning has no equivalent —
+	# skipping a chore costs clock there, never saves it.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	state.wallet.savings = 100
+	StatEffects.apply("dinner", {"choice": "takeout", "score": 1.0}, state, cfg)
+	assert_eq(state.wallet.savings, 100 - cfg.takeout_price)
+	var cook := GameState.new()
+	cook.wallet.savings = 100
+	StatEffects.apply("dinner", {"choice": "cook", "score": 1.0}, cook, cfg)
+	assert_eq(cook.wallet.savings, 100, "cooking is free, it just is not fast")
+
+
+func test_the_dinner_card_itself_pays_no_cooking_energy() -> void:
+	# One meal, one energy source. The card used to grant dinner_cook_energy
+	# flatly; the pan grants it now, scaled by the score.
+	var cfg := BalanceConfig.new()
+	var state := GameState.new()
+	state.energy = 50.0
+	StatEffects.apply("dinner", {"choice": "cook", "score": 1.0}, state, cfg)
+	assert_eq(state.energy, 50.0)
 
 
 func test_freetime_takes_its_bedtime_from_the_clock_not_the_game_count() -> void:
