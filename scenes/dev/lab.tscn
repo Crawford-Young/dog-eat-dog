@@ -54,6 +54,12 @@ text = "listening (lunch)"
 [node name="Dinner" type="Button" parent="Menu/MenuBox/Activities"]
 text = "dinner"
 
+[node name="Cooking" type="Button" parent="Menu/MenuBox/Activities"]
+text = "cooking (dinner, cook choice)"
+
+[node name="Drive_home" type="Button" parent="Menu/MenuBox/Activities"]
+text = "drive home (evening commute)"
+
 [node name="Freetime" type="Button" parent="Menu/MenuBox/Activities"]
 text = "freetime"
 
@@ -82,9 +88,13 @@ toggle_mode = true
 button_group = SubResource("EnergyGroup")
 text = "wrecked (20)"
 
-[node name="HabitCheck" type="CheckBox" parent="Menu/MenuBox"]
+[node name="DebtRow" type="HBoxContainer" parent="Menu/MenuBox"]
+
+[node name="DebtLabel" type="Label" parent="Menu/MenuBox/DebtRow"]
+text = "sleep debt (freetime + sleep)"
+
+[node name="DebtOption" type="OptionButton" parent="Menu/MenuBox/DebtRow"]
 unique_name_in_owner = true
-text = "3-day streak"
 
 [node name="BedtimeRow" type="HBoxContainer" parent="Menu/MenuBox"]
 
@@ -122,6 +132,9 @@ text = "coffee morning (savings 20, energy 45)"
 
 [node name="Late_Morning" type="Button" parent="Menu/MenuBox/DayPresets"]
 text = "late morning (20-min budget — rides the clock to red + the late beat)"
+
+[node name="In_debt" type="Button" parent="Menu/MenuBox/DayPresets"]
+text = "in debt (three-plus nights behind, ceiling down but not sick yet)"
 
 [node name="Host" type="Control" parent="."]
 unique_name_in_owner = true
