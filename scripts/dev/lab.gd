@@ -103,6 +103,7 @@ func _launch_day(preset: String) -> void:
 	var node := DAY_SCENE.instantiate()
 	node.state = _preset_state(preset)
 	node.cfg = _preset_cfg(preset)
+	node.start_from_slot = _preset_start_slot(preset)
 	_host.add_child(node)
 
 
@@ -176,6 +177,10 @@ func _preset_state(preset: String) -> GameState:
 			# playing a real week.
 			state.ledger.debt_minutes = cfg.sleep_debt_cap_minutes * 0.6
 			state.refresh_ceiling(cfg)
+		"post_work":
+			# An ordinary after-work energy — the point of this preset is
+			# measuring an ORDINARY evening, not an engineered one.
+			state.energy = 55.0
 	return state
 
 
@@ -190,6 +195,11 @@ func _preset_cfg(preset: String) -> BalanceConfig:
 		late_cfg.work_start_minutes = cfg.morning_start_minutes + 20
 		return late_cfg
 	return cfg
+
+
+## Pure preset -> fast-forward slot mapping. "" means start from the morning.
+func _preset_start_slot(preset: String) -> String:
+	return "drive_home" if preset == "post_work" else ""
 
 
 func _launch(activity: String) -> void:

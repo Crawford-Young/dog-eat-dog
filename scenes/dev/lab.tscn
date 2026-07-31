@@ -136,6 +136,9 @@ text = "late morning (20-min budget — rides the clock to red + the late beat)"
 [node name="In_debt" type="Button" parent="Menu/MenuBox/DayPresets"]
 text = "in debt (three-plus nights behind, ceiling down but not sick yet)"
 
+[node name="Post_work" type="Button" parent="Menu/MenuBox/DayPresets"]
+text = "post work (starts at drive home — the evening, no morning ride)"
+
 [node name="Host" type="Control" parent="."]
 unique_name_in_owner = true
 anchor_right = 1.0

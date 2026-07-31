@@ -84,6 +84,10 @@ var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var clock: DayClock
 var _clock_running := false
 var _evening := false
+## Dev/lab-only fast-forward — the day is still built by DaySchedule.build in
+## full (the schedule invariant holds); this only skips INTO it, never
+## reshapes it. "" starts from the morning as normal.
+var start_from_slot: String = ""
 ## The evening's till, mirrored off the freetime stamp so the sleep beat can
 ## still read it after the slot boundary. Seeded to bed_mid_line_minutes (also
 ## setup()'s own bed_clock default) at each day reset — not 0.0 — because a
@@ -113,6 +117,9 @@ func _ready() -> void:
 	_ending.visible = false
 	clock = DayClock.new(cfg.morning_budget())
 	schedule.set_slots(DaySchedule.build(state, cfg))
+	if start_from_slot != "":
+		while schedule.current() != start_from_slot and schedule.advance():
+			pass
 	_start_slot()
 
 
