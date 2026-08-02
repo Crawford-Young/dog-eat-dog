@@ -155,9 +155,15 @@ func tick(delta: float) -> void:
 	var ahead := _car_ahead()
 	if not ahead.is_empty() and ahead.pos - distance <= _pin_gap:
 		limit = minf(limit, ahead.speed)
-	pinned = limit < _top_speed
 	speed = minf(speed + _accel * delta, limit)
-	distance += speed * delta
+	var unclamped := distance + speed * delta
+	var moved := unclamped
+	if not ahead.is_empty():
+		moved = maxf(distance, minf(moved, ahead.pos - _car_min_gap))
+	pinned = limit < _top_speed or moved < unclamped
+	if delta > 0.0:
+		speed = (moved - distance) / delta
+	distance = moved
 	_advance_cars(delta)
 
 

@@ -229,7 +229,12 @@ func test_switch_lag_delays_the_change() -> void:
 func test_never_a_crash_speed_snaps_to_slower_car() -> void:
 	# Start at full speed straight into a slow car's gap: speed clamps, no state
 	# other than pinned changes — there is no crash anywhere in the sim.
-	var sim := LaneSim.new(_params([{"lane": 2, "pos": 2.0, "speed": 1.0}]))
+	# pos=15.0, not the route's own car_min_gap(10)-violating 2.0 — issue #14's
+	# position clamp makes a car starting closer than car_min_gap to the dog's
+	# own position an unrealizable setup (the clamp target is negative from
+	# the first tick), which real traffic never produces (make_traffic's own
+	# generation-time separation pass guarantees at least car_min_gap).
+	var sim := LaneSim.new(_params([{"lane": 2, "pos": 15.0, "speed": 1.0}]))
 	_run(sim, 3.0)
 	assert_true(sim.pinned)
 	assert_almost_eq(sim.speed, 1.0, 0.1)
@@ -554,3 +559,55 @@ func test_generated_traffic_never_overlaps_itself_over_a_whole_route() -> void:
 			t += _STEP
 			closest = minf(closest, _closest_same_lane_pair(sim.cars()))
 		assert_gt(closest, 1.0, "seed %d overlapped two cars in a lane" % seed_value)
+
+
+## issue #14: the dog pinned to a car's STORED nominal speed, but a jammed car
+## is position-clamped behind its lead while its stored speed stays high — the
+## dog closed the real gap every frame, crossed the jammed car's position, and
+## _car_ahead() handed it the next car. Threaded the whole jam.
+func _find_car_by_speed(sim: LaneSim, target_speed: float) -> Dictionary:
+	for car in sim.cars():
+		if is_equal_approx(car.speed, target_speed):
+			return car
+	return {}
+
+
+func _jam_sim() -> LaneSim:
+	# Slow lead the rear car cannot get past; the rear's stored speed (60) is
+	# far above the route's top speed, but _advance_cars position-clamps it
+	# behind the lead almost immediately — jammed, with a high nominal speed.
+	var lead := {"lane": 2, "pos": 200.0, "speed": 2.0}
+	var rear := {"lane": 2, "pos": 170.0, "speed": 60.0}
+	var sim := LaneSim.new(_route_params([lead, rear]))
+	sim.lane = 2
+	return sim
+
+
+func test_the_dog_never_drives_through_a_car_jammed_behind_a_slow_lead() -> void:
+	var sim := _jam_sim()
+	var car_min_gap := 20.0
+	var t := 0.0
+	while t < 60.0 and not sim.is_done():
+		sim.tick(_STEP)
+		t += _STEP
+		var rear_now := _find_car_by_speed(sim, 60.0)
+		assert_false(rear_now.is_empty(), "the rear car never disappears from the sim")
+		assert_lte(
+			sim.distance, rear_now.pos - car_min_gap,
+			"the dog must never cross the jammed car ahead of it",
+		)
+
+
+func test_speedo_reads_the_jams_effective_speed_not_the_jammed_cars_nominal() -> void:
+	var sim := _jam_sim()
+	_run(sim, 30.0)
+	assert_lte(
+		sim.speed, 2.0 + 0.5,
+		"the speedo must read the jam's real (lead) speed, not the rear car's stored 60",
+	)
+
+
+func test_pinned_is_true_while_position_blocked_behind_the_jam() -> void:
+	var sim := _jam_sim()
+	_run(sim, 30.0)
+	assert_true(sim.pinned, "a dog stuck behind a jam reads pinned")
