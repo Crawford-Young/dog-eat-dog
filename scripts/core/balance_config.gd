@@ -183,7 +183,7 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## The evening block's absolute start — the minute the dog leaves the office.
 ## This is the wave's PRIMARY playtest lever: moving it moves every band's
 ## effective margin without touching a single band threshold.
-@export var evening_start_minutes: int = 1200
+@export var evening_start_minutes: int = 1290
 ## Absolute wall-clock lines the bedtime bands are cut at. Stored absolute for
 ## the same reason work_start_minutes is — the deadline is the design intent,
 ## the span is derived.
