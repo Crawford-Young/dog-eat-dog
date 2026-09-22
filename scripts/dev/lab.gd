@@ -171,10 +171,10 @@ func _preset_state(preset: String) -> GameState:
 			state.wallet.savings = 20
 			state.energy = 45.0
 		"in_debt":
-			# Three-plus nights behind: the ceiling is down but not yet
-			# under the sick threshold, so ONE more late night should tip
-			# it. This is the only way to playtest the chronic case without
-			# playing a real week.
+			# 60% of the debt cap: the ceiling is down but not yet under
+			# the sick threshold — one more late night brings the wobble,
+			# a second tips it sick. This is the only way to playtest the
+			# chronic case without playing a real week.
 			state.ledger.debt_minutes = cfg.sleep_debt_cap_minutes * 0.6
 			state.refresh_ceiling(cfg)
 		"post_work":
