@@ -196,7 +196,20 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var sleep_bank_cap_minutes: float = 240.0
 ## And how far above zero it may rot. Uncapped debt is a death spiral: the
 ## ceiling bottoms out and no reachable number of good nights climbs back.
-@export var sleep_debt_cap_minutes: float = 960.0
+##
+## T11 round 2 retune, 960 -> 420. This number is not a limit, it is the SLOPE:
+## max_energy lerps 100 -> sleep_ceiling_min across it, so the cap alone decides
+## how many late nights stand between the dog and the cliff. At 960 a late night
+## moved the ceiling ~7 points and the lab's in_debt preset sat 4-11 nights away
+## from sick — the spiral was real on paper and unreachable in a ride. At 420 the
+## same night moves it ~16, which puts in_debt two late nights from the cliff
+## with the wobble night visible in between, and still leaves one bad night from
+## square at a ceiling of ~74 — a shrug, not a spiral.
+##
+## Kept deliberately close to sick_sleep_minutes - sleep_need_minutes (240), the
+## credit one sick day banks: a sick day must dent the cap without erasing it,
+## or the escape hatch becomes a free reset.
+@export var sleep_debt_cap_minutes: float = 420.0
 ## The energy ceiling at a fully maxed debt. BELOW sick_energy_threshold on
 ## purpose — chronic lateness has to be able to make the dog sick.
 @export var sleep_ceiling_min: float = 8.0
