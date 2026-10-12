@@ -5,6 +5,8 @@ extends RefCounted
 ## profile would set limits no person can meet.
 ##
 ## Skill knobs (seconds unless noted):
+##   orient           time spent taking in a freshly hosted screen before
+##                    its first input (every slot, beats and cards too)
 ##   react            decision delay range, drawn fresh per decision
 ##   mash_frames      frames between SPACE presses when mashing (60 fps)
 ##   travel_frames    frames a deliberate mouse move takes
@@ -38,6 +40,7 @@ extends RefCounted
 
 const PROFILES := {
 	"sharp": {
+		"orient": Vector2(0.8, 1.0),
 		"react": Vector2(0.20, 0.30),
 		"mash_frames": Vector2i(6, 8),
 		"travel_frames": Vector2i(12, 18),
@@ -66,6 +69,7 @@ const PROFILES := {
 		"freetime_games": 0,
 	},
 	"sloppy": {
+		"orient": Vector2(1.2, 1.6),
 		"react": Vector2(0.45, 0.70),
 		"mash_frames": Vector2i(8, 12),
 		"travel_frames": Vector2i(20, 30),
@@ -105,6 +109,9 @@ static func policy_rows(profile: Dictionary) -> Array[String]:
 	var dinner := "always cook" if profile.cook_every == 1 \
 			else "cook every %d days, takeout otherwise" % profile.cook_every
 	return [
+		"orient: %.1f-%.1f s taking in each new screen before the first input" % [
+			profile.orient.x, profile.orient.y,
+		],
 		"coffee: %s" % ("buy one" if profile.coffee == "buy" else "water"),
 		"dinner: %s (cook when takeout is unaffordable)" % dinner,
 		"free-time games per night: %d" % profile.freetime_games,
