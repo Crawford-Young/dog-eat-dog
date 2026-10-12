@@ -28,11 +28,11 @@ import:
 cache:
     "{{godot}}" --headless --editor --quit --path .
 
-# export web build (requires export templates — see wave1 T10)
-export-web:
+# export web build (needs the 4.7.1 web nothreads template; CI installs it). Extra flags pass through: just export-web --verbose
+export-web *flags:
     mkdir -p build/web
     touch build/.gdignore
-    "{{godot}}" --headless --path . --export-release "Web" build/web/index.html
+    "{{godot}}" --headless --path . {{flags}} --export-release "Web" build/web/index.html
 
 # serve the web build locally
 serve:
