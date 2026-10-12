@@ -49,7 +49,7 @@ func _reseed(main: Control) -> void:
 
 
 func _result_for(slot: String, overrides: Dictionary) -> Dictionary:
-	# .duplicate() is load-bearing now that T5 stamps onto the freetime result
+	# .duplicate() is load-bearing because T5 stamps onto the freetime result
 	# in place (game.gd's "band"/"bed_minute" write): FAKE_RESULTS is a const,
 	# and GDScript freezes const dictionary VALUES read-only too, so handing
 	# back the frozen entry directly makes game.gd's write fail.
@@ -72,7 +72,7 @@ func _walk(main: Control, overrides: Dictionary = {}, until: String = "") -> voi
 			_finish_cooking_beat_if_pending(main, host)
 
 
-## QA ruling (issue #10 / finding 1): promotion/demotion/warning news is now a
+## QA ruling (issue #10 / finding 1): promotion/demotion/warning news is a
 ## same-day office beat hosted right after work_pm, OUTSIDE the normal slot
 ## schedule — schedule.current() stays "work_pm" (advance() never ran) while
 ## it's up. Drive it like any other beat before the walk moves on, unless the
@@ -268,7 +268,7 @@ func test_restarting_after_the_ending_starts_a_fresh_dog() -> void:
 
 
 func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
-	# QA ruling (issue #10 / finding 1): the "warned" news now lands as a
+	# QA ruling (issue #10 / finding 1): the "warned" news lands as a
 	# same-day office beat right after work_pm, not in the day-end summary.
 	var main := _fresh_main()
 	_walk(main, {"work_am": BAD_WORK, "work_pm": BAD_WORK}, "work_pm")
@@ -278,7 +278,7 @@ func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
 	assert_string_contains(
 		(beat.get_node("%Line") as Label).text,
 		"the cat glanced at your screen today. twice.",
-		"the office delivers the news same-day now",
+		"the office delivers the news same-day",
 	)
 	beat.finished.emit({"score": 1.0, "skipped": false})
 	for slot in ["drive_home", "dinner", "freetime", "sleep"]:
@@ -286,7 +286,7 @@ func test_a_bad_day_earns_a_warning_the_cat_delivers_tomorrow() -> void:
 		_finish_cooking_beat_if_pending(main, host)
 	assert_false(
 		_summary_text(main).contains("the cat glanced at your screen today. twice."),
-		"rank news no longer repeats in the day-end summary",
+		"rank news does not repeat in the day-end summary",
 	)
 	main._on_next_day_pressed()
 	assert_true(
@@ -329,15 +329,15 @@ func test_a_sustained_promotion_announces_at_the_office_before_the_summary() -> 
 
 
 func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
-	# Wave-2 QA ruling (issue #5): next-day energy now blends leftover energy
+	# Wave-2 QA ruling (issue #5): next-day energy blends leftover energy
 	# with the bedtime target (energy_carry_weight, default 0.5), so a wrecked
-	# bedtime target alone no longer guarantees a sick warning — it has to clear
+	# bedtime target alone does not guarantee a sick warning — it has to clear
 	# the threshold together with whatever energy is left at day's end (44.0 for
-	# this fixed walk, now that the wave-3a morning restores on shower and
+	# this fixed walk, since the morning restores on shower and
 	# breakfast: 0.5*44 + 0.5*wrecked < sick_energy_threshold).
 	#
 	# Wave 3b: bedtime comes from the evening clock's band, not the game count,
-	# so a synchronous walk's band is no longer this test's business — every
+	# so a synchronous walk's band is not this test's business — every
 	# band is wrecked, and the telegraph is what is under test either way.
 	var main := _fresh_main()
 	var wrecked := BalanceConfig.new()
@@ -415,7 +415,7 @@ func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
 func test_the_evening_budget_is_derived_from_the_last_band_line() -> void:
 	# Same rule as morning_budget: the LINE is the stored design intent and the
 	# span is computed. A stored evening_budget_minutes would split the
-	# authority — the retired morning_budget_minutes is the precedent.
+	# authority, as with morning_budget.
 	var cfg := BalanceConfig.new()
 	assert_eq(
 		cfg.evening_budget(),
@@ -475,9 +475,8 @@ func test_the_clock_hud_states_the_deadline_the_dog_is_racing() -> void:
 ## hardest — and the commute is also the ONLY slot that paints a full-height
 ## opaque road straight down the middle of the screen, through exactly the strip
 ## the clock sits in. Sibling draw order is the single thing keeping it visible;
-## it shipped the wrong way round and the clock was invisible for the entire
-## drive, with every other clock test passing because the label was updating
-## correctly the whole time — it was just behind the road.
+## a wrong order hides the clock behind the road for the entire drive while the
+## label still updates correctly, so only a draw-order check catches it.
 func test_the_clock_draws_on_top_of_whatever_minigame_is_up() -> void:
 	var main := _fresh_main()
 	assert_gt(
@@ -653,10 +652,10 @@ func test_picking_cook_hosts_the_pan_and_the_day_resumes() -> void:
 
 
 func test_chronic_lateness_eventually_makes_the_dog_sick() -> void:
-	# The live gap this wave closes. sleep_energy["late"] is 35 and the carry
-	# blend trends toward it, so before the ceiling existed a permanently-late
-	# dog never reached the threshold of 12 — only a single catastrophic day
-	# did. Chronic lateness was free.
+	# sleep_energy["late"] is 35 and the carry blend trends toward it, so
+	# without the ceiling a permanently-late dog never reaches the threshold of
+	# 12 — only a single catastrophic day does. The ceiling makes chronic
+	# lateness cost something.
 	var cfg := BalanceConfig.new()
 	var state := GameState.new()
 	var nights := 0
@@ -688,7 +687,7 @@ func test_the_wobble_telegraphs_the_debt_sick_day_a_night_early() -> void:
 	# Every ladder/sick consequence telegraphs one day ahead. The ceiling adds a
 	# new ROUTE to the sick morning, so the existing telegraph has to cover it —
 	# it does, for free, because game.gd:379 already runs is_sick_morning over
-	# _tomorrow_energy and _tomorrow_energy now clamps to the ceiling.
+	# _tomorrow_energy and _tomorrow_energy clamps to the ceiling.
 	var cfg := BalanceConfig.new()
 	var main := _fresh_main()
 	main.state.bedtime = "late"
@@ -748,9 +747,8 @@ func test_the_debt_never_shows_up_as_a_number_outside_the_sleep_beat() -> void:
 
 
 func test_playing_a_game_costs_the_evening_clock_its_price() -> void:
-	# issue #12: a game's only cost was its ~1s dwell hover through
-	# clock_scale, so more games never moved the bed minute and the whole
-	# debt thesis was inert. game.gd spends the clock — the minigame only
+	# issue #12: each game costs the evening clock its price, so more games
+	# move the bed minute. game.gd spends the clock — the minigame only
 	# reports that a game finished.
 	var main := _fresh_main()
 	main.schedule.set_slots(["freetime"] as Array[String])

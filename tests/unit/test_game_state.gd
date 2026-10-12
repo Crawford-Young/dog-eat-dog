@@ -28,7 +28,7 @@ func test_work_score_rolls_toward_new_score() -> void:
 
 func test_next_day_sets_energy_from_bedtime() -> void:
 	# Wave-2 QA ruling (issue #5): sleep blends leftover energy with the
-	# bedtime target — no longer a full reset. 0.5*50 + 0.5*90 = 70.0.
+	# bedtime target — not a full reset. 0.5*50 + 0.5*90 = 70.0.
 	var s := GameState.new()
 	s.energy = 50.0
 	s.bedtime = "early"

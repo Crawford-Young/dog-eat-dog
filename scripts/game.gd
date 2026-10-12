@@ -260,9 +260,8 @@ func _params_for(slot: String) -> Dictionary:
 
 ## The minigame only reports that a game finished — game.gd is the single
 ## spender of any DayClock (wave-3a invariant), same shape as skip_time_cost
-## charging the fixed penalty for a ducked chore. Without this, a game's only
-## cost was its ~1s dwell hover, so more games never moved the bed minute and
-## the whole debt thesis was inert (issue #12).
+## charging the fixed penalty for a ducked chore. Each game costs the clock
+## freetime_game_minutes, so more games move the bed minute (issue #12).
 func _on_game_played() -> void:
 	clock.spend(cfg.freetime_game_minutes)
 
@@ -381,8 +380,8 @@ func _show_late_beat() -> void:
 
 ## Closes the day exactly once — close_day pays the salary and drains living
 ## costs, so it must never be called twice for one day. Rank news (promotion/
-## demotion/warning) no longer runs here — it's a same-day office beat fired
-## right after work_pm (_show_rank_news), before this ever gets called.
+## demotion/warning) is not handled here — it's a same-day office beat fired
+## right after work_pm (_show_rank_news), before this gets called.
 func _show_summary() -> void:
 	_clock_running = false
 	var report := StatEffects.close_day(state, cfg)

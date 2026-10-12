@@ -173,9 +173,8 @@ func test_breakfast_survives_all_three_beats() -> void:
 	assert_signal_emitted(node, "finished")
 
 
-## Breakfast takes a click OR space, but advertised only the click — and the click
-## was the affordance issue #6 had broken, so the prompt named the one input that
-## did not work. Copy states every accepted input. (issue #8)
+## Breakfast takes a click OR space, so the prompt copy states every accepted
+## input rather than naming only one. (issue #8)
 func test_breakfast_prompt_names_both_of_its_inputs() -> void:
 	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
 	add_child_autofree(node)
@@ -235,9 +234,9 @@ func test_drive_shows_how_far_is_left_and_how_fast_the_dog_is_going() -> void:
 
 
 func test_the_sleep_beat_states_the_real_bed_time_and_the_ledger() -> void:
-	# The band copy used to hardcode "10pm" / "midnight" / "3am". Once the bed
-	# minute is real those contradict the clock the player just watched, so the
-	# beat takes the time as a param instead of asserting one.
+	# The band copy must not hardcode "10pm" / "midnight" / "3am": the bed
+	# minute is real, so fixed stamps would contradict the clock the player just
+	# watched. The beat takes the time as a param instead of asserting one.
 	var node: Minigame = load("res://scenes/minigames/sleep.tscn").instantiate()
 	add_child_autofree(node)
 	node.setup({
@@ -259,13 +258,13 @@ func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:
 		for stamp in ["pm", "am", "midnight", "noon"]:
 			assert_false(
 				line.to_lower().contains(stamp),
-				"the '%s' line hardcodes '%s' — the clock states the time now" % [band, stamp],
+				"the '%s' line hardcodes '%s' — the clock states the time" % [band, stamp],
 			)
 
 
 ## issue #11 round 4, user ruling: "space should be the button. click should be
-## everywhere. similar to breakfast" — the four gesture recognizers retired in
-## favor of a click-anywhere/SPACE press contract.
+## everywhere. similar to breakfast" — the gesture contract is click-anywhere/SPACE
+## press, with no per-gesture recognizers.
 ## issue #11 round 5, user ruling: "stirring a pot should not be rhythm."
 ## Chop/transfer stay press-graded (BeatTimer); stir/pour become hold-graded
 ## (HoldMeter) — press starts the hold, release commits. window: 1.0 makes
@@ -349,8 +348,7 @@ func test_cooking_lets_the_mouse_reach_the_game() -> void:
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
-## issue #11: the scene worked mechanically but drew nothing to interact
-## with. Every gesture target now has a visible node — pin that they exist,
+## issue #11: every gesture target has a visible node — pin that they exist,
 ## on top of the generic mouse-filter scan above.
 func test_the_cooking_scene_has_visible_gesture_targets() -> void:
 	var node: Minigame = load("res://scenes/minigames/cooking.tscn").instantiate()

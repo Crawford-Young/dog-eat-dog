@@ -4,10 +4,8 @@ const _STEP := 1.0 / 60.0
 
 ## The shipped commute numbers, READ from BalanceConfig rather than copied into
 ## constants, so the skill properties below are asserted against what the player
-## actually drives. They were copied once and drifted: the QA-R2e tuning loop
-## moved the route 400 -> 900 and three property tests went on measuring a
-## geometry that no longer ships, failing for the layout they still assumed
-## rather than for anything the change broke.
+## actually drives. Copied constants drift when a tuning pass moves the route, and
+## the property tests then measure a geometry that does not ship.
 var _route_length: float = BalanceConfig.new().drive_length
 var _route_top_speed: float = BalanceConfig.new().drive_top_speed
 
@@ -63,9 +61,8 @@ func _traffic(seed_value: int, car_count: int = 16,
 	return LaneSim.make_traffic(_traffic_params(car_count, overrides), rng)
 
 
-## Waves no longer have a fixed size — a blocked wave carries LANES cars, not
-## CARS_PER_WAVE — so slicing by a constant is gone. The generator stamps each
-## car with its wave instead.
+## Waves have no fixed size — a blocked wave carries LANES cars — so the
+## generator stamps each car with its wave rather than slicing by a constant.
 func _wave(cars: Array[Dictionary], index: int) -> Array[Dictionary]:
 	var wave: Array[Dictionary] = []
 	for car in cars:
@@ -271,7 +268,7 @@ func test_an_unblocked_wave_leaves_one_lane_open_and_a_blocked_one_leaves_none()
 
 
 func test_consecutive_open_walls_never_open_the_same_lane_twice() -> void:
-	# The gap is no longer guaranteed to exist, but where it exists it still
+	# The gap is not guaranteed to exist, but where it exists it
 	# moves — a straight line through two READABLE walls stays impossible.
 	for seed_value in range(1, 40):
 		var cars := _traffic(seed_value, 16, {"blocked_wave_chance": 0.0})
@@ -338,8 +335,8 @@ func test_two_mornings_do_not_draw_the_same_traffic() -> void:
 
 
 func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> void:
-	# Spawn used to be solved from one shared speed. Now every wave differs, so
-	# every wave gets its own solve. The claim holds per wave only while the wave
+	# Spawn is solved per wave from that wave's own speed, since every wave
+	# differs. The claim holds per wave only while the wave
 	# is still a wave: a fast roll can back-compute a later wall onto an earlier
 	# one, and the generator's separation pass then spreads the merged pair to
 	# keep cars from overlapping. A merged pair is one obstacle, not two walls
@@ -351,12 +348,11 @@ func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> v
 	# spacing is 260 * (1 - roll) / (waves - 1) while a wave's speed spread
 	# displaces its spawn by a fixed amount — so any retune toward faster traffic
 	# merges more walls and starves the stand-alone population. Reading the
-	# shipped band made this test fail the moment the QA-R2e round-1 retune
-	# landed (0.20-0.60 -> 0.40-0.65 dropped it to 53.9% against its own 60%
-	# floor), which is a feel value breaking a mechanism test. The pinned band is
+	# shipped band would let a feel retune break a mechanism test (a faster band
+	# can drop the stand-alone share below the 60% floor). The pinned band is
 	# deliberately LOW and WIDE: low so walls stay clear of each other, wide so
 	# the per-wave clamp still admits genuinely different speeds and the per-wave
-	# solve stays distinguishable from the shared-speed one it replaced.
+	# solve stays distinguishable from a shared-speed one.
 	var cfg := BalanceConfig.new()
 	var gap: float = cfg.drive_car_min_gap
 	var checked := 0
