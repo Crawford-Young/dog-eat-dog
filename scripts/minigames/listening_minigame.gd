@@ -18,7 +18,6 @@ var _text_speed: float = Typewriter.DEFAULT_CHARS_PER_SEC
 var _spoken: String = ""
 var _nod_tracker: GestureTracker
 var _shake_tracker: GestureTracker
-var _running: bool = false
 
 @onready var _bubble: Label = %Bubble
 @onready var _typer := TypewriterLabel.new()
@@ -39,7 +38,7 @@ func setup(params: Dictionary) -> void:
 	_text_speed = params.get("text_speed", _text_speed)
 	_nod_tracker = GestureTracker.new(GestureTracker.AXIS_Y, GESTURE_AMPLITUDE)
 	_shake_tracker = GestureTracker.new(GestureTracker.AXIS_X, GESTURE_AMPLITUDE)
-	_running = true
+	_start()
 
 
 func _process(delta: float) -> void:
@@ -49,7 +48,6 @@ func _process(delta: float) -> void:
 	_update_bubble()
 	_poll_gesture()
 	if _session.is_over():
-		_running = false
 		_finish(_session.score())
 
 

@@ -1,14 +1,13 @@
 extends Minigame
 
 var _logic: WakeLogic
-var _running: bool = false
 
 @onready var _bar: ProgressBar = %WakeBar
 
 
 func setup(params: Dictionary) -> void:
 	_logic = WakeLogic.new(params)
-	_running = true
+	_start()
 
 
 func _process(delta: float) -> void:
@@ -17,7 +16,6 @@ func _process(delta: float) -> void:
 	_logic.tick(delta)
 	_bar.value = _logic.progress
 	if _logic.is_done():
-		_running = false
 		_finish(1.0)
 
 

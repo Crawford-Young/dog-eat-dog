@@ -5,34 +5,29 @@ extends Minigame
 ## throughput vs the rank's par.
 
 var _shift: WorkShift
-var _shift_left: float = 25.0
 var _par_units: int = 3
-var _running: bool = false
 
 @onready var _text: RichTextLabel = %WorkText
 @onready var _timer_bar: ProgressBar = %ShiftBar
 @onready var _units_label: Label = %UnitsLabel
 
-var _shift_time: float = 25.0
-
 
 func setup(params: Dictionary) -> void:
 	_shift = WorkShift.new(params.tier, params.get("wrong_cap", TypingSession.DEFAULT_WRONG_CAP), RngSource.from_params(params))
-	_shift_time = params.shift_time
-	_shift_left = params.shift_time
+	_start_countdown(params.shift_time)
 	_par_units = params.par_units
-	_running = true
+	_start()
 	_render()
 
 
-func _process(delta: float) -> void:
-	if not _running:
-		return
-	_shift_left -= delta
-	_timer_bar.value = _shift_left / _shift_time
-	if _shift_left <= 0.0:
-		_running = false
-		_finish(_shift.score(_par_units))
+func _process(_delta: float) -> void:
+	if _running:
+		_timer_bar.value = time_fraction()
+
+
+## The shift timer is the base countdown: the shift ends when it runs out.
+func _on_timeout() -> void:
+	_finish(_shift.score(_par_units))
 
 
 func _render() -> void:
