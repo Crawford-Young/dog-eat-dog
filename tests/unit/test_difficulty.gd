@@ -93,9 +93,8 @@ func test_typing_params_carry_the_wrong_buffer_cap() -> void:
 
 
 func test_the_temptation_pull_scales_with_sleep_debt() -> void:
-	# The habit spiral survives the retirement of played_late, with depth
-	# instead of one bit: a late night makes the next one harder to resist, and
-	# five late nights harder still.
+	# The habit spiral has depth: a late night makes the next one harder to
+	# resist, and five late nights harder still.
 	var cfg := BalanceConfig.new()
 	var rested := Difficulty.temptation_params(65.0, cfg, 0.0)
 	var behind := Difficulty.temptation_params(65.0, cfg, cfg.sleep_debt_cap_minutes * 0.5)
@@ -104,7 +103,7 @@ func test_the_temptation_pull_scales_with_sleep_debt() -> void:
 	assert_lt(behind.pull_strength, wrecked.pull_strength)
 	assert_almost_eq(
 		wrecked.pull_strength - rested.pull_strength, cfg.temptation_habit_bonus, 0.001,
-		"a maxed debt pulls exactly as hard as the old played_late bool did",
+		"a maxed debt adds exactly the full temptation_habit_bonus",
 	)
 
 

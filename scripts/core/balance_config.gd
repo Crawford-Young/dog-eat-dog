@@ -221,8 +221,8 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## day". It must therefore stay comfortably ABOVE sleep_need_minutes, so one
 ## sick day always pays debt down rather than accruing more.
 @export var sick_sleep_minutes: float = 720.0
-## Cooking's energy payoff, scaled by how few steps got spoiled. Replaces the
-## flat dinner_cook_energy: the meal is a minigame now, so its value is earned.
+## Cooking's energy payoff, scaled by how few steps got spoiled: the meal is a
+## minigame, so its value is earned.
 @export var cook_energy_min: float = 2.0
 @export var cook_energy_max: float = 14.0
 ## Per-verb gesture tolerance, 0..1 — widens with the energy deficit so a
