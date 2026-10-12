@@ -17,9 +17,7 @@ var _shift_time: float = 25.0
 
 
 func setup(params: Dictionary) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	_shift = WorkShift.new(params.tier, params.get("wrong_cap", TypingSession.DEFAULT_WRONG_CAP), rng)
+	_shift = WorkShift.new(params.tier, params.get("wrong_cap", TypingSession.DEFAULT_WRONG_CAP), RngSource.from_params(params))
 	_shift_time = params.shift_time
 	_shift_left = params.shift_time
 	_par_units = params.par_units

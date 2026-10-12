@@ -9,7 +9,7 @@ var _fumble_chance: float = 0.0
 var _held: Control = null
 var _held_home: Vector2 = Vector2.ZERO
 var _running: bool = false
-var _rng := RandomNumberGenerator.new()
+var _rng: RandomNumberGenerator
 
 @onready var _dog_zone: ColorRect = %DogZone
 @onready var _status: Label = %Status
@@ -17,7 +17,7 @@ var _rng := RandomNumberGenerator.new()
 
 func setup(params: Dictionary) -> void:
 	_fumble_chance = params.fumble_chance
-	_rng.randomize()
+	_rng = RngSource.from_params(params)
 	_running = true
 	_status.text = "get dressed!"
 

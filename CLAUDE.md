@@ -18,6 +18,7 @@
 - **Bedtime is derived, never chosen** — it is the evening `DayClock`'s bed minute at freetime end (`game.gd:285`), banded early / mid / late by `bed_early_line_minutes` (22:00) and `bed_mid_line_minutes` (23:30); the evening starts at `evening_start_minutes` (21:30). The sleep slot is a non-interactive narration beat, not a choice screen.
 - Conversational copy types itself out — `Typewriter` (pure pacing) driven by a `TypewriterLabel` child node. Never set a bubble/prompt/summary `text` directly.
 - All balance tunables live in `BalanceConfig` (`scripts/core/balance_config.gd` holds the defaults; `resources/balance_default.tres` carries overrides only and is currently zero-override) — feel iteration edits tunables, never minigame code.
+- **All randomness comes from `RngSource`** (`scripts/core/rng_source.gd`) — `game.gd` owns one and hands every slot (cooking included) `params["rng"] = rng.next_rng()`; minigames read it via `RngSource.from_params`. No `randomize()` or bare `RandomNumberGenerator.new()` outside it, so a seed reproduces a run.
 - Difficulty flows ONLY through `Difficulty.*_params(energy, cfg)` — no minigame reads GameState directly.
 
 ### Wave-2 invariants (economy + ladder)

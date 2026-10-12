@@ -88,6 +88,9 @@ var _evening := false
 ## full (the schedule invariant holds); this only skips INTO it, never
 ## reshapes it. "" starts from the morning as normal.
 var start_from_slot: String = ""
+## The run's randomness. Unseeded by default; assign RngSource.seeded(n) before
+## _ready (like start_from_slot) to reproduce a whole run.
+var rng := RngSource.new()
 ## The evening's till, mirrored off the freetime stamp so the sleep beat can
 ## still read it after the slot boundary. Seeded to bed_mid_line_minutes (also
 ## setup()'s own bed_clock default) at each day reset — not 0.0 — because a
@@ -183,7 +186,11 @@ func _start_slot() -> void:
 		# on the freetime subclass, so a typed `node.game_played.connect(...)`
 		# would not resolve against the base class.
 		node.connect("game_played", _on_game_played)
-	node.setup(_params_for(slot))
+	var params := _params_for(slot)
+	# Every slot draws one, used or not, so stream position never depends on
+	# which games happen to consume randomness.
+	params["rng"] = rng.next_rng()
+	node.setup(params)
 
 
 func _params_for(slot: String) -> Dictionary:
@@ -349,7 +356,9 @@ func _show_cooking() -> void:
 	var node: Minigame = SCENES["cooking"].instantiate()
 	_host.add_child(node)
 	node.finished.connect(_on_cooking_finished.bind(node), CONNECT_ONE_SHOT)
-	node.setup(Difficulty.cooking_params(state.energy, cfg))
+	var params := Difficulty.cooking_params(state.energy, cfg)
+	params["rng"] = rng.next_rng()
+	node.setup(params)
 
 
 func _on_cooking_finished(result: Dictionary, node: Node) -> void:
