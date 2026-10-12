@@ -59,15 +59,20 @@ func max_energy(cfg: BalanceConfig) -> float:
 ## clock-minutes and the game already prints minutes, so this does not touch
 ## the "energy is never shown as a number" rule — a persistent debt gauge
 ## would, which is why there is exactly one of these and it is not in the HUD.
+##
+## The rung is the ceiling's clarity tier — the same tier the dog's state text
+## reads — so the copy cannot say "square" while the dog looks tired, and the
+## cuts move with any retune of the cap instead of drifting off it. Counting
+## nights did drift: the 420 cap sits under one night of need, so "N nights
+## behind" could never print and "square" covered a ceiling of ~47.
 func ledger_text(slept_minutes: float, cfg: BalanceConfig) -> String:
 	var whole := int(slept_minutes)
 	var tonight := "%dh%02d tonight." % [whole / 60, whole % 60]
-	var half_night := cfg.sleep_need_minutes * 0.5
-	if debt_minutes <= -half_night:
-		return "%s banking it." % tonight
-	if debt_minutes < half_night:
+	if debt_minutes < 0.0:
+		return "%s banked." % tonight
+	var tier := Difficulty.clarity_tier(max_energy(cfg))
+	if tier >= 4:
 		return "%s square." % tonight
-	var nights := int(round(debt_minutes / maxf(cfg.sleep_need_minutes, 1.0)))
-	if nights <= 1:
-		return "%s a night behind." % tonight
-	return "%s %d nights behind." % [tonight, nights]
+	if tier >= 2:
+		return "%s running short." % tonight
+	return "%s running on fumes." % tonight

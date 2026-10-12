@@ -32,7 +32,8 @@ const SCENES := {
 # still renders coworker text (and where speech runs fastest) — so the mid
 # preset must land inside it or the listening speed scaling is untestable here.
 const ENERGY_PRESETS := {"fresh": 90.0, "okay": 65.0, "wrecked": 20.0}
-const DEBT_PRESETS := {"square": 0.0, "behind": 240.0, "wrecked": 960.0}
+# Fractions of sleep_debt_cap_minutes, so the presets follow any retune of the cap.
+const DEBT_PRESETS := {"square": 0.0, "short": 0.5, "fumes": 1.0}
 
 ## Full-day presets: each seeds a fresh GameState and rides res://scenes/main.tscn
 ## from an engineered morning instead of hosting a single minigame.
@@ -267,7 +268,7 @@ func _params_for_debt(activity: String, debt_minutes: float) -> Dictionary:
 
 
 func _selected_debt() -> float:
-	return DEBT_PRESETS.values()[maxi(_debt_option.selected, 0)]
+	return DEBT_PRESETS.values()[maxi(_debt_option.selected, 0)] * cfg.sleep_debt_cap_minutes
 
 
 func _selected_energy() -> float:
