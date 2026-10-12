@@ -5,9 +5,8 @@ class_name StatEffects
 ## D1 (still open): the lunch score is computed but not consumed here —
 ## listening scores its hits, yet none of it reaches state. A later wave gives
 ## it a sink (reputation). Work scores got theirs in wave 2 (the rank ladder).
-## Wave 3a closed the wake/brush half of D1 differently: their par times are
-## gone entirely, because time IS the morning clock's now — dawdling costs
-## budget, and the budget is what the drive cashes out as lateness.
+## The wake/brush half of D1 has no par times: time IS the morning clock —
+## dawdling costs budget, and the budget is what the drive cashes out as lateness.
 
 
 static func apply(slot: String, result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
@@ -103,9 +102,9 @@ static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:
 	state.wallet.credit(pay)
 	var cost := state.wallet.drain(cfg.daily_living_cost)
 	# QA ruling (issue #10 / finding 1): rank news reads as morning-in-bed
-	# news if it waits for the day-end summary — the ladder now evaluates
+	# news if it waits for the day-end summary — the ladder evaluates
 	# right after work_pm (game.gd), same day, at the office. A sick day has
 	# no work_pm slot in its schedule (DaySchedule.build), so "sick days
-	# never evaluate the ladder" holds by construction now, not a special case.
+	# never evaluate the ladder" holds by construction, not as a special case.
 	var normal_events: Array[String] = []
 	return {"pay": pay, "cost": cost, "events": normal_events}
