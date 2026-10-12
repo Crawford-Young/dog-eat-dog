@@ -8,6 +8,12 @@ class_name StatEffects
 ## The wake/brush half of D1 has no par times: time IS the morning clock —
 ## dawdling costs budget, and the budget is what the drive cashes out as lateness.
 
+## The slots where a lost game (`failed`) pays the loss cost, on top of the
+## slot's own effects. drive, work and freetime are left out on purpose: their
+## miss is already charged as the lateness debit, the work-score EMA and the
+## sleep ledger (user ruling, issue #17), so paying here would double it.
+const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]
+
 
 static func apply(slot: String, result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
 	match slot:
@@ -86,6 +92,10 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 			state.refresh_ceiling(cfg)
 		"sleep":
 			pass  # the night was recorded at freetime; this beat only reads it out
+	# Charged last, so a restore that hits the ceiling cannot swallow it.
+	if result.get("failed", false) and slot in LOSS_COST_SLOTS:
+		state.performance = clampf(state.performance - cfg.fail_performance_cost, 0.0, 1.0)
+		state.apply_energy(-cfg.fail_energy_cost)
 
 
 static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:

@@ -40,6 +40,13 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 # under a deliberate flick, which clears a few thousand px/sec.
 @export var temptation_pull_ceiling: float = 600.0
 
+## Losing a minigame (issue #17): the gag beat before the result reports (keep
+## it 1-2 s), and what the loss costs in the slots that pay it — StatEffects
+## owns the slot list.
+@export var fail_gag_seconds: float = 1.5
+@export var fail_performance_cost: float = 0.01
+@export var fail_energy_cost: float = 3.0
+
 @export var typewriter_chars_per_sec: float = 30.0
 @export var sleep_hold_time: float = 1.4
 

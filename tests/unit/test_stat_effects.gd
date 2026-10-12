@@ -286,3 +286,58 @@ func test_close_day_no_longer_evaluates_the_ladder() -> void:
 	var report := StatEffects.close_day(s, cfg)
 	assert_eq(report.events, [])
 	assert_false(s.warning, "the ladder never ran, so no warning is raised here")
+
+
+## The same slot result, played to the end or lost — so a test compares only
+## what `failed` itself costs, on top of whatever the slot already does.
+func _won_and_lost(slot: String, result: Dictionary) -> Array[GameState]:
+	var won := GameState.new()
+	var lost := GameState.new()
+	for s in [won, lost]:
+		s.energy = 50.0
+		s.performance = 0.5
+	var lost_result := result.duplicate()
+	lost_result["failed"] = true
+	StatEffects.apply(slot, result.duplicate(), won, cfg)
+	StatEffects.apply(slot, lost_result, lost, cfg)
+	return [won, lost]
+
+
+func test_a_lost_chore_costs_performance_and_energy_on_top() -> void:
+	for slot in ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]:
+		var pair := _won_and_lost(slot, {"score": 0.0, "skipped": false})
+		assert_almost_eq(pair[0].performance - pair[1].performance,
+				cfg.fail_performance_cost, 0.0001, "%s pays the performance cost" % slot)
+		assert_almost_eq(pair[0].energy - pair[1].energy,
+				cfg.fail_energy_cost, 0.0001, "%s pays the energy cost" % slot)
+
+
+func test_a_lost_chore_keeps_the_slots_own_effects() -> void:
+	var pair := _won_and_lost("brush", {"score": 0.0, "skipped": false})
+	assert_true(pair[1].brushed_today, "a lost brush still counts as brushed")
+
+
+func test_slots_that_already_charge_a_miss_never_pay_the_loss_cost() -> void:
+	# Drive's miss is the lateness debit, work's is the score EMA and free
+	# time's is the sleep ledger (user ruling, issue #17): no double charge.
+	var results := {
+		"drive": {"score": 0.0, "skipped": false, "overrun": 10.0},
+		"work_am": {"score": 0.0, "skipped": false},
+		"work_pm": {"score": 0.0, "skipped": false},
+		"freetime": {"score": 0.0, "skipped": false, "band": "late", "bed_minute": 1500.0},
+	}
+	for slot in results:
+		var pair := _won_and_lost(slot, results[slot])
+		assert_almost_eq(pair[1].performance, pair[0].performance, 0.0001, slot)
+		assert_almost_eq(pair[1].energy, pair[0].energy, 0.0001, slot)
+
+
+func test_the_loss_cost_clamps_performance_at_zero() -> void:
+	state.performance = 0.005
+	StatEffects.apply("wake", {"score": 0.0, "skipped": false, "failed": true}, state, cfg)
+	assert_eq(state.performance, 0.0)
+
+
+func test_the_loss_cost_defaults_match_the_ruling() -> void:
+	assert_eq(cfg.fail_performance_cost, 0.01)
+	assert_eq(cfg.fail_energy_cost, 3.0)
