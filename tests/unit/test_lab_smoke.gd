@@ -175,10 +175,7 @@ func test_every_evening_activity_has_a_launcher() -> void:
 
 
 func test_the_debt_preset_drives_the_freetime_pull() -> void:
-	# played_late is gone. The habit checkbox that fed it has to go with it, or
-	# the lab's freetime launch is measuring a field that no longer exists.
 	var lab := _fresh_lab()
-	assert_false("_habit_check" in lab, "the habit checkbox retired with played_late")
 	var square: Dictionary = lab._params_for_debt("freetime", 0.0)
 	var behind: Dictionary = lab._params_for_debt("freetime", lab.cfg.sleep_debt_cap_minutes)
 	assert_lt(square.pull_strength, behind.pull_strength)

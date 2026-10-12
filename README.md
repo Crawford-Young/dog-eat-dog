@@ -46,6 +46,14 @@ The morning is meant to be a mad dash you can just barely make. A clean, fast on
 
 The clock's colour is the warning: **calm → amber → red** as 8:00 closes in, so arriving late always begins from a visibly red clock. But red is a telegraph, not a promise — the traffic on any given morning is rolled fresh when the commute starts, and a bad roll can show you the red with nothing left to do about it. Some mornings you are late just because. Skipping a chore does not buy time back either: it costs a flat time penalty on top of its stat penalty, so ducking out is never a shortcut. However late the dog is, it is cashed out at the end of the commute — the dog slinks in and the day's performance takes a capped debit.
 
+## The Evening Clock
+
+The evening runs against a clock too, but it counts toward a bedtime instead of a deadline. It starts at **9:30** on the drive home and ticks through dinner and free time; the moment the dog logs off is its bedtime. Before **10:00** is an early night, before **11:30** a mid one, after that a late one. The corner always states the best night still available and when it runs out, and its colour drains toward that line — calm, amber, red — and stays red once the last line has passed.
+
+Every game played in free time costs 45 minutes of that clock, so "one more game" is a real trade. Cooking dinner costs clock; takeout costs bone-bucks and none.
+
+Late nights go on a sleep ledger. A bedtime that leaves less than a full night adds to the dog's sleep debt; a long night pays it back, up to a banked surplus. Debt has exactly one effect: it lowers how awake the dog can get at all, so coffee and food stop refilling it to full. Enough chronic lateness reaches a sick day, and the sick day sleeps the debt back down — one sick day, never a spiral. The sleep beat prints one line about it each night: *banked*, *square*, *running short* or *running on fumes*. Debt is never a gauge on screen.
+
 ## Controls
 
 | Slot | Input |
@@ -58,9 +66,11 @@ The clock's colour is the warning: **calm → amber → red** as 8:00 closes in,
 | Drive | `A`/`D` (or `←`/`→`) to change lane across five lanes. Traffic comes in walls, usually with one lane open — but some walls block all five, and how fast the whole road is moving is rolled fresh each morning. A car ahead pins your speed until you weave around it. Walls shear apart as they roll, so a solid one always opens eventually; reading the stagger early is the skill. Miles-to-go and your speed read out beside the progress bar. **Nothing ever crashes** — bad driving costs time, not damage |
 | Work (typing) | Phrases stream until the shift timer runs out; throughput against your rank's par is the score. Wrong chars insert and block until `Backspace`d, so a jam costs throughput |
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
-| Dinner | Click a choice card (cook / takeout) |
-| Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it; deliberately click **Log off** to end the night |
-| Sleep | No input — bedtime derives from how many games you played |
+| Drive home | Same lane controls as the morning commute, over a shorter road |
+| Dinner | Click a choice card (cook / takeout); cook opens the pan |
+| Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack, and nothing fails dinner — a sloppy step is a smaller energy refill |
+| Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
+| Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |
 | Coffee cart | Click a choice card (buy / skip) — buy is disabled when you can't afford it |
 | Retire offer | Choice card, first thing in the morning once savings hit the target — retire ends the run |
 | Warning / rank news | No input — the cat's narration beat plays out (warning lands before work; rank news lands at the office right after afternoon work) |
@@ -77,6 +87,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | 1 | Vertical slice — one playable day, placeholder art, web export | done |
 | 2 | Ranks + economy — salary and living costs, rank ladder with warning-first demotion, coffee cart, sick days, retirement ending, energy carryover, lab day presets | done |
 | 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
+| 3b | Evening clock + sleep economy — a banded bedtime clock, per-game clock cost, sleep-debt ledger acting through an energy ceiling, cooked dinner, ledger lines | done |
 
 ## Credits
 

@@ -112,12 +112,9 @@ func test_lunch_does_not_touch_performance() -> void:
 	assert_almost_eq(state.performance, 0.5, 0.001)
 
 
-## Retired: "cook" used to grant dinner_cook_energy/cook_energy_max directly
-## from the dinner card, so cook always outscored takeout by construction. T8
-## moves that energy to the pan itself, scaled by how the cooking session
-## actually went — a bad cook can now score below takeout's flat gain. See
-## test_the_dinner_card_itself_pays_no_cooking_energy below, which pins the
-## opposite of what this test used to assert.
+## The pan pays the cooking energy, scaled by how the cooking session actually
+## went — a bad cook can score below takeout's flat gain. The dinner card
+## itself pays none (see test_the_dinner_card_itself_pays_no_cooking_energy).
 func test_cooking_pays_energy_by_how_well_it_went() -> void:
 	var cfg := BalanceConfig.new()
 	var clean := GameState.new()
@@ -146,8 +143,7 @@ func test_takeout_costs_money_and_cooking_costs_none() -> void:
 
 
 func test_the_dinner_card_itself_pays_no_cooking_energy() -> void:
-	# One meal, one energy source. The card used to grant dinner_cook_energy
-	# flatly; the pan grants it now, scaled by the score.
+	# One meal, one energy source: the pan grants it, scaled by the score.
 	var cfg := BalanceConfig.new()
 	var state := GameState.new()
 	state.energy = 50.0
@@ -177,8 +173,8 @@ func test_freetime_records_the_night_on_the_ledger() -> void:
 	assert_lt(state.energy_ceiling, 100.0, "and the ceiling drops the same night")
 
 
-func test_a_long_evening_of_games_no_longer_drains_energy_directly() -> void:
-	# late_game_drain is retired. Games cost CLOCK now, and the clock costs
+func test_a_long_evening_of_games_drains_no_energy_directly() -> void:
+	# Games cost CLOCK, and the clock costs
 	# sleep, and the sleep costs energy — one chain, one authority.
 	var cfg := BalanceConfig.new()
 	var state := GameState.new()
@@ -187,17 +183,6 @@ func test_a_long_evening_of_games_no_longer_drains_energy_directly() -> void:
 		"freetime", {"games_played": 6, "band": "late", "bed_minute": 1421.0}, state, cfg
 	)
 	assert_eq(state.energy, 60.0, "the games themselves take nothing")
-
-
-func test_derive_bedtime_is_gone() -> void:
-	# A tunable or helper that reintroduces game-count authority over bedtime
-	# splits it — same class as the retired morning_budget_minutes.
-	# Godot 4.7.1 rejects has_method() called on the class directly ("Make an
-	# instance instead"), so the probe goes through an instance.
-	assert_false(
-		StatEffects.new().has_method("derive_bedtime"),
-		"game count is not a bedtime authority any more",
-	)
 
 
 func test_sleep_is_a_no_op_because_bedtime_is_already_derived() -> void:
