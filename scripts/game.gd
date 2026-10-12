@@ -97,6 +97,8 @@ var rng := RngSource.new()
 ## schedule that reaches "sleep" without passing through freetime (the lab,
 ## T9) would otherwise print "0:00" and hand the ledger a 31-hour night.
 var _bed_minute := 0.0
+## The minigame (or beat) currently up — the timer bar reads its countdown.
+var _hosted: Minigame
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -107,6 +109,7 @@ var _bed_minute := 0.0
 @onready var _ending: Panel = %Ending
 @onready var _ending_label: Label = %EndingLabel
 @onready var _clock_label: Label = %ClockLabel
+@onready var _timer_bar: Range = %TimerBar
 @onready var _summary_typer := TypewriterLabel.new()
 @onready var _ending_typer := TypewriterLabel.new()
 
@@ -129,6 +132,7 @@ func _ready() -> void:
 ## The whole HUD: the clock only exists while a morning slot is up, and it is
 ## the only thing that converts real seconds into game-minutes.
 func _process(delta: float) -> void:
+	_update_timer_bar()
 	_clock_label.visible = _clock_running
 	if not _clock_running:
 		return
@@ -141,6 +145,25 @@ func _process(delta: float) -> void:
 		"font_color",
 		ZONE_COLORS[clock.zone(cfg.clock_amber_fraction, cfg.clock_red_fraction)],
 	)
+
+
+## The bottom-edge bar shows whatever _timer_bar_fraction picks, or hides.
+func _update_timer_bar() -> void:
+	var fraction := _timer_bar_fraction()
+	_timer_bar.visible = fraction >= 0.0
+	if _timer_bar.visible:
+		_timer_bar.value = fraction
+
+
+## The one place that decides what the timer bar reads: the hosted game's own
+## countdown, as a 1 -> 0 fraction, or -1 for no bar (nothing hosted, or no
+## countdown). Drive and free time read a DayClock fraction here instead.
+func _timer_bar_fraction() -> float:
+	if not is_instance_valid(_hosted) or _hosted.is_queued_for_deletion():
+		return -1.0
+	if not _hosted.has_countdown():
+		return -1.0
+	return _hosted.time_fraction()
 
 
 ## The evening always states the best night still available and when it runs
@@ -178,19 +201,32 @@ func _start_slot() -> void:
 		state.wallet.savings,
 		cfg.retirement_target,
 	]
-	var node: Minigame = SCENES[slot].instantiate()
-	_host.add_child(node)
+	var node := _mount(slot)
 	node.finished.connect(_on_finished.bind(slot, node), CONNECT_ONE_SHOT)
 	if slot == "freetime":
 		# String form: node is typed Minigame here, and game_played lives only
 		# on the freetime subclass, so a typed `node.game_played.connect(...)`
 		# would not resolve against the base class.
 		node.connect("game_played", _on_game_played)
+	node.setup(_hosted_params(slot))
+
+
+## Instantiates `scene_key`'s scene into the host and makes it the hosted game.
+func _mount(scene_key: String) -> Minigame:
+	var node: Minigame = SCENES[scene_key].instantiate()
+	_host.add_child(node)
+	_hosted = node
+	return node
+
+
+## A playable slot's params plus what game.gd hands every one of them.
+func _hosted_params(slot: String) -> Dictionary:
 	var params := _params_for(slot)
 	# Every slot draws one, used or not, so stream position never depends on
 	# which games happen to consume randomness.
 	params["rng"] = rng.next_rng()
-	node.setup(params)
+	params["fail_gag_seconds"] = cfg.fail_gag_seconds
+	return params
 
 
 func _params_for(slot: String) -> Dictionary:
@@ -218,6 +254,8 @@ func _params_for(slot: String) -> Dictionary:
 			return Difficulty.typing_params(state.energy, cfg, 0, state.rank)
 		"drive_home":
 			return Difficulty.drive_home_params(state.energy, cfg)
+		"cooking":
+			return Difficulty.cooking_params(state.energy, cfg)
 		"lunch":
 			return Difficulty.listening_params(state.energy, cfg)
 		"freetime":
@@ -324,8 +362,7 @@ func _show_rank_news(rank_events: Array[String]) -> void:
 			lines.append(EVENT_COPY[event])
 	if rank_events.has("promoted") and state.rank == RankLadder.MAX_RANK:
 		lines.append(SENIOR_TEASE)
-	var node: Minigame = SCENES["warning"].instantiate()
-	_host.add_child(node)
+	var node := _mount("warning")
 	node.finished.connect(_on_out_of_band_beat_finished.bind(node), CONNECT_ONE_SHOT)
 	node.setup({
 		"text": "\n".join(lines),
@@ -353,12 +390,9 @@ func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 func _show_cooking() -> void:
 	_clock_running = true
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS["cooking"]]
-	var node: Minigame = SCENES["cooking"].instantiate()
-	_host.add_child(node)
+	var node := _mount("cooking")
 	node.finished.connect(_on_cooking_finished.bind(node), CONNECT_ONE_SHOT)
-	var params := Difficulty.cooking_params(state.energy, cfg)
-	params["rng"] = rng.next_rng()
-	node.setup(params)
+	node.setup(_hosted_params("cooking"))
 
 
 func _on_cooking_finished(result: Dictionary, node: Node) -> void:
@@ -377,8 +411,7 @@ func _on_cooking_finished(result: Dictionary, node: Node) -> void:
 func _show_late_beat() -> void:
 	_clock_running = false
 	_day_label.text = "day %d — the office" % state.day
-	var node: Minigame = SCENES["warning"].instantiate()
-	_host.add_child(node)
+	var node := _mount("warning")
 	node.finished.connect(_on_out_of_band_beat_finished.bind(node), CONNECT_ONE_SHOT)
 	node.setup({
 		"text": LATE_COPY % clock.clock_text(cfg.morning_start_minutes),

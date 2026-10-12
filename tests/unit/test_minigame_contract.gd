@@ -51,7 +51,7 @@ func test_wake_finishes_once_when_its_done_frame_repeats() -> void:
 	node._process(0.016)
 	node._process(0.016)
 	assert_signal_emit_count(node, "finished", 1)
-	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false}])
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false, "failed": false}])
 
 
 func test_brush_finishes_once_when_its_done_frame_repeats() -> void:
@@ -60,7 +60,7 @@ func test_brush_finishes_once_when_its_done_frame_repeats() -> void:
 	node._process(0.016)
 	node._process(0.016)
 	assert_signal_emit_count(node, "finished", 1)
-	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false}])
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false, "failed": false}])
 
 
 func test_skip_reports_a_zero_skipped_result_exactly_once(p = use_parameters(SKIPPABLE)) -> void:
@@ -68,7 +68,7 @@ func test_skip_reports_a_zero_skipped_result_exactly_once(p = use_parameters(SKI
 	_press_skip(node)
 	_press_skip(node)
 	assert_signal_emit_count(node, "finished", 1)
-	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.0, "skipped": true}])
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.0, "skipped": true, "failed": false}])
 
 
 func test_skip_after_a_finished_game_reports_nothing() -> void:
@@ -77,7 +77,7 @@ func test_skip_after_a_finished_game_reports_nothing() -> void:
 	node._process(0.016)
 	_press_skip(node)
 	assert_signal_emit_count(node, "finished", 1)
-	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false}])
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 1.0, "skipped": false, "failed": false}])
 
 
 func test_a_skipped_breakfast_ignores_further_presses() -> void:
@@ -105,7 +105,7 @@ func test_typing_finishes_once_at_shift_end_with_its_throughput_score() -> void:
 	await wait_for_signal(node.finished, 5.0)
 	await wait_process_frames(5)
 	assert_signal_emit_count(node, "finished", 1)
-	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.5, "skipped": false}])
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.5, "skipped": false, "failed": false}])
 
 
 func test_typing_ignores_keys_after_the_shift_ends() -> void:

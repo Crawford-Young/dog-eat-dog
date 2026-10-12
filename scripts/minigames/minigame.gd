@@ -5,11 +5,18 @@ extends Control
 ## Host calls setup(params), listens for finished(result).
 ##
 ## The base owns the run flag, finish-once, the
-## SkipButton handler and a countdown. A game calls _start() at the end of its
-## setup(), gates input and per-frame play on _running, and ends through
-## _finish()/_finish_with(), which report at most once per game.
+## SkipButton handler, a countdown and the loss gag. A game calls _start() (or
+## _start(params), to honour a "time_limit") at the end of its setup(), gates
+## input and per-frame play on _running, and ends through _finish()/
+## _finish_with() or loses through _fail(gag) — each reports at most once per
+## game, and every result carries score, skipped and failed.
 
 signal finished(result: Dictionary)
+
+## Mirrors BalanceConfig.fail_gag_seconds, for a host that passes no params.
+const DEFAULT_FAIL_GAG_SECONDS := 1.5
+const GAG_FONT := preload("res://assets/fonts/twemoji_mozilla.ttf")
+const GAG_FONT_SIZE := 160
 
 ## True from _start() until the game finishes; never true again after that.
 ## Read by name (`get("_running")`) by the dev autoplay bot.
@@ -18,6 +25,10 @@ var _finished: bool = false
 var _countdown_total: float = 0.0
 var _countdown_left: float = 0.0
 var _counting: bool = false
+var _fail_gag_seconds: float = DEFAULT_FAIL_GAG_SECONDS
+## Seconds left on a loss gag; > 0 only between _fail() and its report.
+var _gag_left: float = 0.0
+var _gag_result: Dictionary = {}
 
 
 func setup(_params: Dictionary) -> void:
@@ -28,10 +39,16 @@ func is_running() -> bool:
 	return _running
 
 
-## Marks the game live. A no-op once it has finished.
-func _start() -> void:
-	if not _finished:
-		_running = true
+## Marks the game live. A no-op once it has finished. A "time_limit" > 0 in
+## params starts the countdown; "fail_gag_seconds" sets the loss gag length.
+func _start(params := {}) -> void:
+	if _finished:
+		return
+	_running = true
+	_fail_gag_seconds = params.get("fail_gag_seconds", DEFAULT_FAIL_GAG_SECONDS)
+	var limit: float = params.get("time_limit", 0.0)
+	if limit > 0.0:
+		_start_countdown(limit)
 
 
 ## Starts (or restarts) a countdown of `seconds`; _on_timeout() fires once when
@@ -55,15 +72,32 @@ func time_fraction() -> float:
 	return clampf(_countdown_left / _countdown_total, 0.0, 1.0)
 
 
+## True while a countdown runs or still has time on it — what a host timer bar
+## shows. False with no countdown, or once it has run out.
+func has_countdown() -> bool:
+	return _counting or time_fraction() > 0.0
+
+
 ## Called once when the countdown runs out. Override to end the game.
 func _on_timeout() -> void:
 	pass
 
 
+## Both the countdown and the gag tick here, on internal process.
 func _notification(what: int) -> void:
-	if what != NOTIFICATION_INTERNAL_PROCESS or not _counting:
+	if what != NOTIFICATION_INTERNAL_PROCESS:
 		return
-	_countdown_left -= get_process_delta_time()
+	var delta := get_process_delta_time()
+	if _gag_left > 0.0:
+		_gag_left -= delta
+		if _gag_left <= 0.0:
+			_gag_left = 0.0
+			_sync_internal_process()
+			_emit_result(_gag_result)
+		return
+	if not _counting:
+		return
+	_countdown_left -= delta
 	if _countdown_left <= 0.0:
 		_set_counting(false)
 		_on_timeout()
@@ -71,7 +105,11 @@ func _notification(what: int) -> void:
 
 func _set_counting(on: bool) -> void:
 	_counting = on
-	set_process_internal(on)
+	_sync_internal_process()
+
+
+func _sync_internal_process() -> void:
+	set_process_internal(_counting or _gag_left > 0.0)
 
 
 ## Every skippable scene connects its SkipButton here.
@@ -84,14 +122,54 @@ func _finish(score: float, skipped: bool = false) -> void:
 	_finish_with({"score": clampf(score, 0.0, 1.0), "skipped": skipped})
 
 
-## Reports `extra` merged over a full, unskipped result — once per game.
+## Reports `extra` merged over a full, unskipped, unfailed result — once per
+## game, and never while a loss gag is playing.
 func _finish_with(extra: Dictionary) -> void:
 	if _finished:
 		return
+	_close()
+	_emit_result(extra)
+
+
+## Loses the game: input, skip and the countdown go dead now, `gag` (emoji)
+## pops up centred, and after fail_gag_seconds the game reports a failed zero
+## with `extra` merged over it. Once per game, like a finish.
+func _fail(gag: String, extra := {}) -> void:
+	if _finished:
+		return
+	_close()
+	_gag_result = {"score": 0.0, "failed": true}
+	_gag_result.merge(extra, true)
+	_show_gag(gag)
+	_gag_left = maxf(_fail_gag_seconds, 0.001)
+	_sync_internal_process()
+
+
+func _close() -> void:
 	_finished = true
 	_running = false
 	if _counting:
 		_set_counting(false)
-	var result := {"score": 1.0, "skipped": false}
+
+
+func _emit_result(extra: Dictionary) -> void:
+	var result := {"score": 1.0, "skipped": false, "failed": false}
 	result.merge(extra, true)
 	finished.emit(result)
+
+
+func _show_gag(gag: String) -> void:
+	var label := Label.new()
+	label.text = gag
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override(&"font", GAG_FONT)
+	label.add_theme_font_size_override(&"font_size", GAG_FONT_SIZE)
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(label)
+	label.pivot_offset = size / 2.0
+	label.scale = Vector2(0.4, 0.4)
+	var pop := label.create_tween()
+	pop.tween_property(label, "scale", Vector2.ONE, 0.25) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

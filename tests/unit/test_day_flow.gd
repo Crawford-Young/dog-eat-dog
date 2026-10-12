@@ -801,3 +801,43 @@ func test_an_unmatched_start_from_slot_walks_to_the_last_slot() -> void:
 	main.start_from_slot = "not_a_real_slot"
 	add_child_autofree(main)
 	assert_eq(main.schedule.current(), "sleep", "no match walks to the schedule's end")
+
+
+func test_the_timer_bar_hides_while_the_minigame_has_no_countdown() -> void:
+	var main := _fresh_main()
+	var bar: Control = main.get_node("%TimerBar")
+	main._process(0.0)
+	assert_false(bar.visible, "an untimed game shows no bar")
+	assert_eq(bar.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the bar never eats a click")
+
+
+func test_the_timer_bar_tracks_the_hosted_countdown() -> void:
+	var main := _fresh_main()
+	var bar: Range = main.get_node("%TimerBar")
+	var node := _current_minigame(main.get_node("%MinigameHost"))
+	node._start({"time_limit": 100.0})
+	main._process(0.0)
+	assert_true(bar.visible)
+	assert_almost_eq(bar.value, 1.0, 0.0001, "a fresh countdown reads full")
+	await wait_process_frames(5)
+	main._process(0.0)
+	assert_lt(bar.value, 1.0)
+	assert_almost_eq(bar.value, node.time_fraction(), 0.0001)
+
+
+func test_the_timer_bar_hides_once_the_hosted_game_is_gone() -> void:
+	var main := _fresh_main()
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host)._start({"time_limit": 100.0})
+	_walk(main, {}, "wake")
+	main._process(0.0)
+	assert_false(main.get_node("%TimerBar").visible, "the finished game's countdown does not linger")
+
+
+func test_every_hosted_game_gets_the_fail_gag_length() -> void:
+	var main := _fresh_main()
+	for slot in ["wake", "drive", "work_am", "freetime", "cooking"]:
+		var params: Dictionary = main._hosted_params(slot)
+		assert_eq(params.get("fail_gag_seconds"), main.cfg.fail_gag_seconds, slot)
+		assert_true(params.has("rng"), slot)
+	assert_true(main._hosted_params("cooking").has("tolerance"), "cooking keeps its difficulty params")
