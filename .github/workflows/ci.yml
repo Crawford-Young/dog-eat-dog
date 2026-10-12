@@ -15,11 +15,11 @@ env:
   # A CI run on a different patch release is not the gate the local runs were.
   GODOT_VERSION: 4.7.1
   # Floor for the GUT suite-size guard below. BUMP THIS when adding a test script.
-  EXPECTED_SCRIPTS: 20
+  EXPECTED_SCRIPTS: 29
 
 jobs:
   test:
-    name: Import & Unit Tests
+    name: Import, Unit Tests & Web Export
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -112,6 +112,75 @@ jobs:
             exit 1
           fi
 
+      - name: Cache web export template
+        id: template-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-${{ env.GODOT_VERSION }}-web-nothreads
+
+      - name: Install web nothreads template
+        # The .tpz carries every platform (~1.28 GB). Only the two web nothreads
+        # zips are kept (export_presets.cfg: thread_support=false), so the cache
+        # stays small and the full download happens only on a cache miss.
+        if: steps.template-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          DEST="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$DEST"
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -j -o /tmp/templates.tpz \
+            templates/version.txt \
+            templates/web_nothreads_release.zip \
+            templates/web_nothreads_debug.zip \
+            -d "$DEST"
+          rm /tmp/templates.tpz
+          ls -la "$DEST"
+
+      - name: Web export
+        # The gate is NOT the exit code. export_filter="all_resources" packs
+        # whatever was scanned, so an EXIT:0 export can still ship dev tooling.
+        # --verbose prints a "Storing File:" line per packed file; the manifest
+        # must be non-empty and free of anything exclude_filter should drop.
+        run: |
+          set -euo pipefail
+          just export-web --verbose 2>&1 | tee export.txt
+
+          for f in index.html index.js index.wasm index.pck; do
+            if [ ! -s "build/web/$f" ]; then
+              echo "::error::Web export is missing build/web/$f."
+              exit 1
+            fi
+          done
+
+          STORED=$(grep -c "Storing File:" export.txt || true)
+          if [ "$STORED" -eq 0 ]; then
+            echo "::error::No \"Storing File:\" lines — the manifest gate has nothing to read."
+            exit 1
+          fi
+
+          if grep "Storing File:" export.txt | grep -E "Storing File: *(res://)?(addons/gut/|tests/|node_modules/|scenes/dev/|scripts/dev/|package\.json|\.gutconfig\.json)"; then
+            echo "::error::Dev tooling shipped in the web pck (lines above)."
+            exit 1
+          fi
+
+          if grep -Eq "ERROR:|SCRIPT ERROR" export.txt; then
+            echo "::error::Web export emitted errors."
+            grep -E "ERROR:|SCRIPT ERROR" export.txt
+            exit 1
+          fi
+
+          echo "stored=$STORED files"
+
+      - name: Upload web build
+        # #11's in-browser check plays this artifact locally with `just serve`.
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-build
+          path: build/web
+          retention-days: 14
+
       - name: Upload run output
         uses: actions/upload-artifact@v7
         if: failure()
@@ -120,6 +189,7 @@ jobs:
           path: |
             gut-output.txt
             launch.txt
+            export.txt
           retention-days: 7
 
   commitlint:

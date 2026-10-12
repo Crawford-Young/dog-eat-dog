@@ -29,7 +29,14 @@ Override the Godot binary with the `GODOT` env var.
 
 ## Web Export
 
-One-time setup: install the 4.7.1 export templates (`Godot_v4.7.1-stable_export_templates.tpz` from the GitHub release) — extract the `templates/web_*` files to `%APPDATA%\Godot\export_templates\4.7.1.stable\`. The committed `export_presets.cfg` uses the nothreads template (`thread_support=false`), so the build runs without COOP/COEP headers. Then:
+CI exports the web build on every PR and push to main, and uploads it as the `web-build` artifact (kept 14 days). To play it without installing templates, download it into `build/web/` and run `just serve`:
+
+```sh
+gh run download <run-id> -n web-build -D build/web
+just serve        # http://localhost:8060
+```
+
+To export locally instead, one-time setup: install the 4.7.1 export templates (`Godot_v4.7.1-stable_export_templates.tpz` from the GitHub release) — extract the `templates/web_*` files to `%APPDATA%\Godot\export_templates\4.7.1.stable\`. The committed `export_presets.cfg` uses the nothreads template (`thread_support=false`), so the build runs without COOP/COEP headers. Then:
 
 ```sh
 just export-web   # build/web/ (gitignored)
