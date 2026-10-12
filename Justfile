@@ -20,6 +20,10 @@ test:
 test-one file:
     "{{godot}}" --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://{{file}} -gexit
 
+# headless autoplay bot — just autoplay days=30 seed=1 profile=sharp [out=report.json]
+autoplay *args:
+    "{{godot}}" --headless --fixed-fps 60 --path . -s res://scripts/dev/autoplay.gd -- {{args}}
+
 # import assets headlessly (after adding/editing scenes or assets)
 import:
     "{{godot}}" --headless --path . --import
