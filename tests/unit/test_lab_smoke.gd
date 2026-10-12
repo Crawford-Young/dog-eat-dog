@@ -186,8 +186,8 @@ func test_the_debt_preset_drives_the_freetime_pull() -> void:
 
 func test_the_debt_preset_writes_the_sleep_beats_ledger_line() -> void:
 	var lab := _fresh_lab()
-	var params: Dictionary = lab._params_for_debt("sleep", lab.cfg.sleep_need_minutes * 3.0)
-	assert_string_contains(params.ledger, "3 nights behind")
+	var params: Dictionary = lab._params_for_debt("sleep", lab.cfg.sleep_debt_cap_minutes)
+	assert_string_contains(params.ledger, "running on fumes")
 	assert_true(params.has("bed_clock"), "the beat needs a time to state")
 
 

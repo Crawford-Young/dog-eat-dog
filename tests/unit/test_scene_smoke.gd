@@ -243,14 +243,14 @@ func test_the_sleep_beat_states_the_real_bed_time_and_the_ledger() -> void:
 	node.setup({
 		"bedtime": "late",
 		"bed_clock": "23:41",
-		"ledger": "7h19 tonight. a night behind.",
+		"ledger": "7h19 tonight. running short.",
 		"text_speed": 99999.0,
 		"hold": 0.01,
 	})
 	await wait_physics_frames(2)
 	var text: String = node.get_node("%Line").text
 	assert_string_contains(text, "23:41")
-	assert_string_contains(text, "a night behind")
+	assert_string_contains(text, "running short")
 
 
 func test_no_band_copy_hardcodes_a_wall_clock_hour() -> void:

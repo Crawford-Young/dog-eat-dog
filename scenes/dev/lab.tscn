@@ -134,7 +134,7 @@ text = "coffee morning (savings 20, energy 45)"
 text = "late morning (20-min budget — rides the clock to red + the late beat)"
 
 [node name="In_debt" type="Button" parent="Menu/MenuBox/DayPresets"]
-text = "in debt (three-plus nights behind, ceiling down but not sick yet)"
+text = "in debt (60% of the cap — running short, one late night from fumes, not sick yet)"
 
 [node name="Post_work" type="Button" parent="Menu/MenuBox/DayPresets"]
 text = "post work (starts at drive home — the evening, no morning ride)"

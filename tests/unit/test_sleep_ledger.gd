@@ -110,20 +110,62 @@ func test_ledger_text_says_square_when_it_is_square() -> void:
 	assert_string_contains(ledger.ledger_text(slept, cfg), "square")
 
 
-func test_ledger_text_says_banking_it_on_a_surplus() -> void:
+func test_ledger_text_says_banked_on_any_surplus() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	ledger.debt_minutes = -cfg.sleep_need_minutes
-	assert_string_contains(ledger.ledger_text(500.0, cfg), "banking it")
+	var slept := ledger.record_night(float(cfg.bed_early_line_minutes), 420.0, cfg)
+	assert_lt(ledger.debt_minutes, 0.0, "a bed on the early line sleeps past need")
+	assert_string_contains(ledger.ledger_text(slept, cfg), "banked")
 
 
-func test_ledger_text_counts_nights_behind() -> void:
+func test_the_ledger_never_says_square_while_the_dog_looks_tired() -> void:
+	# The copy and the sprite were two independently-tuned numbers that agreed
+	# by luck, and the 420 cap broke the luck: "square" with the ceiling at ~47.
+	# The rung is now the ceiling's own clarity tier, so this holds at every
+	# debt and through any future retune of the cap.
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	ledger.debt_minutes = cfg.sleep_need_minutes
-	assert_string_contains(ledger.ledger_text(400.0, cfg), "a night behind")
-	ledger.debt_minutes = cfg.sleep_need_minutes * 3.0
-	assert_string_contains(ledger.ledger_text(400.0, cfg), "3 nights behind")
+	for step in range(0, 43):
+		ledger.debt_minutes = cfg.sleep_debt_cap_minutes * step / 42.0
+		var tired := Difficulty.clarity_tier(ledger.max_energy(cfg)) < 4
+		var text := ledger.ledger_text(400.0, cfg)
+		assert_eq(text.contains("square"), not tired, "debt %d: %s" % [ledger.debt_minutes, text])
+
+
+func test_every_rung_is_reachable_under_the_cap() -> void:
+	# The old "N nights behind" rung could never print once the cap fell under
+	# one night of need. Every rung here must be a debt the ledger can hold.
+	var cfg := _cfg()
+	var ledger := SleepLedger.new()
+	var seen := {}
+	for step in range(-42, 43):
+		ledger.debt_minutes = clampf(
+			cfg.sleep_debt_cap_minutes * step / 42.0,
+			-cfg.sleep_bank_cap_minutes, cfg.sleep_debt_cap_minutes
+		)
+		var text := ledger.ledger_text(400.0, cfg)
+		for rung in ["banked", "square", "running short", "running on fumes"]:
+			if text.contains(rung):
+				seen[rung] = true
+	assert_eq(seen.size(), 4, "rungs seen: %s" % [seen.keys()])
+
+
+func test_on_fumes_shows_before_the_cliff() -> void:
+	# The last rung must print on a night that does NOT yet make the dog sick,
+	# or the copy only ever announces the cliff after the fall.
+	var cfg := _cfg()
+	var ledger := SleepLedger.new()
+	ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	assert_string_contains(ledger.ledger_text(400.0, cfg), "running on fumes")
+	var wobble := false
+	for step in range(0, 43):
+		ledger.debt_minutes = cfg.sleep_debt_cap_minutes * step / 42.0
+		if (
+			ledger.ledger_text(400.0, cfg).contains("running on fumes")
+			and not Difficulty.is_sick_morning(ledger.max_energy(cfg), cfg)
+		):
+			wobble = true
+	assert_true(wobble)
 
 
 func test_nonsense_bed_minutes_never_produce_negative_sleep() -> void:
