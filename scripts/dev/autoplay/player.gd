@@ -36,7 +36,12 @@ func _init(hands_: Hands, profile_: Dictionary, seed_value: int) -> void:
 
 ## Starts the right coroutine for a freshly hosted node. `day` feeds the
 ## dinner policy. Fire-and-forget: the coroutine paces itself on `ticked`.
+## Every screen, beats and choice cards included, is first taken in for the
+## profile's orient time; only then does its driver start reacting.
 func play(slot: String, node: Node, day: int) -> void:
+	var orient: Vector2 = profile.orient
+	if not await _wait(node, roundi(_rng.randf_range(orient.x, orient.y) * 60.0)):
+		return
 	match slot:
 		"wake":
 			_mash(node, "_running")

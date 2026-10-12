@@ -15,15 +15,18 @@ extends SceneTree
 ##            path with forward slashes: out=C:/tmp/run.json
 ##
 ## Profiles (full knobs in autoplay/profiles.gd):
-##   sharp   skilled player: 0.20-0.30 s reaction per decision, ~8.6 Hz
+##   sharp   skilled player: 0.8-1.0 s to take in each new screen, then
+##           0.20-0.30 s reaction per decision, ~8.6 Hz
 ##           mashing, 20 ms beat timing error, ~80 wpm typing with 1% typos,
 ##           never skips.
-##   sloppy  tired casual: 0.45-0.70 s reaction, ~6 Hz mashing, 70 ms beat
+##   sloppy  tired casual: 1.2-1.6 s to take in each new screen, then
+##           0.45-0.70 s reaction, ~6 Hz mashing, 70 ms beat
 ##           error and late passes, ~40 wpm with 6% typos, short brush
 ##           strokes, fumbled drops, wrong gestures, skips 15% of chores.
 ##
 ## Policy, deterministic per profile:
 ##                    sharp            sloppy
+##   orient           0.8-1.0 s        1.2-1.6 s (every hosted screen)
 ##   coffee           water            buy (water when unaffordable)
 ##   dinner           always cook      cook every 3rd day, else takeout
 ##                                     (cook when takeout is unaffordable)
