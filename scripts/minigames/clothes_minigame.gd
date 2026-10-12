@@ -8,7 +8,6 @@ var _logic := DressLogic.new()
 var _fumble_chance: float = 0.0
 var _held: Control = null
 var _held_home: Vector2 = Vector2.ZERO
-var _running: bool = false
 var _rng: RandomNumberGenerator
 
 @onready var _dog_zone: ColorRect = %DogZone
@@ -18,7 +17,7 @@ var _rng: RandomNumberGenerator
 func setup(params: Dictionary) -> void:
 	_fumble_chance = params.fumble_chance
 	_rng = RngSource.from_params(params)
-	_running = true
+	_start()
 	_status.text = "get dressed!"
 
 
@@ -70,7 +69,6 @@ func _try_wear() -> void:
 		_held = null
 		_status.text = "%s on!" % item_name
 		if _logic.is_dressed():
-			_running = false
 			_finish(1.0)
 	else:
 		_drop_home("not yet! (shoes need pants)")

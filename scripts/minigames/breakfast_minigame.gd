@@ -23,7 +23,6 @@ var _beats_done: int = 0
 var _hits: int = 0
 var _speed: float = 1.6
 var _window: float = 0.3
-var _running: bool = false
 var _pulse_t: float = 0.0
 var _flash_t: float = 0.0
 var _flash_color: Color = Color.WHITE
@@ -54,7 +53,7 @@ func setup(params: Dictionary) -> void:
 	_zone.position.y = zone_pos_y
 	_zone.size.y = zone_size_y
 	_start_beat()
-	_running = true
+	_start()
 
 
 func _start_beat() -> void:
@@ -111,7 +110,6 @@ func _press() -> void:
 	_flash_color = FLASH_HIT if hit else FLASH_MISS
 	_beats_done += 1
 	if _beats_done >= _beats_total:
-		_running = false
 		_finish(float(_hits) / _beats_total)
 	else:
 		_start_beat()
@@ -126,9 +124,3 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.physical_keycode == KEY_SPACE
 	if clicked or spaced:
 		_press()
-
-
-func _on_skip_pressed() -> void:
-	if _running:
-		_running = false
-		_finish(0.0, true)

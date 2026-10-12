@@ -4,7 +4,6 @@ extends Minigame
 ## slows you down, and slow is what costs (the day clock keeps running).
 
 var _sim: LaneSim
-var _running: bool = false
 var _route_length: float = 1.0
 var _route_miles: float = 0.0
 var _display_top_mph: float = 0.0
@@ -35,7 +34,7 @@ func setup(params: Dictionary) -> void:
 		rect.color = Color(0.7, 0.55, 0.75, 1)
 		_road.add_child(rect)
 		_car_rects.append(rect)
-	_running = true
+	_start()
 
 
 func _lane_x(lane_index: int) -> float:
@@ -60,7 +59,6 @@ func _process(delta: float) -> void:
 	_speedo.text = "%d mph" % roundi(_sim.speed / _top_speed * _display_top_mph)
 	_honk.visible = _sim.pinned
 	if _sim.is_done():
-		_running = false
 		_finish(1.0)
 
 

@@ -13,7 +13,6 @@ signal game_played
 
 var _session: FreetimeSession
 var _cursor_pos: Vector2
-var _running: bool = false
 var _placed: bool = false
 
 @onready var _cursor: ColorRect = %VirtualCursor
@@ -29,7 +28,7 @@ func setup(params: Dictionary) -> void:
 		params.pull_growth,
 		params.pull_ceiling,
 	)
-	_running = true
+	_start()
 	_update_counter()
 
 
@@ -89,7 +88,6 @@ func _input(event: InputEvent) -> void:
 
 
 func _end() -> void:
-	_running = false
 	_release_cursor()
 	_session.logoff()
 	_finish_with(_session.result())
