@@ -22,10 +22,8 @@ const PIXELS_PER_UNIT := 4.0
 
 
 func setup(params: Dictionary) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
 	var sim_params := params.duplicate()
-	sim_params["cars"] = LaneSim.make_traffic(params, rng)
+	sim_params["cars"] = LaneSim.make_traffic(params, RngSource.from_params(params))
 	_sim = LaneSim.new(sim_params)
 	_route_length = params.length
 	_route_miles = params.route_miles
