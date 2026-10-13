@@ -88,13 +88,65 @@ func test_coworker_speech_finishes_inside_its_own_window() -> void:
 		assert_lt(reveal_time, params.window, "the longest line must land before the window shuts")
 
 
-func test_typing_params_scale() -> void:
-	assert_eq(Difficulty.typing_params(100.0, cfg).tier, 4)
-	assert_eq(Difficulty.typing_params(0.0, cfg).tier, 0)
+func test_the_triage_tier_is_the_clarity_tier_without_a_boost() -> void:
+	assert_eq(Difficulty.triage_params(100.0, cfg).tier, 4)
+	assert_eq(Difficulty.triage_params(50.0, cfg).tier, Difficulty.clarity_tier(50.0))
+	assert_eq(Difficulty.triage_params(0.0, cfg).tier, 0)
 
 
-func test_typing_params_carry_the_wrong_buffer_cap() -> void:
-	assert_eq(Difficulty.typing_params(50.0, cfg).wrong_cap, cfg.typing_wrong_cap)
+func test_a_triage_boost_lifts_the_tier_and_caps_at_the_top() -> void:
+	assert_eq(Difficulty.triage_params(30.0, cfg, 2).tier, Difficulty.clarity_tier(30.0) + 2)
+	assert_eq(Difficulty.triage_params(90.0, cfg, 2).tier, 4)
+
+
+func test_the_triage_read_delay_is_the_tiers() -> void:
+	cfg.triage_read_delays = [0.5, 0.4, 0.3, 0.2, 0.1] as Array[float]
+	for energy in [0.0, 30.0, 50.0, 70.0, 100.0]:
+		var p := Difficulty.triage_params(energy, cfg)
+		assert_almost_eq(p.read_delay, cfg.triage_read_delays[p.tier], 0.0001)
+	assert_almost_eq(Difficulty.triage_params(30.0, cfg, 2).read_delay, 0.2, 0.0001,
+			"the boosted tier reads at the boosted delay")
+
+
+func test_the_shipped_read_delay_never_shrinks_as_the_tier_falls() -> void:
+	var delays := cfg.triage_read_delays
+	assert_eq(delays.size(), 5, "one delay per clarity tier, 0 to 4")
+	for tier in range(4):
+		assert_gt(delays[tier], delays[tier + 1], "tier %d reads slower than tier %d" % [tier, tier + 1])
+
+
+func test_triage_params_carry_the_inbox() -> void:
+	cfg.triage_shift_time = 17.0
+	cfg.triage_arrival_gap = 0.7
+	cfg.triage_arrival_jitter = 0.3
+	cfg.triage_inbox_capacity = 4
+	var p := Difficulty.triage_params(80.0, cfg)
+	assert_eq(p.capacity, 4)
+	assert_almost_eq(p.shift_time, 17.0, 0.0001)
+	assert_almost_eq(p.gap, 0.7, 0.0001)
+	assert_almost_eq(p.jitter, 0.3, 0.0001)
+	assert_almost_eq(p.speed, 1.0, 0.0001, "no progress given is the start of the day")
+
+
+func test_a_higher_rank_gets_a_shorter_email_window() -> void:
+	cfg.triage_email_windows = [3.0, 2.0, 1.0] as Array[float]
+	assert_almost_eq(Difficulty.triage_params(80.0, cfg, 0, 0).window, 3.0, 0.0001)
+	assert_almost_eq(Difficulty.triage_params(80.0, cfg, 0, 2).window, 1.0, 0.0001)
+	assert_almost_eq(Difficulty.triage_params(80.0, cfg, 0, 99).window, 1.0, 0.0001,
+			"rank clamps to the table")
+
+
+func test_the_shipped_triage_tightens_with_rank() -> void:
+	var table := cfg.triage_email_windows
+	assert_eq(table.size(), RankLadder.RANK_NAMES.size(), "one window per rank")
+	for i in range(1, table.size()):
+		assert_lt(table[i], table[i - 1])
+
+
+func test_triage_mail_speeds_up_with_the_day() -> void:
+	cfg.day_ramp_speed_max = 2.0
+	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 0.5).speed, 1.5, 0.0001)
+	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 
 
 func test_the_temptation_pull_scales_with_sleep_debt() -> void:
@@ -178,10 +230,6 @@ func test_burst_words_speed_up_with_the_day() -> void:
 	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 
 
-func test_no_boost_matches_wave_one_behavior() -> void:
-	assert_eq(Difficulty.typing_params(50.0, cfg).tier, Difficulty.clarity_tier(50.0))
-
-
 func test_sick_morning_below_threshold_only() -> void:
 	assert_true(Difficulty.is_sick_morning(cfg.sick_energy_threshold - 0.1, cfg))
 	assert_false(Difficulty.is_sick_morning(cfg.sick_energy_threshold, cfg))
@@ -250,19 +298,6 @@ func test_the_drive_home_is_the_morning_road_but_shorter() -> void:
 	assert_eq(evening.keys().size(), morning.keys().size(), "and the same param contract")
 
 
-func test_typing_params_carry_shift_and_rank_par() -> void:
-	var cfg := BalanceConfig.new()
-	var p := Difficulty.typing_params(80.0, cfg, 0, 2)
-	assert_almost_eq(p.shift_time, cfg.typing_shift_time, 0.001)
-	assert_eq(p.par_units, cfg.typing_par_units[2])
-	assert_false(p.has("error_tolerance"))
-
-
-func test_typing_par_clamps_rank_to_table() -> void:
-	var cfg := BalanceConfig.new()
-	assert_eq(Difficulty.typing_params(80.0, cfg, 0, 99).par_units, cfg.typing_par_units[2])
-
-
 func test_wake_and_brush_params_have_no_par_time() -> void:
 	var cfg := BalanceConfig.new()
 	assert_false(Difficulty.wake_params(50.0, cfg).has("par_time"))
@@ -322,7 +357,7 @@ func test_untimed_games_get_no_time_limit() -> void:
 	# shift timer; lunch runs its fixed beats.
 	assert_false(Difficulty.drive_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.drive_home_params(50.0, cfg).has("time_limit"))
-	assert_false(Difficulty.typing_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.triage_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.burst_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.listening_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.temptation_params(50.0, cfg, 0.0).has("time_limit"))
@@ -341,8 +376,8 @@ func test_each_scored_game_gets_its_loss_threshold() -> void:
 	cfg.lunch_fail_score = 0.07
 	cfg.breakfast_fail_hits = 2
 	cfg.cook_spoil_limit = 4
-	assert_eq(Difficulty.typing_params(50.0, cfg).fail_score, 0.42)
-	assert_eq(Difficulty.typing_params(50.0, cfg, 2, 1).fail_score, 0.42)
+	assert_eq(Difficulty.triage_params(50.0, cfg).fail_score, 0.42)
+	assert_eq(Difficulty.triage_params(50.0, cfg, 2, 1, 0.5).fail_score, 0.42)
 	assert_eq(Difficulty.burst_params(50.0, cfg).fail_score, 0.42)
 	assert_eq(Difficulty.burst_params(50.0, cfg, 2, 1, 0.5).fail_score, 0.42)
 	assert_eq(Difficulty.listening_params(50.0, cfg).fail_score, 0.07)
@@ -403,6 +438,12 @@ func _ramped_games() -> Array[Dictionary]:
 			"speed_key": "speed",
 			"params": func(energy: float, progress: float) -> Dictionary:
 				return Difficulty.burst_params(energy, cfg, cfg.coffee_buff_tiers, 1, progress),
+		},
+		{
+			"name": "work_pm triage",
+			"speed_key": "speed",
+			"params": func(energy: float, progress: float) -> Dictionary:
+				return Difficulty.triage_params(energy, cfg, 0, 1, progress),
 		},
 	]
 

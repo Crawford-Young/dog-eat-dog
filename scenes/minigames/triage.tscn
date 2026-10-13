@@ -1,0 +1,106 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/minigames/triage_minigame.gd" id="1"]
+
+[node name="Triage" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="MonitorSlot" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.25
+anchor_top = 0.17
+anchor_right = 0.75
+anchor_bottom = 0.63
+mouse_filter = 2
+
+[node name="EmailSlot" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.4
+anchor_top = 0.26
+anchor_right = 0.6
+anchor_bottom = 0.46
+mouse_filter = 2
+
+[node name="EmailBar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.4
+anchor_top = 0.47
+anchor_right = 0.6
+anchor_bottom = 0.5
+mouse_filter = 2
+max_value = 1.0
+show_percentage = false
+
+[node name="PileRow" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.62
+anchor_top = 0.32
+anchor_right = 0.98
+anchor_bottom = 0.42
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="ReplySlot" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.05
+anchor_top = 0.3
+anchor_right = 0.2
+anchor_bottom = 0.5
+mouse_filter = 2
+
+[node name="ReplyLabel" type="Label" parent="."]
+anchor_left = 0.05
+anchor_top = 0.51
+anchor_right = 0.2
+anchor_bottom = 0.56
+mouse_filter = 2
+text = "A  REPLY"
+horizontal_alignment = 1
+
+[node name="TrashSlot" type="Control" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.8
+anchor_top = 0.5
+anchor_right = 0.95
+anchor_bottom = 0.7
+mouse_filter = 2
+
+[node name="TrashLabel" type="Label" parent="."]
+anchor_left = 0.8
+anchor_top = 0.71
+anchor_right = 0.95
+anchor_bottom = 0.76
+mouse_filter = 2
+text = "D  TRASH"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="."]
+anchor_left = 0.25
+anchor_top = 0.65
+anchor_right = 0.75
+anchor_bottom = 0.72
+mouse_filter = 2
+text = "REPLY TO WORK, TRASH THE JUNK"
+horizontal_alignment = 1
+
+[node name="ShiftBar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.35
+anchor_top = 0.06
+anchor_right = 0.65
+anchor_bottom = 0.1
+mouse_filter = 2
+max_value = 1.0
+show_percentage = false
+
+[node name="TallyLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.35
+anchor_top = 0.11
+anchor_right = 0.65
+anchor_bottom = 0.16
+mouse_filter = 2
+horizontal_alignment = 1

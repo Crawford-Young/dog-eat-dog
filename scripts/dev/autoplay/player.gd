@@ -1,11 +1,11 @@
 extends RefCounted
 
 ## The oracle player. One coroutine per hosted node reads the node's internals
-## to decide WHAT to press (lane state, the typing target, spot positions, beat
+## to decide WHAT to press (lane state, the word on screen, spot positions, beat
 ## timing) and then presses it through Hands, as real InputEvents. It reads a
-## game through public accessors where the game has them (the burst's
-## session()), and never calls a method that acts, a button's pressed signal
-## or a game.gd handler.
+## game through public accessors where the game has them (the burst's and the
+## triage's session()), and never calls a method that acts, a button's pressed
+## signal or a game.gd handler.
 ##
 ## Every coroutine re-checks that its node is still hosted after each await,
 ## so a node that finished mid-gesture is simply abandoned.
@@ -69,7 +69,7 @@ func play(slot: String, node: Node, day: int) -> void:
 		"work_am":
 			_burst(node)
 		"work_pm":
-			_type(node)
+			_triage(node)
 		"lunch":
 			_listen(node)
 		"cooking":
@@ -392,28 +392,31 @@ func _burst(node: Node) -> void:
 			return
 
 
-## Work PM's typing shift. Type the target; a typo lodges in the wrong-buffer,
-## gets noticed a reaction later and is backspaced out. The shift timer ends the slot.
-func _type(node: Node) -> void:
-	if not await _think(node):
-		return
+## Sort each email that reaches the top: wait for it to come into focus, take
+## it in for one reaction, then press A (reply) for work or D (trash) for junk —
+## the other key with chance `typo`. Reads only the minigame's public
+## session(); the shift timer ends the slot.
+func _triage(node: Node) -> void:
+	var handled := -1
 	for i in LOOP_CAP_FRAMES:
 		if not _is_live(node):
 			return
-		var shift: WorkShift = node.get("_shift")
-		if not shift.session.wrong_buffer.is_empty():
-			if not await _think(node):
+		var session: TriageSession = node.session()
+		var top := session.front_id()
+		if top == handled or not session.is_legible():
+			if not await _wait(node, 1):
 				return
-			for c in shift.session.wrong_buffer:
-				hands.tap(KEY_BACKSPACE)
-				if not await _wait(node, _char_frames()):
-					return
 			continue
-		var c := shift.target[shift.session.typed_count]
+		if not await _think(node):
+			return
+		if not _is_live(node) or node.session().front_id() != top:
+			continue  # it expired while the dog was reading
+		handled = top
+		var reply := TriageSession.is_work(session.front_icon())
 		if _chance(profile.typo):
-			c = _typo_for(c)
-		hands.type_char(c)
-		if not await _wait(node, _char_frames()):
+			reply = not reply
+		hands.tap(KEY_A if reply else KEY_D)
+		if not await _wait(node, 1):
 			return
 
 

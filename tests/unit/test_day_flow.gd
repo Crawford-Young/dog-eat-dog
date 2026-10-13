@@ -414,7 +414,8 @@ func test_both_work_shifts_read_the_dogs_rank() -> void:
 	main.state.rank = 2
 	assert_eq(main._params_for("work_am").window, main.cfg.burst_word_windows[2],
 			"the burst's word window")
-	assert_eq(main._params_for("work_pm").par_units, main.cfg.typing_par_units[2])
+	assert_eq(main._params_for("work_pm").window, main.cfg.triage_email_windows[2],
+			"the triage's email window")
 
 
 func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
@@ -1187,3 +1188,17 @@ func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> vo
 	assert_true(_current_minigame(host).has_method("session"), "work AM hosts the burst")
 	# One of the day's four games is behind it: 1 + 0.25 * (2.0 - 1).
 	assert_almost_eq(main._params_for("work_am").speed, 1.25, 0.0001)
+
+
+func test_work_pm_is_the_inbox_triage_and_its_mail_rides_the_days_progress() -> void:
+	var main := _fresh_main()
+	main.cfg.day_ramp_speed_max = 2.0
+	main.schedule.set_slots(["wake", "work_am", "lunch", "work_pm"] as Array[String])
+	main._start_slot()
+	var host: Control = main.get_node("%MinigameHost")
+	for slot in ["wake", "work_am", "lunch"]:
+		_current_minigame(host).finished.emit(_result_for(slot, {}))
+	assert_eq(main.schedule.current(), "work_pm")
+	assert_true(_current_minigame(host).session() is TriageSession, "work PM hosts the triage")
+	# Three of the day's four games are behind it: 1 + 0.75 * (2.0 - 1).
+	assert_almost_eq(main._params_for("work_pm").speed, 1.75, 0.0001)

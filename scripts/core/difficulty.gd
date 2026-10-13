@@ -67,16 +67,6 @@ static func brush_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
-static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 0, rank: int = 0) -> Dictionary:
-	return {
-		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
-		"wrong_cap": cfg.typing_wrong_cap,
-		"shift_time": cfg.typing_shift_time,
-		"par_units": cfg.typing_par_units[clampi(rank, 0, cfg.typing_par_units.size() - 1)],
-		"fail_score": cfg.work_fail_score,
-	}
-
-
 ## Work AM's word burst. The clarity tier (plus coffee's boost) picks how long
 ## and legible the words are; the rank picks the word window; the day ramp is
 ## the stream's speed. The shift timer ends it, so no time_limit.
@@ -88,6 +78,28 @@ static func burst_params(
 		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
 		"shift_time": cfg.burst_shift_time,
 		"window": windows[clampi(rank, 0, windows.size() - 1)],
+		"speed": day_ramp(progress, cfg),
+		"fail_score": cfg.work_fail_score,
+	}
+
+
+## Work PM's inbox triage. The clarity tier (plus any boost) picks the read
+## delay, how long each email on top stays out of focus; the rank picks the
+## window the email on top has; the day ramp is the inbox's speed. The shift
+## timer ends it, so no time_limit.
+static func triage_params(
+		energy: float, cfg: BalanceConfig, boost_tiers := 0, rank := 0, progress := 0.0
+) -> Dictionary:
+	var tier := clampi(clarity_tier(energy) + boost_tiers, 0, 4)
+	var windows := cfg.triage_email_windows
+	return {
+		"tier": tier,
+		"read_delay": cfg.triage_read_delays[tier],
+		"shift_time": cfg.triage_shift_time,
+		"window": windows[clampi(rank, 0, windows.size() - 1)],
+		"gap": cfg.triage_arrival_gap,
+		"jitter": cfg.triage_arrival_jitter,
+		"capacity": cfg.triage_inbox_capacity,
 		"speed": day_ramp(progress, cfg),
 		"fail_score": cfg.work_fail_score,
 	}

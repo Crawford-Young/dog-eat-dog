@@ -16,10 +16,11 @@ extends RefCounted
 ##   circle_radius    scrub / stir radius range, px
 ##   beat_sd          timing error on a beat press (s, gaussian)
 ##   late_pass        chance of letting the marker go by once before pressing
-##   char_frames      mean frames between typed characters; char_sd jitter
-##                    (work AM's burst and work PM's shift alike)
-##   typo             chance a typed character is wrong; the burst drops it,
-##                    the shift jams it, and either costs a reaction to notice
+##   char_frames      mean frames between typed characters in work AM's
+##                    burst; char_sd jitter
+##   typo             chance a key is wrong: a burst letter (dropped, and a
+##                    reaction to notice) or a triage sort (the other bin, so
+##                    the email is filed wrong)
 ##   hold_sd          release error on a hold meter, in meter units (0..1)
 ##   gesture_px       nod / shake stroke length; gesture_frames per stroke
 ##   wrong_gesture    chance of nodding at a shake cue or the other way round

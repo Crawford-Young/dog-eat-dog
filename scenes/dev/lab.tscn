@@ -48,8 +48,8 @@ text = "drive (commute)"
 [node name="Work_am" type="Button" parent="Menu/MenuBox/Activities"]
 text = "word burst (work am)"
 
-[node name="Typing" type="Button" parent="Menu/MenuBox/Activities"]
-text = "typing (work pm)"
+[node name="Work_pm" type="Button" parent="Menu/MenuBox/Activities"]
+text = "inbox triage (work pm)"
 
 [node name="Listening" type="Button" parent="Menu/MenuBox/Activities"]
 text = "listening (lunch)"
