@@ -133,13 +133,19 @@ func test_drive_activity_launches_and_sets_up() -> void:
 	assert_eq(lab.get_node("%Host").get_child_count(), 1, "drive minigame is hosted")
 
 
-func test_typing_params_uses_the_selected_rank() -> void:
+func test_work_pm_launches_the_inbox_triage() -> void:
+	var lab := _fresh_lab()
+	lab._launch("work_pm")
+	var hosted: Node = lab.get_node("%Host").get_child(0)
+	assert_true(hosted.session() is TriageSession, "the work-pm button hosts the triage")
+	assert_true(hosted.is_running())
+
+
+func test_triage_params_use_the_selected_rank() -> void:
 	var lab := _fresh_lab()
 	lab.get_node("%RankOption").selected = 2
-	var params: Dictionary = lab._params_for("typing")
-	assert_eq(
-		params["par_units"], lab.cfg.typing_par_units[2], "rank selector feeds typing_params"
-	)
+	var params: Dictionary = lab._params_for("work_pm")
+	assert_eq(params["window"], lab.cfg.triage_email_windows[2], "rank selector feeds triage_params")
 
 
 func test_work_am_launches_the_word_burst() -> void:

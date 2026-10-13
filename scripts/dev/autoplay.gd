@@ -17,12 +17,13 @@ extends SceneTree
 ## Profiles (full knobs in autoplay/profiles.gd):
 ##   sharp   skilled player: 0.8-1.0 s to take in each new screen, then
 ##           0.20-0.30 s reaction per decision, ~8.6 Hz
-##           mashing, 20 ms beat timing error, ~80 wpm typing with 1% typos,
-##           never skips.
+##           mashing, 20 ms beat timing error, ~80 wpm typing with 1% typos
+##           (1% of triage sorts in the wrong bin), never skips.
 ##   sloppy  tired casual: 1.2-1.6 s to take in each new screen, then
 ##           0.45-0.70 s reaction, ~6 Hz mashing, 70 ms beat
-##           error and late passes, ~40 wpm with 6% typos, short brush
-##           strokes, fumbled drops, wrong gestures, skips 15% of chores.
+##           error and late passes, ~40 wpm with 6% typos (and 6% of sorts
+##           in the wrong bin), short brush strokes, fumbled drops, wrong
+##           gestures, skips 15% of chores.
 ##
 ## Policy, deterministic per profile:
 ##                    sharp            sloppy
@@ -76,6 +77,9 @@ var _freetime_games_seen := 0
 var _tally := {
 	"seconds": {},
 	"scores": {},
+	## The rank each score was played at, parallel to scores (JSON only), so a
+	## work score can be read by rank.
+	"score_ranks": {},
 	## Lost games (result.failed), keyed by slot. game.gd's own finished
 	## handler runs first, so the drive and free-time stamps are already on.
 	"misses": {},
@@ -212,15 +216,21 @@ func _open(node: Node) -> void:
 	# Listening only: the result dict is read for the report, never produced.
 	# Connected after game.gd's handler, so its stamps are visible here.
 	var slot := _current_slot
-	(node as Minigame).finished.connect(func(result: Dictionary) -> void: _record_score(slot, result))
+	var rank: int = _game.state.rank
+	(node as Minigame).finished.connect(
+		func(result: Dictionary) -> void: _record_score(slot, result, rank)
+	)
 	_player.play(_current_slot, node, _game.state.day)
 
 
-func _record_score(slot: String, result: Dictionary) -> void:
+func _record_score(slot: String, result: Dictionary, rank: int) -> void:
 	var scores: Dictionary = _tally.scores
+	var ranks: Dictionary = _tally.score_ranks
 	if not scores.has(slot):
 		scores[slot] = []
+		ranks[slot] = []
 	scores[slot].append(float(result.get("score", 0.0)))
+	ranks[slot].append(rank)
 	if result.get("failed", false):
 		var misses: Dictionary = _tally.misses
 		misses[slot] = misses.get(slot, 0) + 1

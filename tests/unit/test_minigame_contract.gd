@@ -9,11 +9,19 @@ const WAKE := "res://scenes/minigames/wake.tscn"
 const BRUSH := "res://scenes/minigames/brush.tscn"
 const SHOWER := "res://scenes/minigames/shower.tscn"
 const BREAKFAST := "res://scenes/minigames/breakfast.tscn"
-const TYPING := "res://scenes/minigames/typing.tscn"
 const BURST := "res://scenes/minigames/burst.tscn"
 const BURST_PARAMS := {
 	"tier": 4, "shift_time": 100.0, "window": 100.0, "speed": 1.0,
 }
+const TRIAGE := "res://scenes/minigames/triage.tscn"
+## Mail never lands or expires on its own (100 s gap and window), so the test
+## decides the tally.
+const TRIAGE_PARAMS := {
+	"tier": 4, "read_delay": 0.0, "shift_time": 100.0, "window": 100.0,
+	"gap": 100.0, "jitter": 0.0, "speed": 1.0,
+}
+## Holds no art, so every art slot draws its emoji placeholder.
+const NO_ART_ROOT := "res://tests/fixtures/props/none"
 
 const SKIPPABLE := [
 	[BREAKFAST, {"window": 0.3, "speed": 1.6, "beats": 3}],
@@ -94,17 +102,44 @@ func test_a_skipped_breakfast_ignores_further_presses() -> void:
 	assert_signal_emit_count(node, "finished", 1)
 
 
-func test_typing_does_not_finish_before_the_shift_ends() -> void:
-	var node := _host(TYPING, {"tier": 4, "wrong_cap": 5, "shift_time": 100.0, "par_units": 3})
+func _triage(shift_time: float) -> Node:
+	var params := TRIAGE_PARAMS.duplicate()
+	params.shift_time = shift_time
+	var node: Node = load(TRIAGE).instantiate()
+	node.props_root = NO_ART_ROOT
+	add_child_autofree(node)
+	node.setup(params)
+	watch_signals(node)
+	return node
+
+
+func _press_key(node: Node, keycode: Key) -> void:
+	var event := InputEventKey.new()
+	event.pressed = true
+	event.keycode = keycode
+	event.physical_keycode = keycode
+	node._unhandled_key_input(event)
+
+
+## Sorts the top email right (or wrong) with its real key.
+func _sort(node: Node, right: bool) -> void:
+	var work := TriageSession.is_work(node.session().front_icon())
+	_press_key(node, KEY_A if work == right else KEY_D)
+
+
+func test_the_triage_does_not_finish_before_the_shift_ends() -> void:
+	var node := _triage(100.0)
 	await wait_process_frames(10)
 	assert_signal_not_emitted(node, "finished")
 
 
-func test_typing_finishes_once_at_shift_end_with_its_throughput_score() -> void:
-	var node := _host(TYPING, {"tier": 4, "wrong_cap": 5, "shift_time": 0.25, "par_units": 2})
-	for c in node._shift.target:
-		_type_char(node, c)
-	assert_eq(node._shift.units_done, 1, "precondition: one phrase of a par-2 shift typed")
+func test_the_triage_finishes_once_at_shift_end_scoring_correct_over_shown() -> void:
+	var node := _triage(0.25)
+	var session: TriageSession = node.session()
+	_sort(node, true)
+	session.tick(session.gap())
+	_sort(node, false)
+	assert_eq(session.emails_shown(), 2, "precondition: one sorted right, one wrong")
 	assert_signal_not_emitted(node, "finished", "the shift has not run out yet")
 	await wait_for_signal(node.finished, 5.0)
 	await wait_process_frames(5)
@@ -112,11 +147,12 @@ func test_typing_finishes_once_at_shift_end_with_its_throughput_score() -> void:
 	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.5, "skipped": false, "failed": false}])
 
 
-func test_typing_ignores_keys_after_the_shift_ends() -> void:
-	var node := _host(TYPING, {"tier": 4, "wrong_cap": 5, "shift_time": 0.1, "par_units": 3})
+func test_the_triage_ignores_keys_after_the_shift_ends() -> void:
+	var node := _triage(0.1)
 	await wait_for_signal(node.finished, 5.0)
-	_type_char(node, node._shift.target[0])
-	assert_eq(node._shift.session.typed_count, 0, "a key after the shift must not type")
+	_sort(node, true)
+	_sort(node, false)
+	assert_eq(node.session().emails_shown(), 0, "a key after the shift must not sort")
 	assert_signal_emit_count(node, "finished", 1)
 
 

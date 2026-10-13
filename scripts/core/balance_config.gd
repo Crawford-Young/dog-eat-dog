@@ -16,8 +16,6 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var brush_strokes_max: int = 16
 @export var brush_amplitude: float = 40.0
 
-@export var typing_wrong_cap: int = 5
-
 @export var listening_window_base: float = 1.2
 @export var listening_window_min: float = 0.45
 # Speech, not narration: a coworker's line has to land well before its gesture
@@ -220,8 +218,6 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## the player can read while a bad roll is happening to them.
 @export var drive_route_miles: float = 9.0
 @export var drive_display_top_mph: float = 60.0
-@export var typing_shift_time: float = 25.0
-@export var typing_par_units: Array[int] = [3, 4, 5]
 ## Work AM's word burst (#18): words stream for the whole shift, the timer
 ## ends it (no time_limit), and the score is words typed / words shown. Every
 ## word gets burst_word_windows[rank] seconds, divided by the day ramp's speed;
@@ -229,6 +225,22 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## rank sets the bar and the dog's state decides how many words clear it.
 @export var burst_shift_time: float = 25.0
 @export var burst_word_windows: Array[float] = [3.0, 2.0, 1.15]
+## Work PM's inbox triage (#18): emails land every triage_arrival_gap seconds
+## (each gap rolled within triage_arrival_jitter of it either side), over the
+## day ramp's speed; the shift timer ends it (no time_limit), and the score is
+## correct sorts / emails shown. The email on top gets
+## triage_email_windows[rank] seconds (also over the speed) from reaching the
+## top; the inbox holds triage_inbox_capacity emails and buries what lands on
+## a full one, so the arrival gap is the pace to keep. The clarity tier is the
+## read delay: the email on top is out of focus for triage_read_delays[tier]
+## seconds (indexed by tier, 0 to 4) each time a new one reaches it — the dog's
+## eyes, so the ramp does not shorten it, and it never shrinks as the tier falls.
+@export var triage_shift_time: float = 25.0
+@export var triage_email_windows: Array[float] = [2.0, 1.5, 1.1]
+@export var triage_arrival_gap: float = 0.75
+@export var triage_arrival_jitter: float = 0.5
+@export var triage_inbox_capacity: int = 6
+@export var triage_read_delays: Array[float] = [0.45, 0.3, 0.2, 0.1, 0.0]
 
 ## The evening block's absolute start — the minute the dog leaves the office.
 ## This is the wave's PRIMARY playtest lever: moving it moves every band's

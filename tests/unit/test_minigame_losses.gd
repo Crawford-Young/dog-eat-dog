@@ -12,7 +12,7 @@ const SHOWER := "res://scenes/minigames/shower.tscn"
 const CLOTHES := "res://scenes/minigames/clothes.tscn"
 const BREAKFAST := "res://scenes/minigames/breakfast.tscn"
 const COOKING := "res://scenes/minigames/cooking.tscn"
-const TYPING := "res://scenes/minigames/typing.tscn"
+const TRIAGE := "res://scenes/minigames/triage.tscn"
 const BURST := "res://scenes/minigames/burst.tscn"
 const LISTENING := "res://scenes/minigames/listening.tscn"
 
@@ -237,41 +237,49 @@ func test_cooking_runs_while_it_cooks() -> void:
 	assert_true(node.is_running(), "the pan is a live game, like every other one")
 
 
-# --- work pm (the typing shift) ----------------------------------------------
+# --- work pm (the inbox triage) --------------------------------------------
 
 
-func _shift(par: int, fail_score: float) -> Minigame:
-	return _host(TYPING, {
-		"tier": 4, "wrong_cap": 5, "shift_time": 0.2, "par_units": par,
+## Mail never lands or expires on its own (100 s gap and window), so the test
+## decides the tally: `right` emails sorted right, then `wrong` sorted wrong.
+func _triage(fail_score: float, right: int, wrong: int) -> Minigame:
+	var node := _host(TRIAGE, {
+		"tier": 4, "read_delay": 0.0, "shift_time": 0.2, "window": 100.0,
+		"gap": 100.0, "jitter": 0.0, "speed": 1.0,
 		"fail_score": fail_score, "fail_gag_seconds": 0.05,
 	})
+	var session: TriageSession = node.session()
+	for i in right + wrong:
+		if session.inbox_size() == 0:
+			session.tick(session.gap())
+		var work := TriageSession.is_work(session.front_icon())
+		var event := InputEventKey.new()
+		event.pressed = true
+		event.physical_keycode = KEY_A if work == (i < right) else KEY_D
+		node._unhandled_key_input(event)
+	return node
 
 
-func _type_one_phrase(node: Minigame) -> void:
-	for c in node._shift.target:
-		_type_char(node, c)
-
-
-func test_a_shift_under_the_fail_score_is_a_miss_that_keeps_its_score() -> void:
-	var node := _shift(4, 0.5)
-	_type_one_phrase(node)
+func test_a_triage_under_the_fail_score_is_an_avalanche_miss_that_keeps_its_score() -> void:
+	var node := _triage(0.5, 1, 3)
 	await wait_seconds(WAIT + 0.2)
 	assert_signal_emit_count(node, "finished", 1)
 	assert_true(_result(node).failed)
 	assert_almost_eq(_result(node).score, 0.25, 0.0001, "the work EMA reads the real score")
-	assert_true(_gag_shown(node))
+	assert_true(_gag_shown(node), "the inbox-avalanche gag pops")
 
 
-func test_a_shift_at_the_fail_score_is_not_a_miss() -> void:
-	var node := _shift(2, 0.5)
-	_type_one_phrase(node)
+func test_a_triage_at_the_fail_score_is_not_a_miss() -> void:
+	var node := _triage(0.5, 1, 1)
 	await wait_seconds(WAIT + 0.2)
 	assert_eq(_result(node), {"score": 0.5, "skipped": false, "failed": false})
 
 
-func test_the_shift_timer_is_not_a_time_limit() -> void:
-	var node := _shift(2, 0.5)
-	assert_almost_eq(node._countdown_total, 0.2, 0.0001, "the shift keeps its own timer")
+func test_the_triage_runs_on_the_shift_timer_not_a_time_limit() -> void:
+	var cfg := BalanceConfig.new()
+	var node := _host(TRIAGE, Difficulty.triage_params(50.0, cfg, 0, 0, 1.0))
+	assert_almost_eq(node.time_left(), cfg.triage_shift_time, 0.1,
+			"the shift keeps its own timer, ramp or no ramp")
 
 
 # --- work am (the word burst) -----------------------------------------------

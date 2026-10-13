@@ -21,7 +21,7 @@ const SCENES := {
 	"coffee": preload("res://scenes/minigames/coffee.tscn"),
 	"work_am": preload("res://scenes/minigames/burst.tscn"),
 	"lunch": preload("res://scenes/minigames/listening.tscn"),
-	"work_pm": preload("res://scenes/minigames/typing.tscn"),
+	"work_pm": preload("res://scenes/minigames/triage.tscn"),
 	"drive_home": preload("res://scenes/minigames/drive.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
 	"cooking": preload("res://scenes/minigames/cooking.tscn"),
@@ -296,7 +296,8 @@ func _params_for(slot: String) -> Dictionary:
 				_day_progress(),
 			)
 		"work_pm":
-			return Difficulty.typing_params(state.energy, cfg, 0, state.rank)
+			# No boost: coffee is a morning buff (it lifts work AM only).
+			return Difficulty.triage_params(state.energy, cfg, 0, state.rank, _day_progress())
 		"drive_home":
 			return Difficulty.drive_home_params(state.energy, cfg)
 		"cooking":

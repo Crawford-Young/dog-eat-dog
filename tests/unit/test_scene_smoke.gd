@@ -30,11 +30,11 @@ func test_brush_scene_instantiates() -> void:
 	assert_not_null(node)
 
 
-func test_typing_scene_instantiates() -> void:
-	var scene: PackedScene = load("res://scenes/minigames/typing.tscn")
+func test_triage_scene_instantiates() -> void:
+	var scene: PackedScene = load("res://scenes/minigames/triage.tscn")
 	var node := scene.instantiate()
 	add_child_autofree(node)
-	node.setup({"tier": 4, "wrong_cap": 5, "shift_time": 100.0, "par_units": 3})
+	node.setup(Difficulty.triage_params(50.0, BalanceConfig.new()))
 	assert_not_null(node)
 
 
