@@ -116,7 +116,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | 2 | Ranks + economy — salary and living costs, rank ladder with warning-first demotion, coffee cart, sick days, retirement ending, energy carryover, lab day presets | done |
 | 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
 | 3b | Evening clock + sleep economy — a banded bedtime clock, per-game clock cost, sleep-debt ledger acting through an energy ceiling, cooked dinner, ledger lines | done |
-| A | Minigame contract + losses + HUD — every playable slot can be lost (time limit or score rule, gag, HIT/MISS/SKIP stamp), day strip, savings-to-retire poster, autoplay misses | in review |
+| A | Minigame contract + losses + HUD — every playable slot can be lost (time limit or score rule, gag, HIT/MISS/SKIP stamp), day strip, savings-to-retire poster, autoplay misses | done |
 
 ## Credits
 
