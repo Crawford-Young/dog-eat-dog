@@ -44,6 +44,9 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## it 1-2 s), and what the loss costs in the slots that pay it — StatEffects
 ## owns the slot list.
 @export var fail_gag_seconds: float = 1.5
+## How long a game's HIT/MISS/SKIP stamp holds before the next slot mounts, in
+## real seconds. The DayClock holds still through it, as it does for the gag.
+@export var stamp_hold_seconds: float = 0.8
 @export var fail_performance_cost: float = 0.01
 @export var fail_energy_cost: float = 3.0
 ## Per-game time limits in real seconds, and the score floors that make a game
