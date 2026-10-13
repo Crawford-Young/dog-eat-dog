@@ -21,6 +21,7 @@ const FLASH_HIT := Color(1.4, 1.8, 1.4)
 const FLASH_MISS := Color(0.6, 0.3, 0.3)
 
 var _beat: BeatTimer
+var _rng: RandomNumberGenerator
 var _beats_total: int = 3
 var _beats_done: int = 0
 var _hits: int = 0
@@ -51,6 +52,7 @@ func setup(params: Dictionary) -> void:
 	_window = params.window
 	_beats_total = params.beats
 	_fail_hits = params.get("fail_hits", 0)
+	_rng = RngSource.from_params(params)
 	# HitZone ships with independent left/right and top/bottom anchors (a
 	# stretched box) — Godot warns on any direct .size write to a Control
 	# whose opposite anchors differ. Collapse to matched anchors once,
@@ -67,7 +69,10 @@ func setup(params: Dictionary) -> void:
 
 
 func _start_beat() -> void:
-	_beat = BeatTimer.new(_speed, _window)
+	# A random start phase: from a fixed one the first centre crossing lands at
+	# one instant, so a ramp moving it past a reaction time flipped sharp from
+	# never missing to missing (the step-2 cliff, #18).
+	_beat = BeatTimer.new(_speed, _window, _rng.randf_range(0.0, 2.0))
 	var beat_name: String = BEAT_NAMES[_beats_done % BEAT_NAMES.size()]
 	_beat_label.text = beat_name
 	# Only the current beat's food is on screen — same "one thing says me" rule

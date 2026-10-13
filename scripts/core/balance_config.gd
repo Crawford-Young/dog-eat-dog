@@ -57,16 +57,18 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## Difficulty._deficit pinned to 1.0 in a throwaway copy, rounded to 0.1 s.
 @export var wake_time_limit_base: float = 3.7  # sharp p90, #11 baseline
 @export var wake_time_limit_max: float = 17.0  # sharp p90 at d=1 (16.98), #17
-@export var brush_time_limit_base: float = 2.3  # sharp p90, #11 baseline
+@export var brush_time_limit_base: float = 2.0  # sharp ~10% misses (2.1 was 0%, 1.9 46%), #18 step 10
 @export var brush_time_limit_max: float = 3.3  # sharp p90 at d=1 (3.32), #17
-@export var shower_time_limit_base: float = 3.5  # sharp p90, #11 baseline
+@export var shower_time_limit_base: float = 3.65  # sharp 7-15% misses (3.5 was 19%, 3.7 6%), #18 step 10
 @export var shower_time_limit_max: float = 7.0  # sharp p90 at d=1 (7.00), #17
 @export var clothes_time_limit_base: float = 4.2  # sharp p90, #11 baseline
 @export var clothes_time_limit_max: float = 6.1  # sharp p90 at d=1 (6.10), #17
-@export var breakfast_time_limit_base: float = 2.3  # sharp p90, #11 baseline
-## The beat speed does not move with energy, so the duration does not scale
-## (d=1 p90 2.23). The day ramp speeds it up but never moves this limit.
-@export var breakfast_time_limit_max: float = 2.3  # = base, measured, #17
+@export var breakfast_time_limit_base: float = 2.9  # sharp ~9% misses with random beat phases, #18 step 10
+## The beat speed does not move with energy, so the duration does not scale.
+## The day ramp speeds it up but never moves this limit. Each beat starts at a
+## random phase, so the unlimited sharp run is 2.5 s median, p90 3.0 s at ramp
+## 1.0 and 2.9 s at the shipped 1.3 (the old fixed start was 2.2 s, p90 2.25).
+@export var breakfast_time_limit_max: float = 2.9  # = base, measured, #18 step 10
 @export var cook_time_limit_base: float = 6.4  # sharp p90, #11 baseline
 ## The verbs run at a fixed speed too (d=1 p90 6.43).
 @export var cook_time_limit_max: float = 6.4  # = base, measured, #17
@@ -149,7 +151,11 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var clock_scale: float = 1.5
 @export var skip_time_cost: float = 8.0
 @export var clock_amber_fraction: float = 0.4
-@export var clock_red_fraction: float = 0.15
+## Red is the slow tail of a clean sharp morning: the bot arrives 6.7 min before
+## 8:00 at the median (a quarter under 3.7, a tenth under 2.2; seeds 1-5 x 30
+## days, #18 step 10), so 0.05 of the 45-minute morning (2.25 min) is amber at
+## the median and red from about the slowest tenth. Evening bands share it.
+@export var clock_red_fraction: float = 0.05
 @export var lateness_debit_per_min: float = 0.004
 @export var lateness_debit_cap: float = 0.12
 @export var shower_spots_base: int = 2
@@ -163,10 +169,26 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var breakfast_window_min: float = 0.12
 @export var breakfast_beat_speed: float = 1.6
 @export var breakfast_beats: int = 3
-## Day ramp (#18): play-speed multiplier at the day's last game, lerped from
-## 1.0 on day progress; speed only, never a time limit. Breakfast cliff: sharp
-## misses jump between 1.10 and 1.15 (each beat restarts at phase 0, p90 limit).
-@export var day_ramp_speed_max: float = 1.1
+## Day ramp (#18): per-game play-speed multiplier at the day's last game,
+## lerped from 1.0 on day progress; speed only, never a time limit. Each game
+## has its own max because the bot finds a different cliff in each (30 days,
+## seeds 1-5, step 10):
+## - breakfast: with a random beat start there is no cliff; sharp misses fall
+##   from ~11% at 1.0 to 3% at 1.3 (a faster beat finishes sooner), so 1.3 is
+##   a felt speed-up, not a punishment.
+## - burst: sharp work_am misses 0% at 1.5, 4% at 1.7, 34% at 1.8, 76% at 1.9
+##   (all of them at rank 2, 1.15 s windows); 1.74 is ~11%.
+## - triage: sharp misses 0% up to 3.0 and 15-22% only at 4-5 (a mail every
+##   0.2 s), while sloppy loses its promotions above ~1.2 (its score is the
+##   arrival rate, not the window); held at 1.1.
+## - cup: the grab zone is +-0.07 track widths, so the cup's speed at the
+##   day's end must keep half the zone above 3 sigma of sharp's press error
+##   (test_difficulty pins it: 1.67 at most); 1.5 forced to buy is 0 sharp
+##   spills and ~20% sloppy.
+@export var day_ramp_breakfast_max: float = 1.3
+@export var day_ramp_burst_max: float = 1.74
+@export var day_ramp_triage_max: float = 1.1
+@export var day_ramp_cup_max: float = 1.5
 @export var breakfast_energy_min: float = 2.0
 @export var breakfast_energy_max: float = 8.0
 @export var skip_breakfast_penalty: float = 4.0
@@ -237,7 +259,10 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## the clarity tier picks the word's length (longer as the dog fades), so the
 ## rank sets the bar and the dog's state decides how many words clear it.
 @export var burst_shift_time: float = 25.0
-@export var burst_word_windows: Array[float] = [3.0, 2.0, 1.15]
+## Rank 0 is 5.5 s, set so sloppy can promote again (it spends its day in the
+## mailroom otherwise: 2 of 5 seeds reach junior in 30 days at 5.5, 4 of 5 at
+## 6.0, none at 5.0 or at the old 3.0); ranks 1-2 are what sharp is measured on.
+@export var burst_word_windows: Array[float] = [5.5, 2.0, 1.15]
 ## Work PM's inbox triage (#18): emails land every triage_arrival_gap seconds
 ## (each gap rolled within triage_arrival_jitter of it either side), over the
 ## day ramp's speed; the shift timer ends it (no time_limit), and the score is

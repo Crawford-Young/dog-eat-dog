@@ -136,8 +136,11 @@ func _render() -> void:
 	_tally.text = "sorted right: %d / %d" % [_session.correct, _session.emails_shown()]
 
 
-## Frees `parent`'s children now, so a count read this frame is current.
+## Frees `parent`'s children now, so a count read this frame is current. Freed
+## outright, not queue_freed: a detached node waiting on the idle frame is an
+## orphan to anything that looks before it, and these are leaf art no one else
+## holds.
 func _clear(parent: Node) -> void:
 	for child in parent.get_children():
 		parent.remove_child(child)
-		child.queue_free()
+		child.free()

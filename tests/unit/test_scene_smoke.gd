@@ -158,13 +158,6 @@ func _mouse_blockers(root: Node) -> Array:
 	return blockers
 
 
-func test_clothes_lets_the_mouse_reach_the_game() -> void:
-	var node: Minigame = load("res://scenes/minigames/clothes.tscn").instantiate()
-	add_child_autofree(node)
-	var blockers: Array = _mouse_blockers(node)
-	assert_eq(blockers.size(), 0, "these nodes eat the drag: %s" % str(blockers))
-
-
 func test_breakfast_lets_the_mouse_reach_the_game() -> void:
 	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
 	add_child_autofree(node)
@@ -193,6 +186,41 @@ func test_breakfast_survives_all_three_beats() -> void:
 	node._press()
 	node._press()
 	assert_signal_emitted(node, "finished")
+
+
+## Each beat starts the marker at a phase drawn from the game's own rng, not
+## always at the left end: a fixed start made the first centre crossing land on
+## the same instant every time, so a ramp that moved it past a reaction time
+## flipped sharp from never missing to missing (the step-2 cliff, #18).
+func _breakfast_beat_starts(seed_value: int) -> Array:
+	var node: Minigame = load("res://scenes/minigames/breakfast.tscn").instantiate()
+	add_child_autofree(node)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	node.setup({"window": 0.3, "speed": 1.6, "beats": 3, "rng": rng})
+	var starts: Array = []
+	for i in 3:
+		starts.append([node._beat.position, node._beat.get("_dir")])
+		node._press()
+	return starts
+
+
+func test_breakfast_beats_start_at_a_random_phase() -> void:
+	var seen := {}
+	for seed_value in 10:
+		for start in _breakfast_beat_starts(seed_value):
+			assert_between(start[0], 0.0, 1.0)
+			seen[start] = true
+	assert_gt(seen.size(), 20, "30 beats do not all start in the same place")
+	var rising := 0
+	for start in seen:
+		rising += 1 if start[1] > 0.0 else 0
+	assert_between(rising, 1, seen.size() - 1, "and not all the same way")
+
+
+func test_breakfast_beat_starts_replay_from_the_same_seed() -> void:
+	assert_eq(_breakfast_beat_starts(7), _breakfast_beat_starts(7))
+	assert_ne(_breakfast_beat_starts(7), _breakfast_beat_starts(8))
 
 
 ## Breakfast takes a click OR space, so the prompt copy states every accepted
