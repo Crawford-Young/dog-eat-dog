@@ -288,14 +288,18 @@ func test_drive_params_carries_the_traffic_randomness_tunables() -> void:
 
 
 func test_the_drive_home_is_the_morning_road_but_shorter() -> void:
+	# At EVERY energy, not one: both wall counts round a lerp on the same
+	# deficit, so a mismatched base/max pair can tie at some energies only.
 	var cfg := BalanceConfig.new()
-	var morning := Difficulty.drive_params(65.0, cfg)
-	var evening := Difficulty.drive_home_params(65.0, cfg)
-	assert_lt(evening.length, morning.length)
-	assert_lt(evening.route_miles, morning.route_miles)
-	assert_lt(evening.car_count, morning.car_count, "fewer walls on a shorter road")
-	assert_eq(evening.top_speed, morning.top_speed, "same car, same road rules")
-	assert_eq(evening.keys().size(), morning.keys().size(), "and the same param contract")
+	for energy in range(0, 101, 5):
+		var morning := Difficulty.drive_params(float(energy), cfg)
+		var evening := Difficulty.drive_home_params(float(energy), cfg)
+		assert_lt(evening.length, morning.length)
+		assert_lt(evening.route_miles, morning.route_miles)
+		assert_lt(evening.car_count, morning.car_count,
+				"fewer walls on a shorter road at energy %d" % energy)
+		assert_eq(evening.top_speed, morning.top_speed, "same car, same road rules")
+		assert_eq(evening.keys().size(), morning.keys().size(), "and the same param contract")
 
 
 func test_wake_and_brush_params_have_no_par_time() -> void:

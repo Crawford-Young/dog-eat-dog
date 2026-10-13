@@ -169,7 +169,7 @@ func test_freetime_records_the_night_on_the_ledger() -> void:
 	StatEffects.apply(
 		"freetime", {"games_played": 4, "band": "late", "bed_minute": 1421.0}, state, cfg
 	)
-	assert_eq(state.ledger.debt_minutes, 41.0, "480 needed, 439 slept")
+	assert_eq(state.ledger.debt_minutes, 41.0, "a 23:41 bed is 41 minutes past the square 23:00")
 	assert_lt(state.energy_ceiling, 100.0, "and the ceiling drops the same night")
 
 

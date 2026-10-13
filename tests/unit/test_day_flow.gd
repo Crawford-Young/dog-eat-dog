@@ -427,7 +427,7 @@ func test_the_morning_budget_is_derived_from_the_arrival_deadline() -> void:
 	# beside it.
 	assert_eq(cfg.morning_budget(), float(cfg.work_start_minutes - cfg.morning_start_minutes),
 			"the morning is the gap to the deadline")
-	assert_eq(cfg.morning_budget(), 60.0, "and that gap is currently 60 minutes")
+	assert_eq(cfg.morning_budget(), 45.0, "and that gap is currently 45 minutes (7:15 wake, #18)")
 	assert_eq(_fresh_main().clock.budget, cfg.morning_budget(),
 			"the clock is built from the derived budget, not a standalone tunable")
 
@@ -476,8 +476,8 @@ func test_a_maxed_debt_ceiling_can_reach_the_sick_cliff() -> void:
 
 func test_the_drive_home_is_shorter_than_the_morning_commute() -> void:
 	# Wave-3b invariant, held as data. Two full commutes a day is the failure
-	# mode this exists to prevent — the 3a reflect measured the morning commute
-	# at ~33 of the morning's ~44 minutes already.
+	# mode this exists to prevent: the commute is the morning's biggest single
+	# cost, and evening time belongs in cooking and freetime.
 	var cfg := BalanceConfig.new()
 	assert_lt(cfg.drive_home_length, cfg.drive_length)
 	assert_lt(cfg.drive_home_route_miles, cfg.drive_route_miles)

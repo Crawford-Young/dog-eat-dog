@@ -201,7 +201,7 @@ func test_the_sick_pin_breaks_because_the_debt_moves() -> void:
 	assert_eq(
 		s.ledger.debt_minutes,
 		cfg.sleep_debt_cap_minutes + cfg.sleep_need_minutes - cfg.sick_sleep_minutes,
-		"960 owed, 720 slept against a 480 need, so 720 still owed",
+		"a maxed debt, less the 240 a sick day sleeps past the need",
 	)
 	assert_gt(s.energy, pinned, "the ceiling lifted instead of staying pinned")
 

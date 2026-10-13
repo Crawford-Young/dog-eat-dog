@@ -55,3 +55,18 @@ func test_a_tally_without_misses_still_prints() -> void:
 	var tally := _tally()
 	tally.erase("misses")
 	assert_true(_row(Report.markdown(tally), "wake").ends_with("| 0 |"))
+
+
+func test_the_report_prints_the_morning_arrival_margin() -> void:
+	# Minutes before 8:00 at the end of each drive, negative when late (#18):
+	# the number the wake is tuned against, so a re-run can re-measure it.
+	var tally := _tally()
+	tally["margins"] = [6.0, -1.5, 4.0]
+	var markdown := Report.markdown(tally)
+	assert_string_contains(markdown, "- arrival margin (min before 8:00): median 4.0, min -1.5")
+	var parsed: Dictionary = JSON.parse_string(Report.json(tally))
+	assert_eq(parsed.margins, [6.0, -1.5, 4.0])
+
+
+func test_a_tally_without_margins_still_prints() -> void:
+	assert_string_contains(Report.markdown(_tally()), "- arrival margin (min before 8:00): none")

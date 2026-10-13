@@ -317,7 +317,7 @@ func _drive(node: Node) -> void:
 	if not await _think(node):
 		return
 	for i in LOOP_CAP_FRAMES:
-		var sim: LaneSim = node.get("_sim")
+		var sim: LaneSim = node.sim()
 		var dir := _steer(sim)
 		if not await _think(node):
 			return
@@ -337,7 +337,7 @@ func _steer(sim: LaneSim) -> int:
 	if best_lane == sim.lane:
 		return 0
 	var dir := signi(best_lane - sim.lane)
-	var margin: float = sim.get("_block_margin")
+	var margin := sim.block_margin()
 	for car in sim.cars():
 		if car.lane == sim.lane + dir and absf(car.pos - sim.distance) <= margin:
 			return 0  # someone alongside; wait for the gap
@@ -348,7 +348,7 @@ func _steer(sim: LaneSim) -> int:
 ## the lookahead; an empty lane reads as top speed.
 func _lane_value(sim: LaneSim, lane: int) -> float:
 	var lookahead: float = profile.drive_lookahead
-	var top: float = sim.get("_top_speed")
+	var top := sim.top_speed()
 	var nearest := {}
 	for car in sim.cars():
 		if car.lane == lane and car.pos >= sim.distance \
