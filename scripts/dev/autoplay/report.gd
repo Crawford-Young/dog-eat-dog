@@ -68,6 +68,8 @@ static func markdown(t: Dictionary) -> String:
 		]
 	lines.append("- late arrivals: %s" % late)
 	lines.append("- arrival margin (min before 8:00): %s" % _margin_text(t.get("margins", [])))
+	lines.append("- home margin (min before home-by): %s" % _margin_text(t.get("home_margins", [])))
+	lines.append("- bed bands: %s" % _bands_text(t.get("bands", {})))
 	lines.append("- late-band nights: %d / %d" % [t.late_band_nights, t.nights])
 	lines.append("- running-on-fumes nights: %d / %d" % [t.fumes_nights, t.nights])
 	lines.append("- sick days: %d" % t.sick_days)
@@ -113,13 +115,22 @@ static func _score_text(scores: Array) -> String:
 	return "%.2f" % median(sorted)
 
 
-## Minutes before 8:00 at each drive's end, negative when late.
+## Minutes before a deadline (8:00, home_by) at each drive's end, negative
+## when late.
 static func _margin_text(margins: Array) -> String:
 	if margins.is_empty():
 		return "none"
 	var sorted := margins.duplicate()
 	sorted.sort()
 	return "median %.1f, min %.1f" % [median(sorted), sorted[0]]
+
+
+## Nights per bed band, in band order, zero for a band no night landed in.
+static func _bands_text(bands: Dictionary) -> String:
+	var parts: Array[String] = []
+	for band in BalanceConfig.BANDS:
+		parts.append("%s %d" % [band, bands.get(band, 0)])
+	return ", ".join(parts)
 
 
 static func _sum(values: Array) -> float:

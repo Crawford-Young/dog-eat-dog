@@ -18,12 +18,25 @@ func _params(cars: Array = []) -> Dictionary:
 	}
 
 
-func _route_params(cars: Array = []) -> Dictionary:
+func _route_params(cars: Array = [], length: float = _route_length) -> Dictionary:
 	return {
-		"length": _route_length, "top_speed": _route_top_speed, "accel": 40.0,
+		"length": length, "top_speed": _route_top_speed, "accel": 40.0,
 		"pin_gap": 30.0, "block_margin": 25.0, "switch_lag": 0.0,
 		"car_min_gap": 20.0, "cars": cars,
 	}
+
+
+## Both roads the game ships — the commute and the drive home — with every
+## wall count each one deals (the deficit lerps base -> max, so the counts in
+## between are most days). The skill properties below hold on both.
+func _shipped_roads() -> Array[Dictionary]:
+	var cfg := BalanceConfig.new()
+	return [
+		{"name": "commute", "length": cfg.drive_length,
+			"waves": range(cfg.drive_waves_base, cfg.drive_waves_max + 1)},
+		{"name": "drive home", "length": cfg.drive_home_length,
+			"waves": range(roundi(cfg.drive_home_waves_base), roundi(cfg.drive_home_waves_max) + 1)},
+	]
 
 
 func _run(sim: LaneSim, seconds: float) -> void:
@@ -442,15 +455,17 @@ func test_waves_are_spread_down_the_route_with_room_to_read_the_first() -> void:
 func test_holding_one_lane_never_holds_top_speed() -> void:
 	# The whole point of the rework: a straight line gets pinned and pays for
 	# it, at the lightest traffic the game ships as much as the heaviest.
-	var cfg := BalanceConfig.new()
-	for seed_value in range(1, 9):
-		for waves in [cfg.drive_waves_base, cfg.drive_waves_max]:
-			var cars := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE)
-			var run := _drive_route(LaneSim.new(_route_params(cars)), false)
-			assert_true(run.pinned,
-					"seed %d let a straight line through %d waves" % [seed_value, waves])
-			assert_gt(run.time, 10.0,
-					"seed %d cost a straight line nothing at %d waves" % [seed_value, waves])
+	for road in _shipped_roads():
+		var length: float = road.length
+		var open_road := _drive_route(LaneSim.new(_route_params([], length)), false)
+		for seed_value in range(1, 9):
+			for waves in road.waves:
+				var cars := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, {"length": length})
+				var run := _drive_route(LaneSim.new(_route_params(cars, length)), false)
+				assert_true(run.pinned, "%s seed %d let a straight line through %d waves"
+						% [road.name, seed_value, waves])
+				assert_gt(run.time, open_road.time + 0.25, "%s seed %d cost a straight line nothing at %d waves"
+						% [road.name, seed_value, waves])
 
 
 func test_weaving_to_the_open_lane_beats_holding_a_lane() -> void:
@@ -459,19 +474,19 @@ func test_weaving_to_the_open_lane_beats_holding_a_lane() -> void:
 	# one costs — that morning is lost to luck by design, and asserting skill
 	# beats luck there would assert against the whole point of the round.
 	var cfg := BalanceConfig.new()
-	var light := {
-		"blocked_wave_chance": 0.0,
-		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
-	}
-	# Every wall count a morning ships, not just the fresh dog's: the deficit
-	# lerps base -> max, so the counts in between are most mornings.
-	for waves in range(cfg.drive_waves_base, cfg.drive_waves_max + 1):
-		for seed_value in range(1, 9):
-			var traffic := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
-			var straight := _drive_route(LaneSim.new(_route_params(traffic)), false)
-			var weaving := _drive_route(LaneSim.new(_route_params(traffic)), true)
-			assert_lt(weaving.time, straight.time,
-					"seed %d pays nothing for skill at %d waves" % [seed_value, waves])
+	for road in _shipped_roads():
+		var length: float = road.length
+		var light := {
+			"blocked_wave_chance": 0.0, "length": length,
+			"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
+		}
+		for waves in road.waves:
+			for seed_value in range(1, 9):
+				var traffic := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
+				var straight := _drive_route(LaneSim.new(_route_params(traffic, length)), false)
+				var weaving := _drive_route(LaneSim.new(_route_params(traffic, length)), true)
+				assert_lt(weaving.time, straight.time, "%s seed %d pays nothing for skill at %d waves"
+						% [road.name, seed_value, waves])
 
 
 func test_a_light_traffic_morning_can_still_be_driven_clean() -> void:
@@ -480,18 +495,20 @@ func test_a_light_traffic_morning_can_still_be_driven_clean() -> void:
 	# (waves - 1), so a SLOW day spreads the walls and a fast one packs them
 	# under the ~55 units (pin_gap + block_margin) clearing a wall costs.
 	var cfg := BalanceConfig.new()
-	var light := {
-		"blocked_wave_chance": 0.0, "car_speed_jitter": 0.0,
-		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
-	}
-	var open_road := _drive_route(LaneSim.new(_route_params()), false)
-	for waves in range(cfg.drive_waves_base, cfg.drive_waves_max + 1):
-		for seed_value in range(1, 9):
-			var cars := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
-			var run := _drive_route(LaneSim.new(_route_params(cars)), true)
-			assert_almost_eq(run.time, open_road.time, 0.5,
-					"seed %d cannot be driven clean on the lightest roll at %d waves"
-					% [seed_value, waves])
+	for road in _shipped_roads():
+		var length: float = road.length
+		var light := {
+			"blocked_wave_chance": 0.0, "car_speed_jitter": 0.0, "length": length,
+			"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
+		}
+		var open_road := _drive_route(LaneSim.new(_route_params([], length)), false)
+		for waves in road.waves:
+			for seed_value in range(1, 9):
+				var cars := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
+				var run := _drive_route(LaneSim.new(_route_params(cars, length)), true)
+				assert_almost_eq(run.time, open_road.time, 0.5,
+						"%s seed %d cannot be driven clean on the lightest roll at %d waves"
+						% [road.name, seed_value, waves])
 
 
 func test_a_faster_car_settles_behind_a_slower_one_instead_of_passing_through() -> void:

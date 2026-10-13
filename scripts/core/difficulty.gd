@@ -4,7 +4,7 @@ class_name Difficulty
 ## deficit = 0.0 at full energy, 1.0 at empty. All knobs lerp on deficit.
 ## The loss knobs (issue #17) ride along: a timed game gets a "time_limit"
 ## lerped on the same deficit as its difficulty, a scored one its MISS floor.
-## Drive and free time get neither — game.gd judges them off the DayClock at
+## The drives and free time get neither — game.gd judges them off the DayClock at
 ## slot end.
 ## Play speed also rides an optional `progress` (0-1 through the day, see
 ## day_progress) via day_ramp (issue #18); a time limit never does.

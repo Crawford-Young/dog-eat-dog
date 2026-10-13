@@ -70,3 +70,29 @@ func test_the_report_prints_the_morning_arrival_margin() -> void:
 
 func test_a_tally_without_margins_still_prints() -> void:
 	assert_string_contains(Report.markdown(_tally()), "- arrival margin (min before 8:00): none")
+
+
+func test_the_report_prints_the_drive_home_margin() -> void:
+	# Minutes before home_by at the end of each drive home, negative when late
+	# (#18): the number home_by is tuned against.
+	var tally := _tally()
+	tally["home_margins"] = [3.0, -0.5, 2.0, 1.0]
+	var markdown := Report.markdown(tally)
+	assert_string_contains(markdown, "- home margin (min before home-by): median 1.5, min -0.5")
+	var parsed: Dictionary = JSON.parse_string(Report.json(tally))
+	assert_eq(parsed.home_margins, [3.0, -0.5, 2.0, 1.0])
+
+
+func test_a_tally_without_home_margins_still_prints() -> void:
+	assert_string_contains(Report.markdown(_tally()), "- home margin (min before home-by): none")
+
+
+func test_the_report_prints_the_bed_band_of_every_night() -> void:
+	# What the evening clock costs shows up as bedtime: early / mid / late.
+	var tally := _tally()
+	tally["bands"] = {"early": 1, "late": 3}
+	assert_string_contains(Report.markdown(tally), "- bed bands: early 1, mid 0, late 3")
+
+
+func test_a_tally_without_bands_still_prints() -> void:
+	assert_string_contains(Report.markdown(_tally()), "- bed bands: early 0, mid 0, late 0")

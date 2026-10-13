@@ -81,13 +81,18 @@ var _tally := {
 	## work score can be read by rank.
 	"score_ranks": {},
 	## Lost games (result.failed), keyed by slot. game.gd's own finished
-	## handler runs first, so the drive and free-time stamps are already on.
+	## handler runs first, so the drive, drive-home and free-time stamps are already on.
 	"misses": {},
 	"overruns": [],
 	## Minutes before 8:00 when each drive ends, negative when late: the
 	## number the wake (morning_start_minutes) is tuned against.
 	"margins": [],
+	## Minutes before home_by when each drive home ends, negative when late:
+	## the number home_by_minutes is tuned against.
+	"home_margins": [],
 	"nights": 0,
+	## Nights per bed band (early / mid / late), read at the sleep beat.
+	"bands": {},
 	"late_band_nights": 0,
 	"fumes_nights": 0,
 	"sick_days": 0,
@@ -209,6 +214,8 @@ func _open(node: Node) -> void:
 			_tally.sick_days += 1
 		"sleep":
 			_tally.nights += 1
+			var bands: Dictionary = _tally.bands
+			bands[_game.state.bedtime] = bands.get(_game.state.bedtime, 0) + 1
 			if _game.state.bedtime == "late":
 				_tally.late_band_nights += 1
 			var ledger: String = _game.state.ledger.ledger_text(0.0, _game.cfg)
@@ -226,6 +233,9 @@ func _open(node: Node) -> void:
 	if slot == "drive":
 		(node as Minigame).finished.connect(func(_result: Dictionary) -> void:
 			_tally.margins.append(_game.clock.remaining() - _game.clock.overrun()))
+	if slot == "drive_home":
+		(node as Minigame).finished.connect(func(_result: Dictionary) -> void:
+			_tally.home_margins.append(_game.cfg.home_budget() - _game.clock.elapsed))
 	_player.play(_current_slot, node, _game.state.day)
 
 

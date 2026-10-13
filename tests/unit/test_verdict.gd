@@ -5,9 +5,9 @@ extends GutTest
 ## the beats and cards that are not games.
 
 const PLAYABLE: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "work_am", "lunch", "work_pm", "cooking", "freetime"]
+		"drive", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
 const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick", "coffee",
-		"dinner", "drive_home", "late_arrival", "rank_news"]
+		"dinner", "late_arrival", "rank_news"]
 
 
 func test_the_counted_slots_are_the_loss_tables_playable_slots() -> void:
