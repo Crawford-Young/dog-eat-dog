@@ -208,6 +208,23 @@ func test_coffee_skip_costs_nothing() -> void:
 	assert_eq(s.wallet.savings, 0)
 
 
+func test_coffee_spill_pays_the_price_and_buys_no_focus() -> void:
+	var s := GameState.new()
+	s.wallet.credit(10)
+	var before := s.energy
+	var performance := s.performance
+	StatEffects.apply("coffee",
+			{"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}, s, cfg)
+	assert_eq(s.wallet.savings, 10 - cfg.coffee_price, "the cart still takes its five")
+	assert_false(s.coffee_today, "and the cup is on the floor")
+	assert_eq(s.energy, before, "money is the whole cost: no loss energy")
+	assert_eq(s.performance, performance, "nor a loss performance cost")
+
+
+func test_coffee_is_not_a_loss_cost_slot() -> void:
+	assert_false("coffee" in StatEffects.LOSS_COST_SLOTS)
+
+
 func test_coffee_crash_drains_after_morning_work() -> void:
 	var sober := GameState.new()
 	sober.energy = 80.0

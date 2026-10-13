@@ -148,6 +148,21 @@ func test_triage_params_use_the_selected_rank() -> void:
 	assert_eq(params["window"], lab.cfg.triage_email_windows[2], "rank selector feeds triage_params")
 
 
+func test_coffee_launches_the_cup_grab_with_a_cup_the_dog_can_pay_for() -> void:
+	var lab := _fresh_lab()
+	lab._launch("coffee")
+	var hosted: Node = lab.get_node("%Host").get_child(0)
+	assert_true(hosted.session() is CoffeeSession, "the coffee button hosts the cup grab")
+	assert_true(hosted.session().can_afford(), "the lab dog always has the five")
+	assert_true(hosted.is_running())
+
+
+func test_the_coffee_button_launches_it() -> void:
+	var lab := _fresh_lab()
+	lab.get_node("%Activities/Coffee").pressed.emit()
+	assert_eq(lab.get_node("%Host").get_child_count(), 1)
+
+
 func test_work_am_launches_the_word_burst() -> void:
 	var lab := _fresh_lab()
 	lab._launch("work_am")

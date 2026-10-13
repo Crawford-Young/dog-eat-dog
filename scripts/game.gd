@@ -334,11 +334,9 @@ func _params_for(slot: String) -> Dictionary:
 				"hold": cfg.sleep_hold_time,
 			}
 		"coffee":
-			return {
-				"text_speed": cfg.typewriter_chars_per_sec,
-				"disabled_choices":
-					[] if state.wallet.savings >= cfg.coffee_price else ["buy"],
-			}
+			var cup := Difficulty.cup_params(state.energy, cfg, _day_progress())
+			cup["can_afford"] = state.wallet.savings >= cfg.coffee_price
+			return cup
 		"retire_offer":
 			return {"text_speed": cfg.typewriter_chars_per_sec}
 		"warning":

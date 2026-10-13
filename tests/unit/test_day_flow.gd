@@ -20,6 +20,7 @@ const FAKE_RESULTS := {
 	"retire_offer": {"score": 1.0, "skipped": false, "choice": "stay"},
 }
 const BUY_COFFEE := {"score": 1.0, "skipped": false, "choice": "buy"}
+const SPILL_COFFEE := {"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}
 const RETIRE := {"score": 1.0, "skipped": false, "choice": "retire"}
 const BAD_WORK := {"score": 0.0, "skipped": false}
 const SKIPPED := {"score": 0.0, "skipped": true}
@@ -1162,7 +1163,8 @@ func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
 		"lunch": {"score": 0.0, "skipped": false, "failed": true},
 	})
 	# wake brush shower clothes breakfast drive work_am lunch work_pm
-	# drive_home cooking freetime — coffee, dinner and sleep leave no mark.
+	# drive_home cooking freetime — dinner and sleep leave no mark, and neither
+	# does a coffee left to pass (the walk's water).
 	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅")
 
 
@@ -1211,9 +1213,59 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_eq(main.schedule.current(), "breakfast")
-	# Four of the day's eleven games are behind it: 1 + 4 / 11 * (2.0 - 1).
+	# Four of the day's twelve games are behind it: 1 + 4 / 12 * (2.0 - 1).
 	assert_almost_eq(main._params_for("breakfast").speed,
-			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 11.0), 0.0001)
+			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 12.0), 0.0001)
+
+
+func test_coffee_is_the_cup_grab_and_its_cup_rides_the_days_progress() -> void:
+	var main := _fresh_main()
+	main.cfg.day_ramp_speed_max = 2.0
+	main.schedule.set_slots(["wake", "coffee", "work_am"] as Array[String])
+	main._start_slot()
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host).finished.emit(_result_for("wake", {}))
+	assert_eq(main.schedule.current(), "coffee")
+	assert_true(_current_minigame(host).session() is CoffeeSession, "the cart hosts the cup grab")
+	# One of the day's three games is behind it: 1 + 1 / 3 * (2.0 - 1).
+	assert_almost_eq(main._params_for("coffee").speed,
+			main.cfg.coffee_cup_speed * (1.0 + 1.0 / 3.0), 0.0001)
+
+
+func test_a_dog_that_cannot_pay_gets_a_cup_it_cannot_grab() -> void:
+	var main := _fresh_main()
+	main.state.wallet.savings = main.cfg.coffee_price - 1
+	assert_false(main._params_for("coffee").can_afford)
+	main.state.wallet.savings = main.cfg.coffee_price
+	assert_true(main._params_for("coffee").can_afford, "exactly the price is enough")
+
+
+func test_a_clean_grab_stamps_a_hit_and_a_spill_a_miss_but_water_stamps_nothing() -> void:
+	var grab := _held_main()
+	_finish(grab, "coffee", BUY_COFFEE.duplicate())
+	assert_eq(_stamp(grab).text, "HIT")
+	assert_eq(_strip(grab), "✅")
+	var spill := _held_main()
+	_finish(spill, "coffee", SPILL_COFFEE.duplicate())
+	assert_eq(_stamp(spill).text, "MISS")
+	assert_eq(_strip(spill), "❌")
+	var water := _held_main()
+	_finish(water, "coffee", FAKE_RESULTS.coffee.duplicate())
+	assert_false(_stamp(water).visible, "letting it pass is a choice, not a result")
+	assert_eq(_strip(water), "")
+
+
+func test_a_spilled_cup_costs_the_price_and_nothing_else() -> void:
+	var spiller := _fresh_main()
+	spiller.state.wallet.savings = 20
+	_walk(spiller, {"coffee": SPILL_COFFEE}, "coffee")
+	var sober := _fresh_main()
+	sober.state.wallet.savings = 20
+	_walk(sober, {}, "coffee")
+	assert_eq(spiller.state.wallet.savings, 20 - spiller.cfg.coffee_price, "the cart took its five")
+	assert_false(spiller.state.coffee_today, "and there is no coffee")
+	assert_eq(spiller.state.energy, sober.state.energy, "no loss energy cost")
+	assert_eq(spiller.state.performance, sober.state.performance, "no loss performance cost")
 
 
 func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> void:

@@ -5,8 +5,8 @@ extends GutTest
 ## the beats and cards that are not games.
 
 const PLAYABLE: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
-const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick", "coffee",
+		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick",
 		"dinner", "late_arrival", "rank_news"]
 
 
@@ -35,6 +35,18 @@ func test_a_slot_that_is_not_a_game_has_no_verdict() -> void:
 	for slot in EXEMPT:
 		assert_eq(Verdict.of(slot, {"score": 1.0, "skipped": false}), "", slot)
 		assert_eq(Verdict.of(slot, {"score": 0.0, "skipped": true, "failed": true}), "", slot)
+
+
+func test_a_clean_grab_is_a_hit_and_a_spill_a_miss() -> void:
+	assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": "buy"}), Verdict.HIT)
+	assert_eq(Verdict.of("coffee",
+			{"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}), Verdict.MISS)
+
+
+## Water is a choice, not a game result: no stamp, no strip mark, and not a SKIP
+## either - the cup passing is not a ducked chore.
+func test_letting_the_cup_pass_has_no_verdict() -> void:
+	assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": "skip"}), "")
 
 
 func test_the_strip_marks_each_verdict_in_order() -> void:

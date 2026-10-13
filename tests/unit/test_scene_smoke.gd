@@ -76,8 +76,17 @@ func test_sleep_scene_instantiates() -> void:
 func test_coffee_scene_instantiates() -> void:
 	var node = load("res://scenes/minigames/coffee.tscn").instantiate()
 	add_child_autofree(node)
-	node.setup({"text_speed": 30.0})
+	node.setup(Difficulty.cup_params(50.0, BalanceConfig.new()))
 	assert_not_null(node)
+
+
+## The grab routes SPACE and the click through _unhandled_input.
+func test_coffee_lets_the_mouse_reach_the_game() -> void:
+	var node: Minigame = load("res://scenes/minigames/coffee.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup(Difficulty.cup_params(50.0, BalanceConfig.new()))
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
 func test_retire_offer_scene_instantiates() -> void:
