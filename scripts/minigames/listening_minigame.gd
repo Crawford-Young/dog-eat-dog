@@ -28,13 +28,14 @@ var _shake_tracker: GestureTracker
 @onready var _typer := TypewriterLabel.new()
 
 
+func _art_folder() -> String:
+	return "lunch"
+
+
 func _ready() -> void:
 	add_child(_typer)
 	_typer.bind(_bubble)
-	var bubble_font := FontVariation.new()
-	bubble_font.base_font = _bubble.get_theme_font(&"font")
-	bubble_font.fallbacks = [preload("res://assets/fonts/twemoji_mozilla.ttf")]
-	_bubble.add_theme_font_override(&"font", bubble_font)
+	PropArt.with_emoji_fallback(_bubble)
 
 
 func setup(params: Dictionary) -> void:

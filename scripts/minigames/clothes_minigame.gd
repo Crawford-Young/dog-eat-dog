@@ -17,6 +17,10 @@ var _rng: RandomNumberGenerator
 @onready var _status: Label = %Status
 
 
+func _art_folder() -> String:
+	return "clothes"
+
+
 func setup(params: Dictionary) -> void:
 	_fumble_chance = params.fumble_chance
 	_rng = RngSource.from_params(params)

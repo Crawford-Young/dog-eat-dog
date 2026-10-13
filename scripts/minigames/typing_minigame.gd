@@ -17,6 +17,10 @@ var _fail_score: float = 0.0
 @onready var _units_label: Label = %UnitsLabel
 
 
+func _art_folder() -> String:
+	return "work"
+
+
 func setup(params: Dictionary) -> void:
 	_shift = WorkShift.new(params.tier, params.get("wrong_cap", TypingSession.DEFAULT_WRONG_CAP), RngSource.from_params(params))
 	_start_countdown(params.shift_time)

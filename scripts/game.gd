@@ -85,7 +85,6 @@ const STAMP_COLORS := {
 	Verdict.MISS: Color(1.0, 0.35, 0.3),
 	Verdict.SKIP: Color(0.8, 0.8, 0.8, 0.55),
 }
-const EMOJI_FONT := preload("res://assets/fonts/twemoji_mozilla.ttf")
 
 var state := GameState.new()
 var schedule := DaySchedule.new()
@@ -142,7 +141,7 @@ func _ready() -> void:
 	_summary.visible = false
 	_ending.visible = false
 	for label in [_poster_label, _strip_label]:
-		_with_emoji_fallback(label)
+		PropArt.with_emoji_fallback(label)
 	clock = DayClock.new(cfg.morning_budget())
 	_bed_minute = float(cfg.bed_mid_line_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
@@ -150,14 +149,6 @@ func _ready() -> void:
 		while schedule.current() != start_from_slot and schedule.advance():
 			pass
 	_start_slot()
-
-
-## The default font has no emoji; Twemoji backs it, as on the listening bubble.
-func _with_emoji_fallback(label: Label) -> void:
-	var font := FontVariation.new()
-	font.base_font = label.get_theme_font(&"font")
-	font.fallbacks = [EMOJI_FONT]
-	label.add_theme_font_override(&"font", font)
 
 
 ## The HUD persists across slots; only the clock label hides, when no timed

@@ -42,6 +42,10 @@ var _active_prop: CanvasItem = null
 @onready var _cakes: Control = %Cakes
 
 
+func _art_folder() -> String:
+	return "breakfast"
+
+
 func setup(params: Dictionary) -> void:
 	_speed = params.speed
 	_window = params.window

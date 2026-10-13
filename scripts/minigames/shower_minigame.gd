@@ -20,6 +20,10 @@ const SPOT_POSITIONS := [
 ]
 
 
+func _art_folder() -> String:
+	return "shower"
+
+
 func setup(params: Dictionary) -> void:
 	_spots_left = params.spots
 	_revolutions_required = params.revolutions

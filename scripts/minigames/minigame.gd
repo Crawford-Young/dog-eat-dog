@@ -15,7 +15,7 @@ signal finished(result: Dictionary)
 
 ## Mirrors BalanceConfig.fail_gag_seconds, for a host that passes no params.
 const DEFAULT_FAIL_GAG_SECONDS := 1.5
-const GAG_FONT := preload("res://assets/fonts/twemoji_mozilla.ttf")
+const GAG_FONT := PropArt.EMOJI_FONT
 const GAG_FONT_SIZE := 160
 ## The gag pops from this fraction of full size over this many seconds.
 const GAG_START_SCALE := 0.4
@@ -32,6 +32,8 @@ var _fail_gag_seconds: float = DEFAULT_FAIL_GAG_SECONDS
 ## Seconds left on a loss gag; > 0 only between _fail() and its report.
 var _gag_left: float = 0.0
 var _gag_result: Dictionary = {}
+## Where art slots are read from; tests point it at a fixture root.
+var props_root: String = PropArt.ROOT
 
 
 func setup(_params: Dictionary) -> void:
@@ -167,18 +169,25 @@ func _emit_result(extra: Dictionary) -> void:
 	finished.emit(result)
 
 
+## The game's art folder under assets/props (`props/<folder>/gag.png` draws
+## the loss gag). Each losable game overrides it; "" draws only the emoji.
+func _art_folder() -> String:
+	return ""
+
+
+## Pops the game's gag.png when present, else the `gag` emoji, full size over
+## Twemoji — centred, mouse-transparent.
 func _show_gag(gag: String) -> void:
-	var label := Label.new()
-	label.text = gag
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_override(&"font", GAG_FONT)
-	label.add_theme_font_size_override(&"font_size", GAG_FONT_SIZE)
-	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(label)
-	label.pivot_offset = size / 2.0
-	label.scale = Vector2.ONE * GAG_START_SCALE
-	var pop := label.create_tween()
-	pop.tween_property(label, "scale", Vector2.ONE, GAG_POP_SECONDS) \
+	var art := PropArt.make(_art_folder(), "gag", gag, props_root, GAG_FONT)
+	if art is Label:
+		var label := art as Label
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override(&"font_size", GAG_FONT_SIZE)
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(art)
+	art.pivot_offset = size / 2.0
+	art.scale = Vector2.ONE * GAG_START_SCALE
+	var pop := art.create_tween()
+	pop.tween_property(art, "scale", Vector2.ONE, GAG_POP_SECONDS) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
