@@ -60,7 +60,7 @@ func play(slot: String, node: Node, day: int) -> void:
 		"drive", "drive_home":
 			_drive(node)
 		"coffee":
-			_choose(node, "Buy" if profile.coffee == "buy" else "Skip", "Skip")
+			_coffee(node)
 		"dinner":
 			var cook: bool = day % int(profile.cook_every) == 0
 			_choose(node, "Cook" if cook else "Takeout", "Cook")
@@ -357,6 +357,20 @@ func _lane_value(sim: LaneSim, lane: int) -> float:
 	if nearest.is_empty() or nearest.pos - sim.distance > lookahead:
 		return top * 10.0 + lookahead * 0.05
 	return nearest.speed * 10.0 + (nearest.pos - sim.distance) * 0.05
+
+
+## The cup grab. A "buy" dog presses once, aimed at the cup crossing the middle
+## of the zone, with the profile's beat_sd of timing error (the cup is seen
+## coming for its lead-in, so this is aim, not a reaction to a surprise). A
+## "water" dog, or one that cannot pay (the cup is out of reach), lets it pass.
+## Reads only the minigame's public session().
+func _coffee(node: Node) -> void:
+	var session: CoffeeSession = node.session()
+	if profile.coffee != "buy" or not session.can_afford():
+		return
+	var aim := session.seconds_to_zone() + _rng.randfn(0.0, profile.beat_sd)
+	if await _wait(node, roundi(aim / FRAME)):
+		hands.tap(KEY_SPACE)
 
 
 func _choose(node: Node, wanted: String, fallback: String) -> void:

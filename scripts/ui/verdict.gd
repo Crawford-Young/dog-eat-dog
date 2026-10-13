@@ -3,12 +3,15 @@ extends RefCounted
 
 ## The HUD's read of a finished slot (issue #17): HIT, MISS or a muted SKIP,
 ## stamped mid-screen and marked on the day's strip. Only the playable slots
-## of the #11 loss table, plus the drive home since its home_by line (#18), get
-## one; narration beats, sleep, the retire offer, sick and the coffee and dinner
-## cards are not games.
+## of the #11 loss table, plus the drive home since its home_by line (#18) and
+## the coffee cup grab, get one; narration beats, sleep, the retire offer, sick
+## and the dinner card are not games. Letting the cup pass (water) is a choice,
+## not a result, so it gets none either.
 
 const COUNTED_SLOTS: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+## The choice that makes a counted slot a non-game: the coffee cup left to pass.
+const WATER := "skip"
 const HIT := "HIT"
 const MISS := "MISS"
 const SKIP := "SKIP"
@@ -22,7 +25,7 @@ const MARKS := {HIT: "✅", MISS: "❌", SKIP: "–"}
 ## game goes dead to input (`_running` gates its SkipButton), so a result
 ## never carries both.
 static func of(slot: String, result: Dictionary) -> String:
-	if slot not in COUNTED_SLOTS:
+	if slot not in COUNTED_SLOTS or (slot == "coffee" and result.get("choice") == WATER):
 		return ""
 	if result.get("failed", false):
 		return MISS

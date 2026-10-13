@@ -103,6 +103,16 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var coffee_price: int = 5
 @export var coffee_buff_tiers: int = 2
 @export var coffee_crash_drain: float = 18.0
+## The coffee cart's cup grab (#18): the cup crosses the track at
+## coffee_cup_speed track widths a second (the day ramp multiplies it), entering
+## coffee_cup_lead seconds in. The paw grabs it in a zone coffee_zone_width wide
+## around coffee_zone_center (both track fractions): 0.14 / 0.77 s is +-0.09 s
+## at the day's fastest, past a sharp press (sd 0.02 s) and short of a sloppy
+## one (sd 0.07 s).
+@export var coffee_cup_speed: float = 0.7
+@export var coffee_cup_lead: float = 1.0
+@export var coffee_zone_center: float = 0.7
+@export var coffee_zone_width: float = 0.14
 @export var takeout_price: int = 12
 @export var retirement_target: int = 4000
 @export var sick_energy_threshold: float = 12.0

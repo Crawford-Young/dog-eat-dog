@@ -105,6 +105,18 @@ static func triage_params(
 	}
 
 
+## The coffee cart's cup grab. The day ramp is the cup's speed. Energy does not
+## touch it: the grab is a reaction test with no limit to scale, so a tired dog
+## is never handed an easier cup.
+static func cup_params(_energy: float, cfg: BalanceConfig, progress := 0.0) -> Dictionary:
+	return {
+		"speed": cfg.coffee_cup_speed * day_ramp(progress, cfg),
+		"lead": cfg.coffee_cup_lead,
+		"zone_center": cfg.coffee_zone_center,
+		"zone_width": cfg.coffee_zone_width,
+	}
+
+
 static func shower_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	var d := _deficit(energy)
 	return {

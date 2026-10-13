@@ -14,7 +14,8 @@ extends RefCounted
 ##   short_stroke     chance a swipe falls short of the 40 px a stroke needs
 ##   circle_rps       scrub / stir circling speed, revolutions per second
 ##   circle_radius    scrub / stir radius range, px
-##   beat_sd          timing error on a beat press (s, gaussian)
+##   beat_sd          timing error on a beat press, or on the coffee cup grab
+##                    (s, gaussian)
 ##   late_pass        chance of letting the marker go by once before pressing
 ##   char_frames      mean frames between typed characters in work AM's
 ##                    burst; char_sd jitter
@@ -33,8 +34,9 @@ extends RefCounted
 ##   shoes_first      chance of trying shoes before pants
 ##
 ## Policy (deterministic per profile):
-##   coffee          "buy" | "skip" (the water button); falls back to water
-##                   when the buy button is disabled
+##   coffee          "buy" (aim a press at the cup crossing the grab zone)
+##                   | "skip" (water: let the cup pass); water when the cup
+##                   is out of reach (unaffordable)
 ##   cook_every      dinner: cook when day % cook_every == 0, else takeout;
 ##                   1 = always cook. Falls back to cook when takeout is
 ##                   disabled (not enough savings)

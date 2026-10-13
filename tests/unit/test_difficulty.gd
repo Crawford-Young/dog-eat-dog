@@ -449,7 +449,46 @@ func _ramped_games() -> Array[Dictionary]:
 			"params": func(energy: float, progress: float) -> Dictionary:
 				return Difficulty.triage_params(energy, cfg, 0, 1, progress),
 		},
+		{
+			"name": "coffee cup",
+			"speed_key": "speed",
+			"params": func(energy: float, progress: float) -> Dictionary:
+				return Difficulty.cup_params(energy, cfg, progress),
+		},
 	]
+
+
+func test_the_cup_params_carry_the_tunables() -> void:
+	var p := Difficulty.cup_params(50.0, cfg)
+	assert_eq(p.speed, cfg.coffee_cup_speed, "no progress given is the start of the day")
+	assert_eq(p.zone_center, cfg.coffee_zone_center)
+	assert_eq(p.zone_width, cfg.coffee_zone_width)
+	assert_eq(p.lead, cfg.coffee_cup_lead)
+
+
+func test_the_cup_speeds_up_with_the_day() -> void:
+	cfg.day_ramp_speed_max = 2.0
+	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 0.5).speed,
+			cfg.coffee_cup_speed * 1.5, 0.0001)
+	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 1.0).speed,
+			cfg.coffee_cup_speed * 2.0, 0.0001)
+
+
+## Energy never changes the cup: a tired dog gets no easier a grab, and no
+## harder a one either (the clarity and limit levers sit on the other games).
+func test_energy_never_changes_the_cup() -> void:
+	for progress in [0.0, 0.6]:
+		assert_eq(Difficulty.cup_params(0.0, cfg, progress), Difficulty.cup_params(100.0, cfg, progress))
+
+
+func test_the_shipped_cup_gives_a_sloppy_hand_a_chance_and_a_sharp_one_a_certainty() -> void:
+	# Half the zone, in seconds the cup spends either side of its centre, at the
+	# day's fastest: wider than a sharp press's timing error, narrower than a
+	# sloppy one's (beat_sd 0.02 and 0.07 in the autoplay profiles).
+	var p := Difficulty.cup_params(50.0, cfg, 1.0)
+	var half_seconds: float = p.zone_width / 2.0 / p.speed
+	assert_gt(half_seconds, 0.02 * 3.0, "sharp is inside the zone 3 sigma out")
+	assert_lt(half_seconds, 0.07 * 2.0, "sloppy lands outside it now and then")
 
 
 func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
@@ -467,17 +506,17 @@ func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
 
 
 func test_day_progress_is_the_share_of_counted_slots_already_played() -> void:
-	# Eleven of A_DAY's slots are counted games; the retire offer, the warning,
-	# the coffee cart, dinner and sleep are not.
+	# Twelve of A_DAY's slots are counted games; the retire offer, the warning,
+	# dinner and sleep are not.
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 0), 0.0, 0.0001, "nothing played yet")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 11.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 12.0, 0.0001,
 			"the retire offer is not a game")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 11.0, 0.0001, "breakfast")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 6.0 / 11.0, 0.0001,
-			"work_am: the warning and the coffee cart are not games")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 10.0 / 11.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 12.0, 0.0001, "breakfast")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 7.0 / 12.0, 0.0001,
+			"work_am: the cup grab is a game now, the warning is not")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 11.0 / 12.0, 0.0001,
 			"dinner: the drive home is a game (home_by, #18)")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 10.0 / 11.0, 0.0001, "freetime")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 11.0 / 12.0, 0.0001, "freetime")
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 15), 1.0, 0.0001, "sleep: every game played")
 
 

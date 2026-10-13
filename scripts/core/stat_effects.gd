@@ -13,7 +13,8 @@ class_name StatEffects
 ## slot's own effects. drive, work and freetime are left out on purpose: their
 ## miss is already charged as the lateness debit, the work-score EMA and the
 ## sleep ledger (user ruling, issue #17), so paying here would double it. So is
-## drive_home: past home_by, its bill is the evening clock and sleep (#18).
+## drive_home: past home_by, its bill is the evening clock and sleep (#18). And
+## coffee: a spilled cup's bill is the price, spent in its own branch.
 const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]
 
 
@@ -46,8 +47,14 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 						cfg.lateness_debit_cap)
 				state.performance = clampf(state.performance - debit, 0.0, 1.0)
 		"coffee":
-			if result.get("choice") == "buy" and state.wallet.spend(cfg.coffee_price):
-				state.coffee_today = true
+			# A spill (a grab off the cup) still pays the cart; money is its
+			# whole cost, which is why coffee is not a LOSS_COST_SLOT.
+			match result.get("choice"):
+				"buy":
+					if state.wallet.spend(cfg.coffee_price):
+						state.coffee_today = true
+				"spill":
+					state.wallet.spend(cfg.coffee_price)
 		"retire_offer", "warning":
 			pass  # beats — flow control lives in game.gd
 		"sick":
