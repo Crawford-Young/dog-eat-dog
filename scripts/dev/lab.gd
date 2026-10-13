@@ -22,6 +22,7 @@ const SCENES := {
 	"drive": preload("res://scenes/minigames/drive.tscn"),
 	"drive_home": preload("res://scenes/minigames/drive.tscn"),
 	"cooking": preload("res://scenes/minigames/cooking.tscn"),
+	"work_am": preload("res://scenes/minigames/burst.tscn"),
 	"typing": preload("res://scenes/minigames/typing.tscn"),
 	"listening": preload("res://scenes/minigames/listening.tscn"),
 	"dinner": preload("res://scenes/minigames/dinner.tscn"),
@@ -232,6 +233,8 @@ func _params_for(activity: String) -> Dictionary:
 			return Difficulty.drive_home_params(energy, cfg)
 		"cooking":
 			return Difficulty.cooking_params(energy, cfg)
+		"work_am":
+			return Difficulty.burst_params(energy, cfg, 0, _rank_option.selected)
 		"typing":
 			return Difficulty.typing_params(energy, cfg, 0, _rank_option.selected)
 		"listening":

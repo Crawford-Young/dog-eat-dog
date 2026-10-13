@@ -134,14 +134,48 @@ func test_temptation_ceiling_clears_the_worst_starting_pull() -> void:
 	assert_gt(cfg.temptation_pull_ceiling, worst.pull_strength)
 
 
-func test_coffee_boosts_typing_clarity_two_tiers() -> void:
-	var p := Difficulty.typing_params(30.0, cfg, cfg.coffee_buff_tiers)
+func test_coffee_boosts_burst_clarity_two_tiers() -> void:
+	var p := Difficulty.burst_params(30.0, cfg, cfg.coffee_buff_tiers)
 	assert_eq(p.tier, Difficulty.clarity_tier(30.0) + 2)
 
 
 func test_coffee_boost_caps_at_top_tier() -> void:
-	var p := Difficulty.typing_params(90.0, cfg, cfg.coffee_buff_tiers)
+	var p := Difficulty.burst_params(90.0, cfg, cfg.coffee_buff_tiers)
 	assert_eq(p.tier, 4)
+
+
+func test_the_burst_tier_is_the_clarity_tier_without_a_boost() -> void:
+	assert_eq(Difficulty.burst_params(100.0, cfg).tier, 4)
+	assert_eq(Difficulty.burst_params(50.0, cfg).tier, Difficulty.clarity_tier(50.0))
+	assert_eq(Difficulty.burst_params(0.0, cfg).tier, 0)
+
+
+func test_burst_params_carry_the_shift() -> void:
+	cfg.burst_shift_time = 17.0
+	var p := Difficulty.burst_params(80.0, cfg)
+	assert_almost_eq(p.shift_time, 17.0, 0.0001)
+	assert_almost_eq(p.speed, 1.0, 0.0001, "no progress given is the start of the day")
+
+
+func test_a_higher_rank_gets_a_shorter_word_window() -> void:
+	cfg.burst_word_windows = [3.0, 2.0, 1.0] as Array[float]
+	assert_almost_eq(Difficulty.burst_params(80.0, cfg, 0, 0).window, 3.0, 0.0001)
+	assert_almost_eq(Difficulty.burst_params(80.0, cfg, 0, 2).window, 1.0, 0.0001)
+	assert_almost_eq(Difficulty.burst_params(80.0, cfg, 0, 99).window, 1.0, 0.0001,
+			"rank clamps to the table")
+
+
+func test_the_shipped_burst_tightens_with_rank() -> void:
+	var table := cfg.burst_word_windows
+	assert_eq(table.size(), RankLadder.RANK_NAMES.size(), "one allowance per rank")
+	for i in range(1, table.size()):
+		assert_lt(table[i], table[i - 1])
+
+
+func test_burst_words_speed_up_with_the_day() -> void:
+	cfg.day_ramp_speed_max = 2.0
+	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 0.5).speed, 1.5, 0.0001)
+	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 
 
 func test_no_boost_matches_wave_one_behavior() -> void:
@@ -289,6 +323,7 @@ func test_untimed_games_get_no_time_limit() -> void:
 	assert_false(Difficulty.drive_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.drive_home_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.typing_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.burst_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.listening_params(50.0, cfg).has("time_limit"))
 	assert_false(Difficulty.temptation_params(50.0, cfg, 0.0).has("time_limit"))
 
@@ -308,6 +343,8 @@ func test_each_scored_game_gets_its_loss_threshold() -> void:
 	cfg.cook_spoil_limit = 4
 	assert_eq(Difficulty.typing_params(50.0, cfg).fail_score, 0.42)
 	assert_eq(Difficulty.typing_params(50.0, cfg, 2, 1).fail_score, 0.42)
+	assert_eq(Difficulty.burst_params(50.0, cfg).fail_score, 0.42)
+	assert_eq(Difficulty.burst_params(50.0, cfg, 2, 1, 0.5).fail_score, 0.42)
 	assert_eq(Difficulty.listening_params(50.0, cfg).fail_score, 0.07)
 	assert_eq(Difficulty.breakfast_params(50.0, cfg).fail_hits, 2)
 	assert_eq(Difficulty.cooking_params(50.0, cfg).spoil_limit, 4)
@@ -360,6 +397,12 @@ func _ramped_games() -> Array[Dictionary]:
 			"speed_key": "speed",
 			"params": func(energy: float, progress: float) -> Dictionary:
 				return Difficulty.breakfast_params(energy, cfg, progress),
+		},
+		{
+			"name": "work_am burst",
+			"speed_key": "speed",
+			"params": func(energy: float, progress: float) -> Dictionary:
+				return Difficulty.burst_params(energy, cfg, cfg.coffee_buff_tiers, 1, progress),
 		},
 	]
 

@@ -45,8 +45,11 @@ text = "breakfast"
 [node name="Drive" type="Button" parent="Menu/MenuBox/Activities"]
 text = "drive (commute)"
 
+[node name="Work_am" type="Button" parent="Menu/MenuBox/Activities"]
+text = "word burst (work am)"
+
 [node name="Typing" type="Button" parent="Menu/MenuBox/Activities"]
-text = "typing (work)"
+text = "typing (work pm)"
 
 [node name="Listening" type="Button" parent="Menu/MenuBox/Activities"]
 text = "listening (lunch)"
@@ -107,7 +110,7 @@ unique_name_in_owner = true
 [node name="RankRow" type="HBoxContainer" parent="Menu/MenuBox"]
 
 [node name="RankLabel" type="Label" parent="Menu/MenuBox/RankRow"]
-text = "rank (typing only)"
+text = "rank (work only)"
 
 [node name="RankOption" type="OptionButton" parent="Menu/MenuBox/RankRow"]
 unique_name_in_owner = true

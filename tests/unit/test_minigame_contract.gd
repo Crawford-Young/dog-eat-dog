@@ -10,6 +10,10 @@ const BRUSH := "res://scenes/minigames/brush.tscn"
 const SHOWER := "res://scenes/minigames/shower.tscn"
 const BREAKFAST := "res://scenes/minigames/breakfast.tscn"
 const TYPING := "res://scenes/minigames/typing.tscn"
+const BURST := "res://scenes/minigames/burst.tscn"
+const BURST_PARAMS := {
+	"tier": 4, "shift_time": 100.0, "window": 100.0, "speed": 1.0,
+}
 
 const SKIPPABLE := [
 	[BREAKFAST, {"window": 0.3, "speed": 1.6, "beats": 3}],
@@ -113,4 +117,40 @@ func test_typing_ignores_keys_after_the_shift_ends() -> void:
 	await wait_for_signal(node.finished, 5.0)
 	_type_char(node, node._shift.target[0])
 	assert_eq(node._shift.session.typed_count, 0, "a key after the shift must not type")
+	assert_signal_emit_count(node, "finished", 1)
+
+
+func _burst(shift_time: float) -> Node:
+	var params := BURST_PARAMS.duplicate()
+	params.shift_time = shift_time
+	return _host(BURST, params)
+
+
+func test_the_burst_does_not_finish_before_the_shift_ends() -> void:
+	var node := _burst(100.0)
+	await wait_process_frames(10)
+	assert_signal_not_emitted(node, "finished")
+
+
+func test_the_burst_finishes_once_at_shift_end_scoring_typed_over_shown() -> void:
+	var node := _burst(0.25)
+	var session: BurstSession = node.session()
+	for c in session.remaining():
+		_type_char(node, c)
+	session.tick(session.time_left())
+	assert_eq(session.words_shown(), 2, "precondition: one word typed, one expired")
+	assert_signal_not_emitted(node, "finished", "the shift has not run out yet")
+	await wait_for_signal(node.finished, 5.0)
+	await wait_process_frames(5)
+	assert_signal_emit_count(node, "finished", 1)
+	assert_eq(get_signal_parameters(node, "finished"), [{"score": 0.5, "skipped": false, "failed": false}])
+
+
+func test_the_burst_ignores_keys_after_the_shift_ends() -> void:
+	var node := _burst(0.1)
+	await wait_for_signal(node.finished, 5.0)
+	var session: BurstSession = node.session()
+	_type_char(node, session.word[0])
+	assert_eq(session.typed_count, 0, "a key after the shift must not type")
+	assert_eq(session.errors, 0, "nor count as a wrong key")
 	assert_signal_emit_count(node, "finished", 1)

@@ -17,7 +17,9 @@ extends RefCounted
 ##   beat_sd          timing error on a beat press (s, gaussian)
 ##   late_pass        chance of letting the marker go by once before pressing
 ##   char_frames      mean frames between typed characters; char_sd jitter
-##   typo             chance a typed character is wrong
+##                    (work AM's burst and work PM's shift alike)
+##   typo             chance a typed character is wrong; the burst drops it,
+##                    the shift jams it, and either costs a reaction to notice
 ##   hold_sd          release error on a hold meter, in meter units (0..1)
 ##   gesture_px       nod / shake stroke length; gesture_frames per stroke
 ##   wrong_gesture    chance of nodding at a shake cue or the other way round
