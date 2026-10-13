@@ -160,8 +160,9 @@ func _with_emoji_fallback(label: Label) -> void:
 	label.add_theme_font_override(&"font", font)
 
 
-## The whole HUD: the clock only exists while a morning slot is up, and it is
-## the only thing that converts real seconds into game-minutes.
+## The HUD persists across slots; only the clock label hides, when no timed
+## (morning or evening) slot is up. The clock is the only thing that converts
+## real seconds into game-minutes.
 func _process(delta: float) -> void:
 	_update_timer_bar()
 	_clock_label.visible = _clock_running

@@ -44,9 +44,9 @@ func play(slot: String, node: Node, day: int) -> void:
 		return
 	match slot:
 		"wake":
-			_mash(node, "_running")
+			_mash(node, func() -> bool: return _is_live(node))
 		"sick":
-			_mash(node, "_mashing")
+			_mash(node, func() -> bool: return node.get("_mashing"))
 		"brush":
 			_brush(node, slot)
 		"shower":
@@ -183,13 +183,20 @@ func _passes() -> int:
 # --- drivers ----------------------------------------------------------------
 
 
-## Wake and the sick burrow: mash SPACE until the node stops listening.
-func _mash(node: Node, flag: String) -> void:
+## True while a Minigame is live; a node without `is_running` (a beat, a card)
+## counts as not live.
+func _is_live(node: Node) -> bool:
+	return node.has_method("is_running") and node.is_running()
+
+
+## Wake and the sick burrow: mash SPACE until `alive` says the node stops
+## listening.
+func _mash(node: Node, alive: Callable) -> void:
 	if not await _think(node):
 		return
 	var span: Vector2i = profile.mash_frames
 	for i in LOOP_CAP_FRAMES:
-		if not node.get(flag):
+		if not alive.call():
 			return
 		hands.tap(KEY_SPACE)
 		if not await _wait(node, _rng.randi_range(span.x, span.y)):
@@ -289,7 +296,7 @@ func _breakfast(node: Node, slot: String) -> void:
 	if await _skip_chore(node, slot):
 		return
 	for i in LOOP_CAP_FRAMES:
-		if not node.get("_running"):
+		if not _is_live(node):
 			return
 		var beat: BeatTimer = node.get("_beat")
 		var frames := _beat_frames(beat, _react_frames(), _passes())
@@ -363,7 +370,7 @@ func _type(node: Node) -> void:
 	if not await _think(node):
 		return
 	for i in LOOP_CAP_FRAMES:
-		if not node.get("_running"):
+		if not _is_live(node):
 			return
 		var shift: WorkShift = node.get("_shift")
 		if not shift.session.wrong_buffer.is_empty():
@@ -398,7 +405,7 @@ func _listen(node: Node) -> void:
 	var handled := {}
 	var frames: int = profile.gesture_frames
 	for i in LOOP_CAP_FRAMES:
-		if not node.get("_running"):
+		if not _is_live(node):
 			return
 		var session: ListeningSession = node.get("_session")
 		var beat := session.active_beat()
@@ -426,7 +433,7 @@ func _listen(node: Node) -> void:
 ## until it shines, pour by holding SPACE until the line.
 func _cook(node: Node) -> void:
 	for i in LOOP_CAP_FRAMES:
-		if not node.get("_running"):
+		if not _is_live(node):
 			return  # finished, or lost and playing its gag
 		var session: CookingSession = node.get("_session")
 		var verb := CookingSession.VERBS[session.index]

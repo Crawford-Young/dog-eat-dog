@@ -264,7 +264,7 @@ func _release_hold() -> void:
 	_commit(verb, 1.0 if hit else 0.4)
 
 
-## Copied from breakfast_minigame.gd:120-128 — a left-click anywhere or SPACE
+## Copied from breakfast_minigame.gd `_unhandled_input` — a left-click anywhere or SPACE
 ## is a press, for chop/transfer/pour. Stir is mouse-only (issue #11 round 6:
 ## "stir should be the mouse stirring") — it does not accept SPACE at all.
 func _unhandled_input(event: InputEvent) -> void:

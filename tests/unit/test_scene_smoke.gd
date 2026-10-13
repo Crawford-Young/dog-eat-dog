@@ -1,5 +1,8 @@
 extends GutTest
 
+## Full-screen panels, not HUD: they cover the host and take clicks.
+const OVERLAYS := [&"Summary", &"Ending"]
+
 ## Smoke level only — scenes depend on the frame loop and node lifecycle, so
 ## these assert "it instantiates and setup() runs clean", nothing finer.
 ## (Games domain rule: no coverage gate on visual scenes.)
@@ -365,12 +368,17 @@ func test_every_hud_node_draws_over_the_minigame_host() -> void:
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child_autofree(main)
 	var host: Node = main.get_node("%MinigameHost")
-	for hud in ["%DayLabel", "%StripLabel", "%DogLabel", "%RankLabel", "%ClockLabel",
-			"%PosterLabel", "%StampLabel", "%TimerBar"]:
+	var huds := 0
+	for node in main.get_children():
+		# Non-Control children (the typewriter helpers) draw nothing.
+		if not node is Control or node == host or node.name in OVERLAYS:
+			continue
+		huds += 1
 		assert_gt(
-			main.get_node(hud).get_index(),
+			node.get_index(),
 			host.get_index(),
-			"%s must be declared after MinigameHost or minigames paint over it" % hud,
+			"%s must be declared after MinigameHost or minigames paint over it" % node.name,
 		)
-		assert_eq((main.get_node(hud) as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE,
-				"%s never eats a click" % hud)
+		assert_eq((node as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE,
+				"%s never eats a click" % node.name)
+	assert_gt(huds, 0, "no HUD nodes found")

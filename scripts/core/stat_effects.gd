@@ -5,8 +5,9 @@ class_name StatEffects
 ## D1 (still open): the lunch score is computed but not consumed here —
 ## listening scores its hits, yet none of it reaches state. A later wave gives
 ## it a sink (reputation). Work scores got theirs in wave 2 (the rank ladder).
-## The wake/brush half of D1 has no par times: time IS the morning clock —
-## dawdling costs budget, and the budget is what the drive cashes out as lateness.
+## The wake/brush half of D1 has no par times: each game has its own time
+## limit that fails it (see LOSS_COST_SLOTS), while the morning clock still
+## cashes dawdling as the drive's lateness.
 
 ## The slots where a lost game (`failed`) pays the loss cost, on top of the
 ## slot's own effects. drive, work and freetime are left out on purpose: their
