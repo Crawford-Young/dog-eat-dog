@@ -2,8 +2,10 @@ extends RefCounted
 
 ## The oracle player. One coroutine per hosted node reads the node's internals
 ## to decide WHAT to press (lane state, the typing target, spot positions, beat
-## timing) and then presses it through Hands, as real InputEvents. It never
-## calls a minigame method, a button's pressed signal or a game.gd handler.
+## timing) and then presses it through Hands, as real InputEvents. It reads a
+## game through public accessors where the game has them (the burst's
+## session()), and never calls a method that acts, a button's pressed signal
+## or a game.gd handler.
 ##
 ## Every coroutine re-checks that its node is still hosted after each await,
 ## so a node that finished mid-gesture is simply abandoned.
@@ -64,7 +66,9 @@ func play(slot: String, node: Node, day: int) -> void:
 			_choose(node, "Cook" if cook else "Takeout", "Cook")
 		"retire_offer":
 			_choose(node, "Retire", "Retire")
-		"work_am", "work_pm":
+		"work_am":
+			_burst(node)
+		"work_pm":
 			_type(node)
 		"lunch":
 			_listen(node)
@@ -364,8 +368,32 @@ func _choose(node: Node, wanted: String, fallback: String) -> void:
 	await _click(node, button)
 
 
-## Type the target; a typo lodges in the wrong-buffer, gets noticed a reaction
-## later and is backspaced out. The shift timer ends the slot.
+## Take each word in for a reaction, then type its letters. The burst drops a
+## wrong key, so a typo costs the keystroke plus a reaction to notice it. An
+## expired word is just a new word to take in. Reads only the minigame's public
+## session(); the shift timer ends the slot.
+func _burst(node: Node) -> void:
+	var seen := -1
+	for i in LOOP_CAP_FRAMES:
+		if not _is_live(node):
+			return
+		var session: BurstSession = node.session()
+		if session.words_shown() != seen:
+			seen = session.words_shown()
+			if not await _think(node):
+				return
+			continue
+		var c := session.remaining()[0]
+		var typo := _chance(profile.typo)
+		hands.type_char(_typo_for(c) if typo else c)
+		if not await _wait(node, _char_frames()):
+			return
+		if typo and not await _think(node):
+			return
+
+
+## Work PM's typing shift. Type the target; a typo lodges in the wrong-buffer,
+## gets noticed a reaction later and is backspaced out. The shift timer ends the slot.
 func _type(node: Node) -> void:
 	if not await _think(node):
 		return

@@ -19,7 +19,7 @@ const SCENES := {
 	"breakfast": preload("res://scenes/minigames/breakfast.tscn"),
 	"drive": preload("res://scenes/minigames/drive.tscn"),
 	"coffee": preload("res://scenes/minigames/coffee.tscn"),
-	"work_am": preload("res://scenes/minigames/typing.tscn"),
+	"work_am": preload("res://scenes/minigames/burst.tscn"),
 	"lunch": preload("res://scenes/minigames/listening.tscn"),
 	"work_pm": preload("res://scenes/minigames/typing.tscn"),
 	"drive_home": preload("res://scenes/minigames/drive.tscn"),
@@ -288,11 +288,12 @@ func _params_for(slot: String) -> Dictionary:
 		"drive":
 			return Difficulty.drive_params(state.energy, cfg)
 		"work_am":
-			return Difficulty.typing_params(
+			return Difficulty.burst_params(
 				state.energy,
 				cfg,
 				cfg.coffee_buff_tiers if state.coffee_today else 0,
 				state.rank,
+				_day_progress(),
 			)
 		"work_pm":
 			return Difficulty.typing_params(state.energy, cfg, 0, state.rank)

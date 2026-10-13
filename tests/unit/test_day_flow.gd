@@ -196,7 +196,7 @@ func test_both_day_end_panels_wrap_their_copy() -> void:
 	)
 
 
-func test_coffee_lifts_the_morning_typing_tier_only() -> void:
+func test_coffee_lifts_the_morning_burst_tier_only() -> void:
 	# Energy is seeded low so the morning's shower + breakfast refills leave the
 	# dog short of the top clarity tier — the coffee lift is only visible below
 	# the cap (clarity_tier maxes out at 4).
@@ -211,7 +211,7 @@ func test_coffee_lifts_the_morning_typing_tier_only() -> void:
 	assert_eq(buyer.state.energy, sober.state.energy, "coffee costs money, not energy")
 	var clear := Difficulty.clarity_tier(sober.state.energy)
 	assert_eq(sober._params_for("work_am").tier, clear, "no coffee, no lift")
-	assert_gt(buyer._params_for("work_am").tier, clear, "coffee lifts the morning typing tier")
+	assert_gt(buyer._params_for("work_am").tier, clear, "coffee lifts the morning burst tier")
 	assert_eq(buyer._params_for("work_pm").tier, clear, "the buff is morning-only")
 
 
@@ -409,10 +409,11 @@ func test_the_new_morning_slots_each_get_their_own_difficulty_params() -> void:
 	assert_true(main._params_for("drive").has("car_count"), "the commute reads its traffic")
 
 
-func test_both_work_shifts_read_the_dogs_rank_for_their_par() -> void:
+func test_both_work_shifts_read_the_dogs_rank() -> void:
 	var main := _fresh_main()
 	main.state.rank = 2
-	assert_eq(main._params_for("work_am").par_units, main.cfg.typing_par_units[2])
+	assert_eq(main._params_for("work_am").window, main.cfg.burst_word_windows[2],
+			"the burst's word window")
 	assert_eq(main._params_for("work_pm").par_units, main.cfg.typing_par_units[2])
 
 
@@ -1173,3 +1174,16 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	assert_eq(main.schedule.current(), "breakfast")
 	# Four of the day's ten games are behind it: 1 + 0.4 * (2.0 - 1).
 	assert_almost_eq(main._params_for("breakfast").speed, main.cfg.breakfast_beat_speed * 1.4, 0.0001)
+
+
+func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> void:
+	var main := _fresh_main()
+	main.cfg.day_ramp_speed_max = 2.0
+	main.schedule.set_slots(["wake", "work_am", "lunch", "work_pm"] as Array[String])
+	main._start_slot()
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host).finished.emit(_result_for("wake", {}))
+	assert_eq(main.schedule.current(), "work_am")
+	assert_true(_current_minigame(host).has_method("session"), "work AM hosts the burst")
+	# One of the day's four games is behind it: 1 + 0.25 * (2.0 - 1).
+	assert_almost_eq(main._params_for("work_am").speed, 1.25, 0.0001)

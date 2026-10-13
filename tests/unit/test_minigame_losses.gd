@@ -13,6 +13,7 @@ const CLOTHES := "res://scenes/minigames/clothes.tscn"
 const BREAKFAST := "res://scenes/minigames/breakfast.tscn"
 const COOKING := "res://scenes/minigames/cooking.tscn"
 const TYPING := "res://scenes/minigames/typing.tscn"
+const BURST := "res://scenes/minigames/burst.tscn"
 const LISTENING := "res://scenes/minigames/listening.tscn"
 
 const QUICK := {"time_limit": 0.1, "fail_gag_seconds": 0.05}
@@ -236,7 +237,7 @@ func test_cooking_runs_while_it_cooks() -> void:
 	assert_true(node.is_running(), "the pan is a live game, like every other one")
 
 
-# --- work -------------------------------------------------------------------
+# --- work pm (the typing shift) ----------------------------------------------
 
 
 func _shift(par: int, fail_score: float) -> Minigame:
@@ -271,6 +272,47 @@ func test_a_shift_at_the_fail_score_is_not_a_miss() -> void:
 func test_the_shift_timer_is_not_a_time_limit() -> void:
 	var node := _shift(2, 0.5)
 	assert_almost_eq(node._countdown_total, 0.2, 0.0001, "the shift keeps its own timer")
+
+
+# --- work am (the word burst) -----------------------------------------------
+
+
+## Words never expire on their own (100 s windows), so the test decides the
+## tally: `typed` words typed, then `missed` words run out by hand.
+func _burst(fail_score: float, typed: int, missed: int) -> Minigame:
+	var node := _host(BURST, {
+		"tier": 4, "shift_time": 0.2, "window": 100.0,
+		"speed": 1.0, "fail_score": fail_score, "fail_gag_seconds": 0.05,
+	})
+	var session: BurstSession = node.session()
+	for i in typed:
+		for c in session.remaining():
+			_type_char(node, c)
+	for i in missed:
+		session.tick(session.time_left())
+	return node
+
+
+func test_a_burst_under_the_fail_score_is_a_rejected_miss_that_keeps_its_score() -> void:
+	var node := _burst(0.5, 1, 3)
+	await wait_seconds(WAIT + 0.2)
+	assert_signal_emit_count(node, "finished", 1)
+	assert_true(_result(node).failed)
+	assert_almost_eq(_result(node).score, 0.25, 0.0001, "the work EMA reads the real score")
+	assert_true(_gag_shown(node), "the REJECTED gag pops")
+
+
+func test_a_burst_at_the_fail_score_is_not_a_miss() -> void:
+	var node := _burst(0.5, 1, 1)
+	await wait_seconds(WAIT + 0.2)
+	assert_eq(_result(node), {"score": 0.5, "skipped": false, "failed": false})
+
+
+func test_the_burst_runs_on_the_shift_timer_not_a_time_limit() -> void:
+	var cfg := BalanceConfig.new()
+	var node := _host(BURST, Difficulty.burst_params(50.0, cfg, 0, 0, 1.0))
+	assert_almost_eq(node.time_left(), cfg.burst_shift_time, 0.1,
+			"the shift keeps its own timer, ramp or no ramp")
 
 
 # --- lunch ------------------------------------------------------------------

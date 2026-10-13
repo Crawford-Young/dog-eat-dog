@@ -142,6 +142,21 @@ func test_typing_params_uses_the_selected_rank() -> void:
 	)
 
 
+func test_work_am_launches_the_word_burst() -> void:
+	var lab := _fresh_lab()
+	lab._launch("work_am")
+	var hosted: Node = lab.get_node("%Host").get_child(0)
+	assert_true(hosted.has_method("session"), "the work-am button hosts the burst")
+	assert_true(hosted.is_running())
+
+
+func test_burst_params_use_the_selected_rank() -> void:
+	var lab := _fresh_lab()
+	lab.get_node("%RankOption").selected = 2
+	var params: Dictionary = lab._params_for("work_am")
+	assert_eq(params["window"], lab.cfg.burst_word_windows[2], "rank selector feeds burst_params")
+
+
 func test_late_morning_preset_launches_the_main_scene() -> void:
 	var lab := _fresh_lab()
 	lab._launch_day("late_morning")

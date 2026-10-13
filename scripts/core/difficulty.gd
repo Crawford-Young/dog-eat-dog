@@ -3,8 +3,9 @@ class_name Difficulty
 ## Maps current energy (0-100) + BalanceConfig to per-minigame params.
 ## deficit = 0.0 at full energy, 1.0 at empty. All knobs lerp on deficit.
 ## The loss knobs (issue #17) ride along: a timed game gets a "time_limit"
-## lerped on the same deficit as its difficulty, a scored one its MISS floor. Drive and free time get neither —
-## game.gd judges them off the DayClock at slot end.
+## lerped on the same deficit as its difficulty, a scored one its MISS floor.
+## Drive and free time get neither — game.gd judges them off the DayClock at
+## slot end.
 ## Play speed also rides an optional `progress` (0-1 through the day, see
 ## day_progress) via day_ramp (issue #18); a time limit never does.
 
@@ -72,6 +73,22 @@ static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 
 		"wrong_cap": cfg.typing_wrong_cap,
 		"shift_time": cfg.typing_shift_time,
 		"par_units": cfg.typing_par_units[clampi(rank, 0, cfg.typing_par_units.size() - 1)],
+		"fail_score": cfg.work_fail_score,
+	}
+
+
+## Work AM's word burst. The clarity tier (plus coffee's boost) picks how long
+## and legible the words are; the rank picks the word window; the day ramp is
+## the stream's speed. The shift timer ends it, so no time_limit.
+static func burst_params(
+		energy: float, cfg: BalanceConfig, boost_tiers := 0, rank := 0, progress := 0.0
+) -> Dictionary:
+	var windows := cfg.burst_word_windows
+	return {
+		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
+		"shift_time": cfg.burst_shift_time,
+		"window": windows[clampi(rank, 0, windows.size() - 1)],
+		"speed": day_ramp(progress, cfg),
 		"fail_score": cfg.work_fail_score,
 	}
 

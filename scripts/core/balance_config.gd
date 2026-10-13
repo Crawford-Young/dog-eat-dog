@@ -222,6 +222,13 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var drive_display_top_mph: float = 60.0
 @export var typing_shift_time: float = 25.0
 @export var typing_par_units: Array[int] = [3, 4, 5]
+## Work AM's word burst (#18): words stream for the whole shift, the timer
+## ends it (no time_limit), and the score is words typed / words shown. Every
+## word gets burst_word_windows[rank] seconds, divided by the day ramp's speed;
+## the clarity tier picks the word's length (longer as the dog fades), so the
+## rank sets the bar and the dog's state decides how many words clear it.
+@export var burst_shift_time: float = 25.0
+@export var burst_word_windows: Array[float] = [3.0, 2.0, 1.15]
 
 ## The evening block's absolute start — the minute the dog leaves the office.
 ## This is the wave's PRIMARY playtest lever: moving it moves every band's
