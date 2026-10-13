@@ -467,15 +467,17 @@ func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
 
 
 func test_day_progress_is_the_share_of_counted_slots_already_played() -> void:
-	# Ten of A_DAY's slots are counted games; the retire offer, the warning,
-	# the coffee cart, the drive home, dinner and sleep are not.
+	# Eleven of A_DAY's slots are counted games; the retire offer, the warning,
+	# the coffee cart, dinner and sleep are not.
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 0), 0.0, 0.0001, "nothing played yet")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 0.1, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 11.0, 0.0001,
 			"the retire offer is not a game")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 0.4, 0.0001, "breakfast")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 0.6, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 11.0, 0.0001, "breakfast")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 6.0 / 11.0, 0.0001,
 			"work_am: the warning and the coffee cart are not games")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 0.9, 0.0001, "freetime")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 10.0 / 11.0, 0.0001,
+			"dinner: the drive home is a game (home_by, #18)")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 10.0 / 11.0, 0.0001, "freetime")
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 15), 1.0, 0.0001, "sleep: every game played")
 
 

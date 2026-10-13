@@ -291,19 +291,38 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var cook_window_base: float = 0.3
 @export var cook_window_min: float = 0.15
 @export var cook_beat_speed: float = 1.2
-## The drive home. Shorter than the morning commute BY DESIGN (wave-3b
-## invariant) — evening time belongs in cooking and freetime, where the choices
-## are. Everything else about the road is shared with the morning.
-@export var drive_home_length: float = 450.0
-@export var drive_home_route_miles: float = 4.5
+## The drive home: the morning's road and car (top speed, accel, traffic
+## rolls), shorter and with one wall fewer at every energy (test_difficulty).
+## 2/3 is the most walls that stays one under the morning's 3/4 at every
+## energy, so length is the only lever left, and it has to stay under
+## drive_length: 840 units (0.01 mile each) is a sharp bot median of 9.65 s,
+## p90 10.5, over seeds 1-5 x 10 days (450 was 5.9 s). Both lane-sim skill
+## tests run it at every wall count it ships.
+@export var drive_home_length: float = 840.0
+@export var drive_home_route_miles: float = 8.4
 @export var drive_home_waves_base: float = 2.0
 @export var drive_home_waves_max: float = 3.0
+## Home by this, or the drive home is a MISS: the evening's 8:00. Absolute,
+## like work_start_minutes; the span from leaving the office is derived
+## (home_budget()). Its miss pays no loss cost, only the evening minutes the
+## slow drive already spent, which reach the bed minute and the sleep ledger.
+## 21:46 is set so a clean sharp drive barely makes it: sharp bot, seeds 1-5 x
+## 10 days, median 1.5 minutes to spare, late on 3 of 50, each one of the
+## three slowest drives (10.8-12.5 s, the bad traffic rolls). At 21:45 any
+## drive over 10.0 s is late (12 of 50).
+@export var home_by_minutes: int = 1306
 
 
 ## The morning's game-minute budget, derived. game.gd builds every DayClock
 ## from this; nothing stores it.
 func morning_budget() -> float:
 	return maxf(work_start_minutes - morning_start_minutes, 0.0)
+
+
+## The drive home's game-minute budget, derived from home_by_minutes the way
+## morning_budget() is from work_start_minutes.
+func home_budget() -> float:
+	return maxf(home_by_minutes - evening_start_minutes, 0.0)
 
 
 ## The evening's game-minute budget, derived — same rule as morning_budget().

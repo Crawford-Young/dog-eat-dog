@@ -194,18 +194,27 @@ func _update_timer_bar() -> void:
 
 ## The one place that decides what the timer bar reads: the hosted game's own
 ## countdown, as a 1 -> 0 fraction, or -1 for no bar (nothing hosted, or no
-## countdown). Drive and free time have no countdown — the clock never fails a
-## minigame — so their bar is the DayClock's time left: to 8:00 for the
-## commute (so it starts part-drained), and to the 23:30 mid line for free
-## time, since the evening budget is derived as exactly that span.
+## countdown). The drives and free time have no countdown — the clock never
+## fails a minigame — so their bar is the DayClock's time left: to 8:00 for the
+## commute (so it starts part-drained), to home_by for the drive home, and to
+## the 23:30 mid line for free time, since the evening budget is derived as
+## exactly that span.
 func _timer_bar_fraction() -> float:
 	if not is_instance_valid(_hosted) or _hosted.is_queued_for_deletion():
 		return -1.0
 	if _hosted_key == "drive" or _hosted_key == "freetime":
-		return clampf(clock.remaining() / clock.budget, 0.0, 1.0) if clock.budget > 0.0 else 0.0
+		return _left_fraction(clock.budget)
+	if _hosted_key == "drive_home":
+		return _left_fraction(cfg.home_budget())
 	if not _hosted.has_countdown():
 		return -1.0
 	return _hosted.time_fraction()
+
+
+## The clock's minutes left to `span` (an offset from its start) as a 1 -> 0
+## fraction, 0 for an empty span.
+func _left_fraction(span: float) -> float:
+	return clampf((span - clock.elapsed) / span, 0.0, 1.0) if span > 0.0 else 0.0
 
 
 ## The evening always states the best night still available and when it runs
@@ -372,6 +381,11 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		# StatEffects leaves drive out of the loss cost, the debit is the bill.
 		if clock.overrun() > 0.0:
 			result["failed"] = true
+	# Home past home_by is the drive home's MISS (#18), stamped the same way.
+	# Its bill is the evening minutes already spent, which reach the bed
+	# minute; StatEffects leaves drive_home out of the loss cost.
+	if slot == "drive_home" and clock.elapsed > cfg.home_budget():
+		result["failed"] = true
 	if slot == "freetime":
 		# Freetime is the evening's till, exactly as the commute is the
 		# morning's: the clock stops here and what it reads becomes the night.

@@ -18,7 +18,7 @@ const FIRST_WAVE_MEET := 0.20
 const LAST_WAVE_MEET := 0.85
 
 ## Position jitter inside a wave, as a fraction of the route: ±6.0 units on the
-## shipped 850-unit route (±3.2 on drive home's 450), well under the 30-unit pin
+## shipped 850-unit route (±5.9 on drive home's 840), well under the 30-unit pin
 ## gap, so a wave still reads as a wall rather than a smear.
 ##
 ## Retuned 0.015 -> 0.007 when the route went 400 -> 900. This is a fraction of

@@ -453,6 +453,16 @@ func test_the_band_lines_are_offsets_from_the_evenings_start() -> void:
 	assert_eq(lines[1], cfg.evening_budget(), "the last line IS the budget")
 
 
+func test_the_drive_home_budget_is_derived_from_the_home_by_line() -> void:
+	# Same rule as the morning: the line is stored (absolute, like 8:00) and the
+	# span from leaving the office is computed.
+	var cfg := BalanceConfig.new()
+	assert_eq(cfg.home_budget(), float(cfg.home_by_minutes - cfg.evening_start_minutes))
+	assert_gt(cfg.home_by_minutes, cfg.evening_start_minutes, "home_by is after leaving the office")
+	assert_lt(cfg.home_by_minutes, cfg.bed_early_line_minutes,
+			"and before the early bed line, which the drive home must not cost by itself")
+
+
 func test_the_band_names_are_the_sleep_energy_keys() -> void:
 	# One vocabulary for the bands. If these ever diverge, start_next_day
 	# indexes sleep_energy with a key it does not have and the day crashes.
@@ -900,12 +910,31 @@ func test_arriving_on_time_is_not_a_drive_miss() -> void:
 	assert_false(_stamped(main, "drive").failed)
 
 
-func test_the_drive_home_is_never_stamped_a_miss() -> void:
+func test_getting_home_by_the_line_stamps_the_drive_home_a_hit() -> void:
 	var main := _fresh_main()
 	main.schedule.set_slots(["drive_home", "dinner"] as Array[String])
 	main._start_slot()
-	main.clock.spend(999.0)
-	assert_false(_stamped(main, "drive_home").failed)
+	main.clock.spend(main.cfg.home_budget() - 0.5)
+	var result := _stamped(main, "drive_home")
+	assert_false(result.failed)
+	assert_eq(Verdict.of("drive_home", result), Verdict.HIT)
+
+
+func test_getting_home_past_the_line_stamps_the_drive_home_a_miss() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner"] as Array[String])
+	main._start_slot()
+	main.clock.spend(main.cfg.home_budget() + 0.5)
+	var performance: float = main.state.performance
+	var energy: float = main.state.energy
+	var result := _stamped(main, "drive_home")
+	assert_true(result.failed, "past home_by is the drive home's MISS")
+	assert_eq(Verdict.of("drive_home", result), Verdict.MISS)
+	# Wave-B ruling: the miss is paid through the evening clock and sleep.
+	assert_eq(main.state.performance, performance, "no generic loss cost")
+	assert_eq(main.state.energy, energy, "and no loss energy either")
+	assert_eq(main.clock.elapsed, main.cfg.home_budget() + 0.5,
+			"the stamp charges the evening clock nothing on top")
 
 
 func test_a_late_band_night_stamps_free_time_a_miss() -> void:
@@ -958,12 +987,21 @@ func test_the_free_time_bar_shows_the_evening_left_to_the_mid_line() -> void:
 	assert_almost_eq(bar.value, to_mid / main.cfg.evening_budget(), 0.0001)
 
 
-func test_the_drive_home_shows_no_bar() -> void:
+func test_the_drive_home_bar_shows_the_evening_left_to_home_by() -> void:
 	var main := _fresh_main()
+	var bar: Range = main.get_node("%TimerBar")
 	main.schedule.set_slots(["drive_home", "dinner"] as Array[String])
 	main._start_slot()
 	main._process(0.0)
-	assert_false(main.get_node("%TimerBar").visible, "only the commute and free time read the clock")
+	assert_true(bar.visible, "the drive home shows a bar with no countdown of its own")
+	assert_almost_eq(bar.value, 1.0, 0.0001, "full as the dog leaves the office")
+	main.clock.spend(4.0)
+	main._process(0.0)
+	assert_almost_eq(bar.value, (main.cfg.home_budget() - 4.0) / main.cfg.home_budget(), 0.0001)
+	main.clock.spend(999.0)
+	main._process(0.0)
+	assert_true(bar.visible, "an empty bar still shows")
+	assert_eq(bar.value, 0.0, "past home_by it reads empty")
 
 
 func test_a_timed_slot_gets_its_time_limit_from_the_host() -> void:
@@ -1123,9 +1161,9 @@ func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
 		"breakfast": {"score": 0.0, "skipped": false, "failed": true},
 		"lunch": {"score": 0.0, "skipped": false, "failed": true},
 	})
-	# wake brush shower clothes breakfast drive work_am lunch work_pm cooking
-	# freetime — coffee, drive_home, dinner and sleep leave no mark.
-	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅")
+	# wake brush shower clothes breakfast drive work_am lunch work_pm
+	# drive_home cooking freetime — coffee, dinner and sleep leave no mark.
+	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅")
 
 
 func test_the_strip_starts_each_new_day_empty() -> void:
@@ -1173,8 +1211,9 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_eq(main.schedule.current(), "breakfast")
-	# Four of the day's ten games are behind it: 1 + 0.4 * (2.0 - 1).
-	assert_almost_eq(main._params_for("breakfast").speed, main.cfg.breakfast_beat_speed * 1.4, 0.0001)
+	# Four of the day's eleven games are behind it: 1 + 4 / 11 * (2.0 - 1).
+	assert_almost_eq(main._params_for("breakfast").speed,
+			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 11.0), 0.0001)
 
 
 func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> void:

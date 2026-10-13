@@ -12,7 +12,8 @@ class_name StatEffects
 ## The slots where a lost game (`failed`) pays the loss cost, on top of the
 ## slot's own effects. drive, work and freetime are left out on purpose: their
 ## miss is already charged as the lateness debit, the work-score EMA and the
-## sleep ledger (user ruling, issue #17), so paying here would double it.
+## sleep ledger (user ruling, issue #17), so paying here would double it. So is
+## drive_home: past home_by, its bill is the evening clock and sleep (#18).
 const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]
 
 
