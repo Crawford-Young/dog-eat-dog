@@ -14,8 +14,10 @@ class_name StatEffects
 ## miss is already charged as the lateness debit, the work-score EMA and the
 ## sleep ledger (user ruling, issue #17), so paying here would double it. So is
 ## drive_home: past home_by, its bill is the evening clock and sleep (#18). And
-## coffee: a spilled cup's bill is the price, spent in its own branch.
-const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]
+## coffee: a spilled cup's bill is the price, spent in its own branch. Dinner
+## pays it: a walk that times out is sad kibble, with nothing else charged.
+const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "dinner",
+		"cooking"]
 
 
 static func apply(slot: String, result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
@@ -80,7 +82,9 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 		"dinner":
 			# Takeout buys CLOCK with money — the first and only place in the
 			# game where that trade exists. The morning is the inverse: skipping
-			# a chore costs time there, never saves it (wave-3a invariant).
+			# a chore costs time there, never saves it (wave-3a invariant). A
+			# walk that timed out (sad kibble) carries no choice, so it gets no
+			# energy here; the loss cost below is its bill.
 			if result.get("choice") == "takeout":
 				state.apply_energy(cfg.dinner_takeout_energy)
 				state.wallet.spend(cfg.takeout_price)

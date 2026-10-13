@@ -60,10 +60,20 @@ func test_freetime_scene_instantiates() -> void:
 
 
 func test_dinner_scene_instantiates() -> void:
-	var node = load("res://scenes/minigames/dinner.tscn").instantiate()
+	var node: Minigame = load("res://scenes/minigames/dinner.tscn").instantiate()
 	add_child_autofree(node)
-	node.setup({"text_speed": 30.0})
-	assert_not_null(node)
+	node.setup(Difficulty.dinner_params(50.0, BalanceConfig.new()))
+	assert_true(node.is_running())
+
+
+## A/D walk the dog, but every Control still lets the mouse through: the
+## shell's clicks and any later pointer input must never be eaten here.
+func test_dinner_lets_the_mouse_reach_the_game() -> void:
+	var node: Minigame = load("res://scenes/minigames/dinner.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup(Difficulty.dinner_params(50.0, BalanceConfig.new()))
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 
 
 func test_sleep_scene_instantiates() -> void:

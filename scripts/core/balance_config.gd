@@ -114,6 +114,18 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var coffee_zone_center: float = 0.7
 @export var coffee_zone_width: float = 0.14
 @export var takeout_price: int = 12
+## Dinner as a walk (#18): the dog starts dinner_walk_start of the way along a
+## floor with the pan at 0 and the phone at 1, and walks dinner_walk_speed
+## floor widths a second. Neither moves with energy or the day; only the time
+## limit scales, base to max on the energy deficit.
+@export var dinner_walk_speed: float = 0.5
+@export var dinner_walk_start: float = 0.5
+## Set from the bot, seeds 1-5 x 10 days: sharp walks in 2.09-2.17 s median,
+## p90 at most 2.23 s, at energy 55-79; sloppy in 2.93-3.00 s median, slowest
+## 3.27 s, at energy 0-52. The base clears sharp's p90 by ~0.8 s; the max
+## clears sloppy's slowest by ~1.2 s, and its best evening (52) still gets 3.7 s.
+@export var dinner_time_limit_base: float = 3.0
+@export var dinner_time_limit_max: float = 4.5
 @export var retirement_target: int = 4000
 @export var sick_energy_threshold: float = 12.0
 @export var sick_reset_min: float = 45.0

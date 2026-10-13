@@ -3,13 +3,14 @@ extends RefCounted
 
 ## The HUD's read of a finished slot (issue #17): HIT, MISS or a muted SKIP,
 ## stamped mid-screen and marked on the day's strip. Only the playable slots
-## of the #11 loss table, plus the drive home since its home_by line (#18) and
-## the coffee cup grab, get one; narration beats, sleep, the retire offer, sick
-## and the dinner card are not games. Letting the cup pass (water) is a choice,
-## not a result, so it gets none either.
+## of the #11 loss table, plus the drive home since its home_by line (#18), the
+## coffee cup grab and the dinner walk, get one; narration beats, sleep, the
+## retire offer and sick are not games. Letting the cup pass (water) is a
+## choice, not a result, so it gets none either.
 
 const COUNTED_SLOTS: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "dinner", "cooking",
+		"freetime"]
 ## The choice that makes a counted slot a non-game: the coffee cup left to pass.
 const WATER := "skip"
 const HIT := "HIT"

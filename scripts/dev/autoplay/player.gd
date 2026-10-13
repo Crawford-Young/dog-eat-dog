@@ -3,8 +3,8 @@ extends RefCounted
 ## The oracle player. One coroutine per hosted node reads the node's internals
 ## to decide WHAT to press (lane state, the word on screen, spot positions, beat
 ## timing) and then presses it through Hands, as real InputEvents. It reads a
-## game through public accessors where the game has them (the burst's and the
-## triage's session()), and never calls a method that acts, a button's pressed
+## game through public accessors where the game has them (the session() of the
+## burst, the triage, the cup and the walk), and never calls a method that acts, a button's pressed
 ## signal or a game.gd handler.
 ##
 ## Every coroutine re-checks that its node is still hosted after each await,
@@ -62,10 +62,9 @@ func play(slot: String, node: Node, day: int) -> void:
 		"coffee":
 			_coffee(node)
 		"dinner":
-			var cook: bool = day % int(profile.cook_every) == 0
-			_choose(node, "Cook" if cook else "Takeout", "Cook")
+			_dinner(node, day % int(profile.cook_every) == 0)
 		"retire_offer":
-			_choose(node, "Retire", "Retire")
+			_choose(node, "Retire")
 		"work_am":
 			_burst(node)
 		"work_pm":
@@ -373,13 +372,27 @@ func _coffee(node: Node) -> void:
 		hands.tap(KEY_SPACE)
 
 
-func _choose(node: Node, wanted: String, fallback: String) -> void:
+## Dinner: take the kitchen in for a reaction, then hold the key toward the
+## pan (cook) or the phone (takeout) until the walk ends - the pan when takeout
+## is out of reach. Reads only the minigame's public session(); the key is let
+## go when the node finishes, or is lost to the time limit.
+func _dinner(node: Node, cook: bool) -> void:
+	var session: DinnerSession = node.session()
 	if not await _think(node):
 		return
-	var button: Button = node.get_node("%Choices").get_node(wanted)
-	if button.disabled:
-		button = node.get_node("%Choices").get_node(fallback)
-	await _click(node, button)
+	var to_pan := cook or not session.can_afford()
+	var keycode := KEY_A if to_pan else KEY_D
+	hands.key(keycode, true)
+	for i in LOOP_CAP_FRAMES:
+		if not _is_live(node) or not await _wait(node, 1):
+			break
+	hands.key(keycode, false)
+
+
+func _choose(node: Node, wanted: String) -> void:
+	if not await _think(node):
+		return
+	await _click(node, node.get_node("%Choices").get_node(wanted))
 
 
 ## Take each word in for a reaction, then type its letters. The burst drops a
