@@ -43,6 +43,10 @@ const DAY_SCENE := preload("res://scenes/main.tscn")
 
 var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var _current_activity: String = ""
+## How far through the day the ramped games (breakfast, the cup, work AM and
+## PM) play, 0-1; built in _ready beside the rank row. Zero is the start of the
+## day, where every ramp multiplies by 1.
+var _progress_slider: HSlider
 
 @onready var _menu: ScrollContainer = %Menu
 @onready var _activities: VBoxContainer = %Activities
@@ -77,7 +81,30 @@ func _ready() -> void:
 	for rank_name in RankLadder.RANK_NAMES:
 		_rank_option.add_item(rank_name.capitalize())
 	_rank_option.selected = 0
+	_add_progress_row()
 	_result_panel.visible = false
+
+
+## A "day progress" row straight after the rank row: a 0-1 slider and its raw
+## value, so every ramped game can be felt anywhere on the day's escalation.
+func _add_progress_row() -> void:
+	var rank_row := _rank_option.get_parent()
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = "day progress (breakfast, coffee, work)"
+	_progress_slider = HSlider.new()
+	_progress_slider.min_value = 0.0
+	_progress_slider.max_value = 1.0
+	_progress_slider.step = 0.05
+	_progress_slider.custom_minimum_size.x = 200.0
+	var readout := Label.new()
+	readout.text = "0.00"
+	_progress_slider.value_changed.connect(func(v: float) -> void: readout.text = "%.2f" % v)
+	row.add_child(label)
+	row.add_child(_progress_slider)
+	row.add_child(readout)
+	rank_row.get_parent().add_child(row)
+	rank_row.get_parent().move_child(row, rank_row.get_index() + 1)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -217,6 +244,7 @@ func _launch(activity: String) -> void:
 
 func _params_for(activity: String) -> Dictionary:
 	var energy := _selected_energy()
+	var progress := _progress_slider.value
 	match activity:
 		"wake":
 			return Difficulty.wake_params(energy, cfg)
@@ -227,7 +255,7 @@ func _params_for(activity: String) -> Dictionary:
 		"clothes":
 			return Difficulty.dress_params(energy, cfg)
 		"breakfast":
-			return Difficulty.breakfast_params(energy, cfg)
+			return Difficulty.breakfast_params(energy, cfg, progress)
 		"drive":
 			return Difficulty.drive_params(energy, cfg)
 		"drive_home":
@@ -235,13 +263,13 @@ func _params_for(activity: String) -> Dictionary:
 		"cooking":
 			return Difficulty.cooking_params(energy, cfg)
 		"coffee":
-			var cup := Difficulty.cup_params(energy, cfg)
+			var cup := Difficulty.cup_params(energy, cfg, progress)
 			cup["can_afford"] = true
 			return cup
 		"work_am":
-			return Difficulty.burst_params(energy, cfg, 0, _rank_option.selected)
+			return Difficulty.burst_params(energy, cfg, 0, _rank_option.selected, progress)
 		"work_pm":
-			return Difficulty.triage_params(energy, cfg, 0, _rank_option.selected)
+			return Difficulty.triage_params(energy, cfg, 0, _rank_option.selected, progress)
 		"listening":
 			return Difficulty.listening_params(energy, cfg)
 		"freetime", "sleep":

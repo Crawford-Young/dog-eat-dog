@@ -144,7 +144,7 @@ func test_the_shipped_triage_tightens_with_rank() -> void:
 
 
 func test_triage_mail_speeds_up_with_the_day() -> void:
-	cfg.day_ramp_speed_max = 2.0
+	cfg.day_ramp_triage_max = 2.0
 	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 0.5).speed, 1.5, 0.0001)
 	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 
@@ -225,7 +225,7 @@ func test_the_shipped_burst_tightens_with_rank() -> void:
 
 
 func test_burst_words_speed_up_with_the_day() -> void:
-	cfg.day_ramp_speed_max = 2.0
+	cfg.day_ramp_burst_max = 2.0
 	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 0.5).speed, 1.5, 0.0001)
 	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 
@@ -309,14 +309,15 @@ func test_wake_and_brush_params_have_no_par_time() -> void:
 
 
 ## Issue #17: each timed game's time_limit lerps base -> max on the same
-## deficit as its difficulty. Base is the sharp p90 from the #11 baseline, max
-## the sharp p90 measured at full deficit.
-func test_the_time_limit_bases_are_the_sharp_p90_baseline() -> void:
+## deficit as its difficulty. Base is the sharp bot's limit (the p90 of the #11
+## baseline, retuned toward ~10% sharp misses in #18 step 10 for brush, shower
+## and breakfast), max the sharp p90 measured at full deficit.
+func test_the_time_limit_bases_are_the_sharp_bot_limits() -> void:
 	assert_almost_eq(cfg.wake_time_limit_base, 3.7, 0.0001)
-	assert_almost_eq(cfg.brush_time_limit_base, 2.3, 0.0001)
-	assert_almost_eq(cfg.shower_time_limit_base, 3.5, 0.0001)
+	assert_almost_eq(cfg.brush_time_limit_base, 2.0, 0.0001)
+	assert_almost_eq(cfg.shower_time_limit_base, 3.65, 0.0001)
 	assert_almost_eq(cfg.clothes_time_limit_base, 4.2, 0.0001)
-	assert_almost_eq(cfg.breakfast_time_limit_base, 2.3, 0.0001)
+	assert_almost_eq(cfg.breakfast_time_limit_base, 2.9, 0.0001)
 	assert_almost_eq(cfg.cook_time_limit_base, 6.4, 0.0001)
 
 
@@ -435,30 +436,40 @@ func test_each_scored_game_gets_its_loss_threshold() -> void:
 
 
 func test_the_day_ramp_runs_from_no_ramp_to_the_max_across_the_day() -> void:
-	cfg.day_ramp_speed_max = 1.5
-	assert_almost_eq(Difficulty.day_ramp(0.0, cfg), 1.0, 0.0001, "the day starts at base speed")
-	assert_almost_eq(Difficulty.day_ramp(0.5, cfg), 1.25, 0.0001, "halfway is halfway")
-	assert_almost_eq(Difficulty.day_ramp(1.0, cfg), 1.5, 0.0001, "the day ends at the max")
+	assert_almost_eq(Difficulty.day_ramp(0.0, 1.5), 1.0, 0.0001, "the day starts at base speed")
+	assert_almost_eq(Difficulty.day_ramp(0.5, 1.5), 1.25, 0.0001, "halfway is halfway")
+	assert_almost_eq(Difficulty.day_ramp(1.0, 1.5), 1.5, 0.0001, "the day ends at the max")
 
 
 func test_the_day_ramp_clamps_progress_into_the_day() -> void:
-	cfg.day_ramp_speed_max = 1.5
-	assert_almost_eq(Difficulty.day_ramp(-1.0, cfg), 1.0, 0.0001)
-	assert_almost_eq(Difficulty.day_ramp(2.0, cfg), 1.5, 0.0001)
+	assert_almost_eq(Difficulty.day_ramp(-1.0, 1.5), 1.0, 0.0001)
+	assert_almost_eq(Difficulty.day_ramp(2.0, 1.5), 1.5, 0.0001)
 
 
 func test_a_ramp_max_of_one_means_no_ramp() -> void:
-	cfg.day_ramp_speed_max = 1.0
 	for progress in [0.0, 0.4, 1.0]:
-		assert_almost_eq(Difficulty.day_ramp(progress, cfg), 1.0, 0.0001)
+		assert_almost_eq(Difficulty.day_ramp(progress, 1.0), 1.0, 0.0001)
+
+
+func test_each_game_ramps_to_its_own_max() -> void:
+	cfg.day_ramp_breakfast_max = 1.0
+	cfg.day_ramp_burst_max = 2.0
+	cfg.day_ramp_triage_max = 3.0
+	cfg.day_ramp_cup_max = 4.0
+	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg, 1.0).speed, cfg.breakfast_beat_speed, 0.0001)
+	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
+	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 1.0).speed, 3.0, 0.0001)
+	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 1.0).speed, cfg.coffee_cup_speed * 4.0, 0.0001)
 
 
 func test_the_shipped_ramp_speeds_the_day_up() -> void:
-	assert_gt(cfg.day_ramp_speed_max, 1.0, "the shipped config ramps")
+	for ramp_max in [cfg.day_ramp_breakfast_max, cfg.day_ramp_burst_max,
+			cfg.day_ramp_triage_max, cfg.day_ramp_cup_max]:
+		assert_gt(ramp_max, 1.0, "the shipped config ramps")
 
 
 func test_breakfast_beats_speed_up_with_the_day() -> void:
-	cfg.day_ramp_speed_max = 2.0
+	cfg.day_ramp_breakfast_max = 2.0
 	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg).speed, cfg.breakfast_beat_speed, 0.0001,
 			"no progress given is the start of the day")
 	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg, 0.5).speed,
@@ -508,7 +519,7 @@ func test_the_cup_params_carry_the_tunables() -> void:
 
 
 func test_the_cup_speeds_up_with_the_day() -> void:
-	cfg.day_ramp_speed_max = 2.0
+	cfg.day_ramp_cup_max = 2.0
 	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 0.5).speed,
 			cfg.coffee_cup_speed * 1.5, 0.0001)
 	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 1.0).speed,
@@ -533,7 +544,10 @@ func test_the_shipped_cup_gives_a_sloppy_hand_a_chance_and_a_sharp_one_a_certain
 
 
 func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
-	cfg.day_ramp_speed_max = 3.0
+	cfg.day_ramp_breakfast_max = 3.0
+	cfg.day_ramp_burst_max = 3.0
+	cfg.day_ramp_triage_max = 3.0
+	cfg.day_ramp_cup_max = 3.0
 	for game in _ramped_games():
 		for energy in [0.0, 50.0, 100.0]:
 			var start: Dictionary = game.params.call(energy, 0.0)

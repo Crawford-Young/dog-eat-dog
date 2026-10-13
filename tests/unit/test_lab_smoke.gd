@@ -272,3 +272,38 @@ func test_preset_state_post_work_seeds_an_ordinary_after_work_energy() -> void:
 	var lab := _fresh_lab()
 	var state: GameState = lab._preset_state("post_work")
 	assert_eq(state.energy, 55.0)
+
+
+func test_the_lab_starts_every_game_at_the_start_of_the_day() -> void:
+	var lab := _fresh_lab()
+	assert_almost_eq(lab._progress_slider.value, 0.0, 0.0001)
+	assert_almost_eq(lab._params_for("breakfast").speed, lab.cfg.breakfast_beat_speed, 0.0001)
+	assert_almost_eq(lab._params_for("coffee").speed, lab.cfg.coffee_cup_speed, 0.0001)
+	assert_almost_eq(lab._params_for("work_am").speed, 1.0, 0.0001)
+	assert_almost_eq(lab._params_for("work_pm").speed, 1.0, 0.0001)
+
+
+func test_the_progress_slider_spans_the_whole_day() -> void:
+	var lab := _fresh_lab()
+	assert_almost_eq(lab._progress_slider.min_value, 0.0, 0.0001)
+	assert_almost_eq(lab._progress_slider.max_value, 1.0, 0.0001)
+
+
+func test_the_progress_slider_feeds_every_ramped_game_its_end_of_day_speed() -> void:
+	var lab := _fresh_lab()
+	lab._progress_slider.value = 1.0
+	var cfg: BalanceConfig = lab.cfg
+	assert_almost_eq(lab._params_for("breakfast").speed,
+			cfg.breakfast_beat_speed * cfg.day_ramp_breakfast_max, 0.0001)
+	assert_almost_eq(lab._params_for("coffee").speed,
+			cfg.coffee_cup_speed * cfg.day_ramp_cup_max, 0.0001)
+	assert_almost_eq(lab._params_for("work_am").speed, cfg.day_ramp_burst_max, 0.0001)
+	assert_almost_eq(lab._params_for("work_pm").speed, cfg.day_ramp_triage_max, 0.0001)
+
+
+func test_the_progress_slider_sits_in_the_menu_after_the_rank_row() -> void:
+	var lab := _fresh_lab()
+	var rank_row: Node = lab.get_node("%RankOption").get_parent()
+	var row: Node = lab._progress_slider.get_parent()
+	assert_eq(row.get_parent(), rank_row.get_parent(), "a row of the same menu")
+	assert_eq(row.get_index(), rank_row.get_index() + 1)

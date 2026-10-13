@@ -156,3 +156,20 @@ func test_the_morning_is_the_one_segment_case_of_the_same_math() -> void:
 		assert_eq(
 			bare.zone(0.4, 0.15), lined.zone(0.4, 0.15), "zones diverged at %f" % bare.elapsed
 		)
+
+
+## A clean sharp morning's arrival margin, measured by the bot (seeds 1-5 x 30
+## days, #18 step 10): median 6.7 min before 8:00, a quarter of mornings under
+## 3.7, a tenth under 2.2 (1.4 is the tail below that). The shipped fractions
+## colour that morning amber at the median and red only on the slow tail.
+func _shipped_zone_with(minutes_left: float) -> String:
+	var cfg := BalanceConfig.new()
+	var clock := DayClock.new(cfg.morning_budget())
+	clock.spend(cfg.morning_budget() - minutes_left)
+	return clock.zone(cfg.clock_amber_fraction, cfg.clock_red_fraction)
+
+
+func test_a_clean_morning_arrives_amber_at_the_median_and_red_on_the_slow_tail() -> void:
+	assert_eq(_shipped_zone_with(6.7), "amber", "the median clean arrival")
+	assert_eq(_shipped_zone_with(3.7), "amber", "a quarter of mornings are slower")
+	assert_eq(_shipped_zone_with(1.4), "red", "the slow tail")

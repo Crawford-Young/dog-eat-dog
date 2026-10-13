@@ -1208,7 +1208,7 @@ func _draws(font: Font, glyph: String) -> bool:
 
 func test_breakfast_speed_rides_the_days_progress() -> void:
 	var main := _fresh_main()
-	main.cfg.day_ramp_speed_max = 2.0
+	main.cfg.day_ramp_breakfast_max = 2.0
 	var host: Control = main.get_node("%MinigameHost")
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
@@ -1220,7 +1220,7 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 
 func test_coffee_is_the_cup_grab_and_its_cup_rides_the_days_progress() -> void:
 	var main := _fresh_main()
-	main.cfg.day_ramp_speed_max = 2.0
+	main.cfg.day_ramp_cup_max = 2.0
 	main.schedule.set_slots(["wake", "coffee", "work_am"] as Array[String])
 	main._start_slot()
 	var host: Control = main.get_node("%MinigameHost")
@@ -1270,7 +1270,7 @@ func test_a_spilled_cup_costs_the_price_and_nothing_else() -> void:
 
 func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> void:
 	var main := _fresh_main()
-	main.cfg.day_ramp_speed_max = 2.0
+	main.cfg.day_ramp_burst_max = 2.0
 	main.schedule.set_slots(["wake", "work_am", "lunch", "work_pm"] as Array[String])
 	main._start_slot()
 	var host: Control = main.get_node("%MinigameHost")
@@ -1283,7 +1283,7 @@ func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> vo
 
 func test_work_pm_is_the_inbox_triage_and_its_mail_rides_the_days_progress() -> void:
 	var main := _fresh_main()
-	main.cfg.day_ramp_speed_max = 2.0
+	main.cfg.day_ramp_triage_max = 2.0
 	main.schedule.set_slots(["wake", "work_am", "lunch", "work_pm"] as Array[String])
 	main._start_slot()
 	var host: Control = main.get_node("%MinigameHost")

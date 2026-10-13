@@ -15,10 +15,11 @@ static func _deficit(energy: float) -> float:
 
 
 ## The play-speed multiplier `progress` (0-1) of the way through the day: 1.0
-## at the first game, cfg.day_ramp_speed_max at the last. Speed only — a game
-## that speeds up keeps its time limit, so the ramp never shrinks one (#18).
-static func day_ramp(progress: float, cfg: BalanceConfig) -> float:
-	return lerpf(1.0, cfg.day_ramp_speed_max, clampf(progress, 0.0, 1.0))
+## at the first game, `ramp_max` (the game's own cfg.day_ramp_*_max) at the
+## last. Speed only — a game that speeds up keeps its time limit, so the ramp
+## never shrinks one (#18).
+static func day_ramp(progress: float, ramp_max: float) -> float:
+	return lerpf(1.0, ramp_max, clampf(progress, 0.0, 1.0))
 
 
 ## How far through the day position `at` sits: the counted games in
@@ -78,7 +79,7 @@ static func burst_params(
 		"tier": clampi(clarity_tier(energy) + boost_tiers, 0, 4),
 		"shift_time": cfg.burst_shift_time,
 		"window": windows[clampi(rank, 0, windows.size() - 1)],
-		"speed": day_ramp(progress, cfg),
+		"speed": day_ramp(progress, cfg.day_ramp_burst_max),
 		"fail_score": cfg.work_fail_score,
 	}
 
@@ -100,7 +101,7 @@ static func triage_params(
 		"gap": cfg.triage_arrival_gap,
 		"jitter": cfg.triage_arrival_jitter,
 		"capacity": cfg.triage_inbox_capacity,
-		"speed": day_ramp(progress, cfg),
+		"speed": day_ramp(progress, cfg.day_ramp_triage_max),
 		"fail_score": cfg.work_fail_score,
 	}
 
@@ -110,7 +111,7 @@ static func triage_params(
 ## is never handed an easier cup.
 static func cup_params(_energy: float, cfg: BalanceConfig, progress := 0.0) -> Dictionary:
 	return {
-		"speed": cfg.coffee_cup_speed * day_ramp(progress, cfg),
+		"speed": cfg.coffee_cup_speed * day_ramp(progress, cfg.day_ramp_cup_max),
 		"lead": cfg.coffee_cup_lead,
 		"zone_center": cfg.coffee_zone_center,
 		"zone_width": cfg.coffee_zone_width,
@@ -152,7 +153,7 @@ static func breakfast_params(energy: float, cfg: BalanceConfig, progress := 0.0)
 	var d := _deficit(energy)
 	return {
 		"window": lerpf(cfg.breakfast_window_base, cfg.breakfast_window_min, d),
-		"speed": cfg.breakfast_beat_speed * day_ramp(progress, cfg),
+		"speed": cfg.breakfast_beat_speed * day_ramp(progress, cfg.day_ramp_breakfast_max),
 		"beats": cfg.breakfast_beats,
 		"time_limit": lerpf(cfg.breakfast_time_limit_base, cfg.breakfast_time_limit_max, d),
 		"fail_hits": cfg.breakfast_fail_hits,
