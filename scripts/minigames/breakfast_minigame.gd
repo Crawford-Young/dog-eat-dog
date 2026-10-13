@@ -2,13 +2,16 @@ extends Minigame
 
 ## Three timing beats: catch the toast, flip the egg, stack the cakes. Click
 ## (or SPACE) when the marker crosses the plate zone. Hits = bigger energy
-## refill downstream; misses burn it a little.
+## refill downstream; misses burn it a little. Fewer than fail_hits hits, or
+## running out of time, is a MISS (issue #17); a hit-floor MISS keeps its real
+## score, which the energy refill reads.
 ##
 ## Prop + feedback parity with cooking's rhythm redo: the active beat's food
 ## is drawn and pulses, and %HitZone flashes on every press — bright
 ## white-green for a hit, dim red for a miss.
 
 const BEAT_NAMES := ["toast!", "egg!", "cakes!"]
+const FAIL_GAG := "🍞🔥"
 ## The pulse the active prop throbs at — white at rest, this at the peak.
 ## Same values as cooking's PULSE_COLOR, ported rather than reinvented.
 const PULSE_COLOR := Color(1.4, 1.4, 1.0)
@@ -21,6 +24,8 @@ var _beat: BeatTimer
 var _beats_total: int = 3
 var _beats_done: int = 0
 var _hits: int = 0
+## Fewer hits than this is a MISS; 0 (no param) never misses.
+var _fail_hits: int = 0
 var _speed: float = 1.6
 var _window: float = 0.3
 var _pulse_t: float = 0.0
@@ -41,6 +46,7 @@ func setup(params: Dictionary) -> void:
 	_speed = params.speed
 	_window = params.window
 	_beats_total = params.beats
+	_fail_hits = params.get("fail_hits", 0)
 	# HitZone ships with independent left/right and top/bottom anchors (a
 	# stretched box) — Godot warns on any direct .size write to a Control
 	# whose opposite anchors differ. Collapse to matched anchors once,
@@ -53,7 +59,7 @@ func setup(params: Dictionary) -> void:
 	_zone.position.y = zone_pos_y
 	_zone.size.y = zone_size_y
 	_start_beat()
-	_start()
+	_start(params)
 
 
 func _start_beat() -> void:
@@ -109,10 +115,18 @@ func _press() -> void:
 	_flash_t = FLASH_DURATION
 	_flash_color = FLASH_HIT if hit else FLASH_MISS
 	_beats_done += 1
-	if _beats_done >= _beats_total:
-		_finish(float(_hits) / _beats_total)
-	else:
+	if _beats_done < _beats_total:
 		_start_beat()
+		return
+	var score := float(_hits) / _beats_total
+	if _hits < _fail_hits:
+		_fail(FAIL_GAG, {"score": score})
+	else:
+		_finish(score)
+
+
+func _on_timeout() -> void:
+	_fail(FAIL_GAG)
 
 
 func _unhandled_input(event: InputEvent) -> void:

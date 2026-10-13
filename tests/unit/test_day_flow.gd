@@ -806,6 +806,8 @@ func test_an_unmatched_start_from_slot_walks_to_the_last_slot() -> void:
 func test_the_timer_bar_hides_while_the_minigame_has_no_countdown() -> void:
 	var main := _fresh_main()
 	var bar: Control = main.get_node("%TimerBar")
+	main.schedule.set_slots(["coffee"] as Array[String])
+	main._start_slot()
 	main._process(0.0)
 	assert_false(bar.visible, "an untimed game shows no bar")
 	assert_eq(bar.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the bar never eats a click")
@@ -828,8 +830,12 @@ func test_the_timer_bar_tracks_the_hosted_countdown() -> void:
 func test_the_timer_bar_hides_once_the_hosted_game_is_gone() -> void:
 	var main := _fresh_main()
 	var host: Control = main.get_node("%MinigameHost")
-	_current_minigame(host)._start({"time_limit": 100.0})
-	_walk(main, {}, "wake")
+	# A timed game followed by an untimed one, so only a lingering countdown
+	# could show the bar.
+	main.schedule.set_slots(["wake", "coffee"] as Array[String])
+	main._start_slot()
+	assert_true(_current_minigame(host).has_countdown(), "precondition: wake is timed")
+	_current_minigame(host).finished.emit(DONE.duplicate())
 	main._process(0.0)
 	assert_false(main.get_node("%TimerBar").visible, "the finished game's countdown does not linger")
 
@@ -841,3 +847,123 @@ func test_every_hosted_game_gets_the_fail_gag_length() -> void:
 		assert_eq(params.get("fail_gag_seconds"), main.cfg.fail_gag_seconds, slot)
 		assert_true(params.has("rng"), slot)
 	assert_true(main._hosted_params("cooking").has("tolerance"), "cooking keeps its difficulty params")
+
+
+## Issue #17: the clock never fails a minigame, so drive and free time are
+## judged at slot end — game.gd stamps the MISS before StatEffects runs, the
+## same stamp-before-apply as the overrun and the band.
+func _stamped(main: Control, slot: String) -> Dictionary:
+	var result := {"score": 1.0, "skipped": false, "failed": false}
+	main._on_finished(result, slot, autofree(Node.new()))
+	return result
+
+
+func test_arriving_past_eight_stamps_the_drive_a_miss() -> void:
+	var main := _fresh_main()
+	main.clock.spend(main.clock.budget + 5.0)
+	var before: float = main.state.performance
+	var energy: float = main.state.energy
+	assert_true(_stamped(main, "drive").failed, "late is the drive's MISS")
+	assert_almost_eq(
+		main.state.performance,
+		before - 5.0 * main.cfg.lateness_debit_per_min,
+		0.0001,
+		"the lateness debit is the whole charge — no generic loss cost on top",
+	)
+	assert_eq(main.state.energy, energy, "and no loss energy either")
+
+
+func test_arriving_on_time_is_not_a_drive_miss() -> void:
+	var main := _fresh_main()
+	main.clock.spend(main.clock.budget - 1.0)
+	assert_false(_stamped(main, "drive").failed)
+
+
+func test_the_drive_home_is_never_stamped_a_miss() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner"] as Array[String])
+	main._start_slot()
+	main.clock.spend(999.0)
+	assert_false(_stamped(main, "drive_home").failed)
+
+
+func test_a_late_band_night_stamps_free_time_a_miss() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main.clock.spend(main.cfg.evening_budget() + 1.0)
+	var before: float = main.state.performance
+	var result := _stamped(main, "freetime")
+	assert_eq(result.band, "late", "precondition")
+	assert_true(result.failed, "the late band is free time's MISS")
+	assert_eq(main.state.performance, before, "the sleep ledger is the charge, not the loss cost")
+
+
+func test_a_mid_band_night_is_not_a_free_time_miss() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main.clock.spend(main.cfg.evening_budget() - 1.0)
+	var result := _stamped(main, "freetime")
+	assert_eq(result.band, "mid", "precondition")
+	assert_false(result.failed)
+
+
+func test_the_drive_bar_shows_the_morning_left_to_eight() -> void:
+	var main := _fresh_main()
+	var bar: Range = main.get_node("%TimerBar")
+	main.schedule.set_slots(["drive", "coffee"] as Array[String])
+	main.clock.spend(20.0)
+	main._start_slot()
+	main._process(0.0)
+	assert_true(bar.visible, "the commute shows a bar with no countdown of its own")
+	var to_eight := float(main.cfg.work_start_minutes - main.cfg.morning_start_minutes) - 20.0
+	assert_almost_eq(bar.value, to_eight / main.cfg.morning_budget(), 0.0001, "already part-drained")
+	main.clock.spend(999.0)
+	main._process(0.0)
+	assert_true(bar.visible, "an empty bar still shows")
+	assert_eq(bar.value, 0.0, "past 8:00 it reads empty")
+
+
+func test_the_free_time_bar_shows_the_evening_left_to_the_mid_line() -> void:
+	var main := _fresh_main()
+	var bar: Range = main.get_node("%TimerBar")
+	main.schedule.set_slots(["freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main.clock.spend(30.0)
+	main._process(0.0)
+	assert_true(bar.visible)
+	var to_mid := float(main.cfg.bed_mid_line_minutes - main.cfg.evening_start_minutes) - 30.0
+	assert_almost_eq(bar.value, to_mid / main.cfg.evening_budget(), 0.0001)
+
+
+func test_the_drive_home_shows_no_bar() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner"] as Array[String])
+	main._start_slot()
+	main._process(0.0)
+	assert_false(main.get_node("%TimerBar").visible, "only the commute and free time read the clock")
+
+
+func test_a_timed_slot_gets_its_time_limit_from_the_host() -> void:
+	var main := _fresh_main()
+	var energy: float = main.state.energy
+	assert_eq(main._hosted_params("wake").time_limit, Difficulty.wake_params(energy, main.cfg).time_limit)
+	assert_eq(main._hosted_params("cooking").time_limit, Difficulty.cooking_params(energy, main.cfg).time_limit)
+	assert_true(
+		_current_minigame(main.get_node("%MinigameHost")).has_countdown(),
+		"wake is timed from the first frame",
+	)
+
+
+## Issue #17 revision: the gag is presentation, the loss cost is the penalty —
+## so the clock holds still while a lost game plays its gag.
+func test_the_clock_pauses_while_a_lost_game_gags() -> void:
+	var main := _fresh_main()
+	var node := _current_minigame(main.get_node("%MinigameHost"))
+	main._process(1.0)
+	var before: float = main.clock.elapsed
+	assert_gt(before, 0.0, "precondition: the morning clock runs during wake")
+	node._fail("💥")
+	main._process(1.0)
+	assert_eq(main.clock.elapsed, before, "no clock spent during the gag")

@@ -2,6 +2,8 @@ extends Minigame
 
 ## Nod = 2+ vertical strokes, shake = 2+ horizontal strokes, judged per short
 ## gesture window. Bubble renders text at tier >= 3, emoji placeholder below.
+## A lunch scoring under fail_score is a MISS that keeps its real score
+## (issue #17).
 
 const BEATS := [
 	{"t": 1.5, "cue": "nod", "emoji": "😃 ❗❗", "text": "the deadline moved up... wild right?"},
@@ -11,9 +13,12 @@ const BEATS := [
 ]
 const STROKES_FOR_GESTURE := 2
 const GESTURE_AMPLITUDE := 30.0
+const FAIL_GAG := "🙉"
 
 var _session: ListeningSession
 var _tier: int = 4
+## A lunch scoring under this is a MISS; 0 (no param) never misses.
+var _fail_score: float = 0.0
 var _text_speed: float = Typewriter.DEFAULT_CHARS_PER_SEC
 var _spoken: String = ""
 var _nod_tracker: GestureTracker
@@ -36,9 +41,10 @@ func setup(params: Dictionary) -> void:
 	_session = ListeningSession.new(BEATS, params.window)
 	_tier = params.tier
 	_text_speed = params.get("text_speed", _text_speed)
+	_fail_score = params.get("fail_score", 0.0)
 	_nod_tracker = GestureTracker.new(GestureTracker.AXIS_Y, GESTURE_AMPLITUDE)
 	_shake_tracker = GestureTracker.new(GestureTracker.AXIS_X, GESTURE_AMPLITUDE)
-	_start()
+	_start(params)
 
 
 func _process(delta: float) -> void:
@@ -48,7 +54,11 @@ func _process(delta: float) -> void:
 	_update_bubble()
 	_poll_gesture()
 	if _session.is_over():
-		_finish(_session.score())
+		var score := _session.score()
+		if score < _fail_score:
+			_fail(FAIL_GAG, {"score": score})
+		else:
+			_finish(score)
 
 
 func _update_bubble() -> void:

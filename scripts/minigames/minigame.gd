@@ -78,6 +78,12 @@ func has_countdown() -> bool:
 	return _counting or time_fraction() > 0.0
 
 
+## True only while a lost game plays its gag, before the result reports. The
+## host pauses the DayClock on it: the gag is presentation, not time spent.
+func is_gagging() -> bool:
+	return _gag_left > 0.0
+
+
 ## Called once when the countdown runs out. Override to end the game.
 func _on_timeout() -> void:
 	pass

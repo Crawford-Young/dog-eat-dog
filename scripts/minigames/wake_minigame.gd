@@ -1,5 +1,10 @@
 extends Minigame
 
+## Mash SPACE to fill the bar. A bar still short of full at the time limit is
+## a MISS (issue #17).
+
+const FAIL_GAG := "😴⏰"
+
 var _logic: WakeLogic
 
 @onready var _bar: ProgressBar = %WakeBar
@@ -7,7 +12,7 @@ var _logic: WakeLogic
 
 func setup(params: Dictionary) -> void:
 	_logic = WakeLogic.new(params)
-	_start()
+	_start(params)
 
 
 func _process(delta: float) -> void:
@@ -17,6 +22,13 @@ func _process(delta: float) -> void:
 	_bar.value = _logic.progress
 	if _logic.is_done():
 		_finish(1.0)
+
+
+func _on_timeout() -> void:
+	if _logic.is_done():
+		_finish(1.0)
+	else:
+		_fail(FAIL_GAG)
 
 
 func _unhandled_input(event: InputEvent) -> void:

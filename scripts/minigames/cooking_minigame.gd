@@ -14,6 +14,9 @@ extends Minigame
 ## of hold time — the sheen fiction is unchanged, only what advances it is.
 ## All recipe economics stay in CookingSession — this script only turns input
 ## into (verb, quality) pairs, prints the prompt, and shows the fiction.
+## The pan is lost (issue #17) on its spoil_limit-th spoiled step, or when the
+## time limit runs out; a spoil-limit MISS carries the session result, so the
+## real score still pays the cooking energy.
 
 const PROMPTS := {
 	"chop": "chop — press when the knife falls",
@@ -49,11 +52,15 @@ const STIR_MIN_RADIUS := 12.0
 ## The meter fills to 1.0 over this many revolutions — the 0.75 band center
 ## lands at 2.25 revolutions, a stir and a quarter past two.
 const STIR_FULL_REVOLUTIONS := 3.0
+const FAIL_GAG := "🍳🔥"
 
 var _session: CookingSession
 var _text_speed: float = Typewriter.DEFAULT_CHARS_PER_SEC
 var _window: float = 0.3
 var _beat_speed: float = 1.2
+## Spoiled steps that lose the pan. The default sits past the recipe, so a
+## host that passes no limit never trips it.
+var _spoil_limit: int = CookingSession.VERBS.size() + 1
 var _beat: BeatTimer
 var _meter: HoldMeter
 var _presses: int = 0
@@ -90,10 +97,12 @@ func setup(params: Dictionary) -> void:
 	_text_speed = params.get("text_speed", _text_speed)
 	_window = params.get("window", _window)
 	_beat_speed = params.get("beat_speed", _beat_speed)
+	_spoil_limit = params.get("spoil_limit", _spoil_limit)
 	_session = CookingSession.new(params.get("tolerance", 0.3))
 	# The board rocks around its own center, not its top-left corner.
 	_board.pivot_offset = _board.size / 2.0
 	_announce()
+	_start(params)
 
 
 ## Shows only the current verb's props — the knife and carrots for chop, the
@@ -154,7 +163,14 @@ func _announce() -> void:
 ## smoke test can walk the recipe without synthesising an input.
 func _commit(verb: String, quality: float) -> void:
 	_session.act(verb, quality)
+	if _session.spoiled >= _spoil_limit:
+		_fail(FAIL_GAG, _session.result())
+		return
 	_announce()
+
+
+func _on_timeout() -> void:
+	_fail(FAIL_GAG)
 
 
 ## Chop = fraction of its 3 presses that landed on the beat. Transfer is a
@@ -252,7 +268,7 @@ func _release_hold() -> void:
 ## is a press, for chop/transfer/pour. Stir is mouse-only (issue #11 round 6:
 ## "stir should be the mouse stirring") — it does not accept SPACE at all.
 func _unhandled_input(event: InputEvent) -> void:
-	if _session == null or _session.is_done():
+	if not _running:
 		return
 	var clicked: bool = event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT
@@ -282,7 +298,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	if _session == null or _session.is_done():
+	if not _running:
 		return
 	var verb := CookingSession.VERBS[_session.index]
 	_pulse_t += delta

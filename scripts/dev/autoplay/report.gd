@@ -48,13 +48,15 @@ static func markdown(t: Dictionary) -> String:
 	for row in Profiles.policy_rows(Profiles.PROFILES[t.profile]):
 		lines.append("- %s" % row)
 	lines.append("")
-	lines.append("| slot | n | median s | p90 s | max s | median score |")
-	lines.append("|---|---:|---:|---:|---:|---:|")
+	lines.append("| slot | n | median s | p90 s | max s | median score | misses |")
+	lines.append("|---|---:|---:|---:|---:|---:|---:|")
+	var misses: Dictionary = t.get("misses", {})
 	for slot in _ordered_slots(t.seconds):
 		var s := slot_stats(t.seconds[slot])
 		var label: String = slot + (" (out-of-band)" if slot in OUT_OF_BAND else "")
-		lines.append("| %s | %d | %.2f | %.2f | %.2f | %s |" % [
+		lines.append("| %s | %d | %.2f | %.2f | %.2f | %s | %d |" % [
 			label, s.n, s.median, s.p90, s.max, _score_text(t.scores.get(slot, [])),
+			misses.get(slot, 0),
 		])
 	lines.append("")
 	var overruns: Array = t.overruns.duplicate()

@@ -99,6 +99,9 @@ var rng := RngSource.new()
 var _bed_minute := 0.0
 ## The minigame (or beat) currently up — the timer bar reads its countdown.
 var _hosted: Minigame
+## The SCENES key _hosted was mounted under, so the timer bar can tell the
+## morning commute from the drive home (both are drive.tscn).
+var _hosted_key := ""
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -136,7 +139,10 @@ func _process(delta: float) -> void:
 	_clock_label.visible = _clock_running
 	if not _clock_running:
 		return
-	clock.spend(delta * cfg.clock_scale)
+	# A lost game's gag is presentation; the loss cost is the penalty, so the
+	# clock holds still while it plays (user revision, issue #17).
+	if not _hosted_is_gagging():
+		clock.spend(delta * cfg.clock_scale)
 	_clock_label.text = _evening_hud() if _evening else "%s · in by %s" % [
 		clock.clock_text(cfg.morning_start_minutes),
 		DayClock.format_minutes(cfg.work_start_minutes),
@@ -145,6 +151,12 @@ func _process(delta: float) -> void:
 		"font_color",
 		ZONE_COLORS[clock.zone(cfg.clock_amber_fraction, cfg.clock_red_fraction)],
 	)
+
+
+## True while the hosted game is playing its loss gag.
+func _hosted_is_gagging() -> bool:
+	return is_instance_valid(_hosted) and not _hosted.is_queued_for_deletion() \
+			and _hosted.is_gagging()
 
 
 ## The bottom-edge bar shows whatever _timer_bar_fraction picks, or hides.
@@ -157,10 +169,15 @@ func _update_timer_bar() -> void:
 
 ## The one place that decides what the timer bar reads: the hosted game's own
 ## countdown, as a 1 -> 0 fraction, or -1 for no bar (nothing hosted, or no
-## countdown). Drive and free time read a DayClock fraction here instead.
+## countdown). Drive and free time have no countdown — the clock never fails a
+## minigame — so their bar is the DayClock's time left: to 8:00 for the
+## commute (so it starts part-drained), and to the 23:30 mid line for free
+## time, since the evening budget is derived as exactly that span.
 func _timer_bar_fraction() -> float:
 	if not is_instance_valid(_hosted) or _hosted.is_queued_for_deletion():
 		return -1.0
+	if _hosted_key == "drive" or _hosted_key == "freetime":
+		return clampf(clock.remaining() / clock.budget, 0.0, 1.0) if clock.budget > 0.0 else 0.0
 	if not _hosted.has_countdown():
 		return -1.0
 	return _hosted.time_fraction()
@@ -216,6 +233,7 @@ func _mount(scene_key: String) -> Minigame:
 	var node: Minigame = SCENES[scene_key].instantiate()
 	_host.add_child(node)
 	_hosted = node
+	_hosted_key = scene_key
 	return node
 
 
@@ -322,10 +340,18 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		# The commute is the morning's till: whatever the clock overran by is
 		# stamped on the result here, and StatEffects charges it below.
 		result["overrun"] = clock.overrun()
+		# Late is the drive's MISS (issue #17). Stamped, never charged again:
+		# StatEffects leaves drive out of the loss cost, the debit is the bill.
+		if clock.overrun() > 0.0:
+			result["failed"] = true
 	if slot == "freetime":
 		# Freetime is the evening's till, exactly as the commute is the
 		# morning's: the clock stops here and what it reads becomes the night.
 		result["band"] = clock.band_name()
+		# The late band is free time's MISS (issue #17); the sleep ledger,
+		# not the loss cost, is what it pays.
+		if result["band"] == "late":
+			result["failed"] = true
 		_bed_minute = float(cfg.evening_start_minutes) + clock.elapsed
 		result["bed_minute"] = _bed_minute
 		_clock_running = false

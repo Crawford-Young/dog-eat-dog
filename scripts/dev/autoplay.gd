@@ -76,6 +76,9 @@ var _freetime_games_seen := 0
 var _tally := {
 	"seconds": {},
 	"scores": {},
+	## Lost games (result.failed), keyed by slot. game.gd's own finished
+	## handler runs first, so the drive and free-time stamps are already on.
+	"misses": {},
 	"overruns": [],
 	"nights": 0,
 	"late_band_nights": 0,
@@ -207,6 +210,7 @@ func _open(node: Node) -> void:
 		"freetime":
 			_freetime_games_seen = 0
 	# Listening only: the result dict is read for the report, never produced.
+	# Connected after game.gd's handler, so its stamps are visible here.
 	var slot := _current_slot
 	(node as Minigame).finished.connect(func(result: Dictionary) -> void: _record_score(slot, result))
 	_player.play(_current_slot, node, _game.state.day)
@@ -217,6 +221,9 @@ func _record_score(slot: String, result: Dictionary) -> void:
 	if not scores.has(slot):
 		scores[slot] = []
 	scores[slot].append(float(result.get("score", 0.0)))
+	if result.get("failed", false):
+		var misses: Dictionary = _tally.misses
+		misses[slot] = misses.get(slot, 0) + 1
 
 
 func _close_current() -> void:

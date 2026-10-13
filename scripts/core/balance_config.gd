@@ -46,6 +46,34 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var fail_gag_seconds: float = 1.5
 @export var fail_performance_cost: float = 0.01
 @export var fail_energy_cost: float = 3.0
+## Per-game time limits in real seconds, and the score floors that make a game
+## a MISS (issue #17). Difficulty hands each one to its game as a param.
+##
+## Each limit lerps _base (full energy) -> _max (empty) on the same deficit the
+## game's difficulty uses (user revision, #17), aiming at ~10% sharp misses at
+## any energy. Base = sharp p90 from the #11 baseline. Max = sharp p90 at full
+## deficit: autoplay sharp, seeds 1-5 x 30 days (n=137), on 6c6d8bd with
+## Difficulty._deficit pinned to 1.0 in a throwaway copy, rounded to 0.1 s.
+@export var wake_time_limit_base: float = 3.7  # sharp p90, #11 baseline
+@export var wake_time_limit_max: float = 17.0  # sharp p90 at d=1 (16.98), #17
+@export var brush_time_limit_base: float = 2.3  # sharp p90, #11 baseline
+@export var brush_time_limit_max: float = 3.3  # sharp p90 at d=1 (3.32), #17
+@export var shower_time_limit_base: float = 3.5  # sharp p90, #11 baseline
+@export var shower_time_limit_max: float = 7.0  # sharp p90 at d=1 (7.00), #17
+@export var clothes_time_limit_base: float = 4.2  # sharp p90, #11 baseline
+@export var clothes_time_limit_max: float = 6.1  # sharp p90 at d=1 (6.10), #17
+@export var breakfast_time_limit_base: float = 2.3  # sharp p90, #11 baseline
+## The beats run at a fixed speed, so the duration does not scale (d=1 p90 2.23).
+@export var breakfast_time_limit_max: float = 2.3  # = base, measured, #17
+@export var cook_time_limit_base: float = 6.4  # sharp p90, #11 baseline
+## The verbs run at a fixed speed too (d=1 p90 6.43).
+@export var cook_time_limit_max: float = 6.4  # = base, measured, #17
+@export var work_fail_score: float = 0.5  # MISS below it; ruling, #17
+## MISS below it, and lunch scores in thirds (hits / 3 cues), so 0.01 misses
+## exactly the no-hit lunch with the same "score < floor" rule as work.
+@export var lunch_fail_score: float = 0.01  # MISS on no hits; ruling, #17
+@export var breakfast_fail_hits: int = 1  # MISS below 1 hit of 3; ruling, #17
+@export var cook_spoil_limit: int = 3  # the 3rd spoiled step (of 4) is a MISS; ruling, #17
 
 @export var typewriter_chars_per_sec: float = 30.0
 @export var sleep_hold_time: float = 1.4
