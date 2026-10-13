@@ -358,16 +358,19 @@ func test_the_cooking_scene_has_visible_gesture_targets() -> void:
 		assert_not_null(node.get_node(unique_name), "%s is missing" % unique_name)
 
 
-func test_the_clock_hud_draws_over_the_minigame_host() -> void:
-	# The wave-3a reflect's closing lesson: a correct node drawn BEHIND an
-	# opaque one passes every test the suite can express. Visibility is not
-	# draw order. main.tscn is already correct — nothing held it there.
+## The wave-3a reflect's closing lesson: a correct node drawn BEHIND an
+## opaque one passes every test the suite can express. Visibility is not draw
+## order, so every HUD node is held after the host here (issue #17).
+func test_every_hud_node_draws_over_the_minigame_host() -> void:
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child_autofree(main)
 	var host: Node = main.get_node("%MinigameHost")
-	var clock: Node = main.get_node("%ClockLabel")
-	assert_gt(
-		clock.get_index(),
-		host.get_index(),
-		"ClockLabel must be declared after MinigameHost or minigames paint over it",
-	)
+	for hud in ["%DayLabel", "%StripLabel", "%DogLabel", "%RankLabel", "%ClockLabel",
+			"%PosterLabel", "%StampLabel", "%TimerBar"]:
+		assert_gt(
+			main.get_node(hud).get_index(),
+			host.get_index(),
+			"%s must be declared after MinigameHost or minigames paint over it" % hud,
+		)
+		assert_eq((main.get_node(hud) as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE,
+				"%s never eats a click" % hud)

@@ -34,10 +34,19 @@ func _current_minigame(host: Control) -> Minigame:
 	return host.get_child(host.get_child_count() - 1)
 
 
-func _fresh_main() -> Control:
+## The verdict stamp holds the next slot back for stamp_hold_seconds of real
+## frames, and a synchronous walk ticks none, so walks run with no hold by
+## default. The hold's own tests pass the shipped length.
+func _fresh_main(stamp_hold := 0.0) -> Control:
 	var main: Control = load("res://scenes/main.tscn").instantiate()
+	main.cfg = main.cfg.duplicate()
+	main.cfg.stamp_hold_seconds = stamp_hold
 	add_child_autofree(main)
 	return main
+
+
+func _held_main() -> Control:
+	return _fresh_main(BalanceConfig.new().stamp_hold_seconds)
 
 
 ## The morning rebuild game.gd runs at _ready and at next-day, for tests that
@@ -130,19 +139,30 @@ func test_a_full_day_pays_the_days_salary() -> void:
 	)
 
 
-func test_the_poster_tracks_rank_and_savings() -> void:
+## #11 "HUD layout": savings against the target is the score, top-right.
+func test_the_poster_scores_savings_against_the_retirement_target() -> void:
 	var main := _fresh_main()
 	var poster: Label = main.get_node("%PosterLabel")
-	assert_eq(poster.text, "mailroom · savings 0 / %d" % main.cfg.retirement_target)
+	assert_eq(poster.text, "🦴 0 / %d to retire" % main.cfg.retirement_target)
 	_walk(main)
-	main._on_next_day_pressed()
+	var banked: int = main.cfg.salaries[0] - main.cfg.daily_living_cost
 	assert_eq(
 		poster.text,
-		"mailroom · savings %d / %d" % [
-			main.cfg.salaries[0] - main.cfg.daily_living_cost, main.cfg.retirement_target
-		],
-		"the poster refreshes on the next morning's first slot",
+		"🦴 %d / %d to retire" % [banked, main.cfg.retirement_target],
+		"the day's pay shows on the summary, not only the next morning",
 	)
+	main._on_next_day_pressed()
+	assert_eq(poster.text, "🦴 %d / %d to retire" % [banked, main.cfg.retirement_target])
+	assert_true(poster.visible, "the score is always up")
+
+
+func test_the_rank_stays_on_the_top_left() -> void:
+	var main := _fresh_main()
+	var rank: Label = main.get_node("%RankLabel")
+	assert_eq(rank.text, "mailroom")
+	main.state.rank = 2
+	main._start_slot()
+	assert_eq(rank.text, RankLadder.RANK_NAMES[2])
 
 
 func test_coffee_buys_focus_now_and_pays_for_it_at_work() -> void:
@@ -340,9 +360,7 @@ func test_the_summary_telegraphs_a_tomorrow_that_might_not_happen() -> void:
 	# so a synchronous walk's band is not this test's business — every
 	# band is wrecked, and the telegraph is what is under test either way.
 	var main := _fresh_main()
-	var wrecked := BalanceConfig.new()
-	wrecked.sleep_energy = {"early": -60.0, "mid": -60.0, "late": -60.0}
-	main.cfg = wrecked
+	main.cfg.sleep_energy = {"early": -60.0, "mid": -60.0, "late": -60.0}
 	_walk(main)
 	assert_string_contains(_summary_text(main), "tomorrow might not happen")
 	var rested := _fresh_main()
@@ -738,7 +756,8 @@ func test_the_debt_never_shows_up_as_a_number_outside_the_sleep_beat() -> void:
 	main.schedule.set_slots(["freetime"] as Array[String])
 	main._start_slot()
 	await wait_physics_frames(2)
-	for label_name in ["%ClockLabel", "%DogLabel", "%PosterLabel", "%DayLabel"]:
+	for label_name in ["%ClockLabel", "%DogLabel", "%PosterLabel", "%DayLabel", "%RankLabel",
+			"%StripLabel"]:
 		var text: String = main.get_node(label_name).text
 		assert_false(
 			text.contains("behind") or text.contains("debt"),
@@ -967,3 +986,179 @@ func test_the_clock_pauses_while_a_lost_game_gags() -> void:
 	node._fail("💥")
 	main._process(1.0)
 	assert_eq(main.clock.elapsed, before, "no clock spent during the gag")
+
+
+# --- verdict HUD (issue #17, commit 7) ----------------------------------------
+
+
+func _stamp(main: Control) -> Label:
+	return main.get_node("%StampLabel")
+
+
+func _strip(main: Control) -> String:
+	return (main.get_node("%StripLabel") as Label).text
+
+
+## True while the newest hosted node is on its way out and nothing replaced it
+## yet — the hold sits between two slots. Newest only: a test that reseeds the
+## schedule leaves day 1's wake behind, un-driven, at the front of the host.
+func _nothing_hosted(main: Control) -> bool:
+	return _current_minigame(main.get_node("%MinigameHost")).is_queued_for_deletion()
+
+
+func _finish(main: Control, slot: String, result: Dictionary) -> void:
+	main._on_finished(result, slot, autofree(Node.new()))
+
+
+func test_a_finished_game_stamps_hit_mid_screen_and_holds_the_next_slot() -> void:
+	var main := _held_main()
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host).finished.emit(DONE.duplicate())
+	assert_true(_stamp(main).visible, "the stamp is up")
+	assert_eq(_stamp(main).text, "HIT")
+	assert_true(_nothing_hosted(main), "brush waits for the stamp")
+	main._process(main.cfg.stamp_hold_seconds * 0.5)
+	assert_true(_nothing_hosted(main), "still holding halfway through")
+	main._process(main.cfg.stamp_hold_seconds * 0.5 + 0.01)
+	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/brush.tscn")
+	assert_false(_stamp(main).visible, "the stamp clears as the next slot mounts")
+
+
+func test_a_failed_game_stamps_miss() -> void:
+	var main := _held_main()
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(
+		{"score": 0.0, "skipped": false, "failed": true}
+	)
+	assert_eq(_stamp(main).text, "MISS")
+
+
+func test_a_skipped_chore_stamps_a_muted_skip() -> void:
+	var main := _held_main()
+	main.schedule.set_slots(["brush", "shower"] as Array[String])
+	main._start_slot()
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(SKIPPED.duplicate())
+	assert_eq(_stamp(main).text, "SKIP")
+	assert_lt(_stamp(main).get_theme_color("font_color").a, 1.0, "a skip is muted")
+
+
+func test_a_slot_that_is_not_a_game_gets_no_stamp_and_no_hold() -> void:
+	var main := _held_main()
+	var host: Control = main.get_node("%MinigameHost")
+	main.schedule.set_slots(["coffee", "work_am"] as Array[String])
+	main._start_slot()
+	_current_minigame(host).finished.emit(FAKE_RESULTS.coffee.duplicate())
+	assert_false(_stamp(main).visible)
+	assert_eq(_strip(main), "", "no mark for a card")
+	assert_eq(main.schedule.current(), "work_am", "the next slot mounts at once")
+	assert_false(_nothing_hosted(main))
+
+
+func test_a_late_commute_stamps_miss_and_an_on_time_one_hit() -> void:
+	var late := _held_main()
+	late.clock.spend(late.clock.budget + 5.0)
+	_finish(late, "drive", DONE.duplicate())
+	assert_eq(_stamp(late).text, "MISS", "past 8:00 is the drive's MISS")
+	var on_time := _held_main()
+	on_time.clock.spend(on_time.clock.budget - 1.0)
+	_finish(on_time, "drive", DONE.duplicate())
+	assert_eq(_stamp(on_time).text, "HIT")
+
+
+func test_a_late_band_night_stamps_free_time_miss_and_a_mid_one_hit() -> void:
+	var late := _held_main()
+	late.schedule.set_slots(["freetime", "sleep"] as Array[String])
+	late._start_slot()
+	late.clock.spend(late.cfg.evening_budget() + 1.0)
+	_finish(late, "freetime", DONE.duplicate())
+	assert_eq(_stamp(late).text, "MISS")
+	var mid := _held_main()
+	mid.schedule.set_slots(["freetime", "sleep"] as Array[String])
+	mid._start_slot()
+	mid.clock.spend(mid.cfg.evening_budget() - 1.0)
+	_finish(mid, "freetime", DONE.duplicate())
+	assert_eq(_stamp(mid).text, "HIT")
+
+
+## The hold is presentation, exactly like the gag: the clock holds still, and
+## the game's effects land once, before it.
+func test_the_clock_holds_still_during_the_stamp_and_effects_land_once() -> void:
+	var main := _held_main()
+	main._process(1.0)
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(
+		{"score": 0.0, "skipped": false, "failed": true}
+	)
+	var elapsed: float = main.clock.elapsed
+	var energy: float = main.state.energy
+	var performance: float = main.state.performance
+	main._process(main.cfg.stamp_hold_seconds * 0.5)
+	assert_eq(main.clock.elapsed, elapsed, "no clock spent during the stamp")
+	main._process(main.cfg.stamp_hold_seconds * 0.5 + 0.01)
+	assert_eq(main.clock.elapsed, elapsed, "nor on the frame the hold ends")
+	assert_eq(main.state.energy, energy, "the loss cost is not charged again after the hold")
+	assert_eq(main.state.performance, performance)
+	main._process(1.0)
+	assert_almost_eq(main.clock.elapsed, elapsed + main.cfg.clock_scale, 0.001,
+			"and the clock resumes with the next slot")
+
+
+func test_a_held_commute_still_slinks_in_late_after_the_stamp() -> void:
+	var main := _held_main()
+	var host: Control = main.get_node("%MinigameHost")
+	main.schedule.set_slots(["drive", "coffee"] as Array[String])
+	main._start_slot()
+	main.clock.spend(main.clock.budget + 5.0)
+	_current_minigame(host).finished.emit(DONE.duplicate())
+	assert_true(_nothing_hosted(main), "the late beat waits for the stamp too")
+	main._process(main.cfg.stamp_hold_seconds + 0.01)
+	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/warning.tscn")
+	assert_eq(main.schedule.current(), "drive", "still the out-of-band late beat")
+
+
+func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
+	var main := _fresh_main()
+	_walk(main, {
+		"brush": SKIPPED,
+		"breakfast": {"score": 0.0, "skipped": false, "failed": true},
+		"lunch": {"score": 0.0, "skipped": false, "failed": true},
+	})
+	# wake brush shower clothes breakfast drive work_am lunch work_pm cooking
+	# freetime — coffee, drive_home, dinner and sleep leave no mark.
+	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅")
+
+
+func test_the_strip_starts_each_new_day_empty() -> void:
+	var main := _fresh_main()
+	_walk(main)
+	assert_ne(_strip(main), "", "precondition: the day left marks")
+	main._on_next_day_pressed()
+	assert_eq(_strip(main), "")
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(DONE.duplicate())
+	assert_eq(_strip(main), "✅", "the new day's first game is its first mark")
+
+
+func test_restarting_clears_the_strip() -> void:
+	var main := _fresh_main()
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(DONE.duplicate())
+	assert_eq(_strip(main), "✅", "precondition")
+	main._on_restart_pressed()
+	assert_eq(_strip(main), "")
+
+
+## Neither the default font nor a web build's system has these glyphs; the HUD
+## labels fall back to the bundled Twemoji, as the listening bubble does.
+func test_the_emoji_hud_labels_can_draw_their_glyphs() -> void:
+	var main := _fresh_main()
+	var poster_font: Font = (main.get_node("%PosterLabel") as Label).get_theme_font(&"font")
+	var strip_font: Font = (main.get_node("%StripLabel") as Label).get_theme_font(&"font")
+	assert_true(_draws(poster_font, "🦴"), "the bone")
+	for mark in Verdict.MARKS.values():
+		assert_true(_draws(strip_font, mark), "strip mark %s" % mark)
+
+
+func _draws(font: Font, glyph: String) -> bool:
+	if font.has_char(glyph.unicode_at(0)):
+		return true
+	for fallback in font.fallbacks:
+		if (fallback as Font).has_char(glyph.unicode_at(0)):
+			return true
+	return false

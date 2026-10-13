@@ -3,7 +3,9 @@ extends Control
 ## Game flow: build the morning's schedule, host one minigame at a time, close
 ## the day (pay, rank ladder), show a summary, loop. Energy is shown ONLY as the
 ## dog's state text — never a number (spec rule). Money is fine to show: the
-## poster line is the retirement counter.
+## poster line, top-right, is the retirement counter and the run's score.
+## Each game ends on a HIT/MISS/SKIP stamp that holds the next slot back, and
+## the day's verdicts line up as a strip under the day label (issue #17).
 ##
 ## Wave 3a: this script is the ONLY spender of the morning DayClock — it turns
 ## real seconds into game-minutes in _process and charges the fixed skip costs
@@ -77,6 +79,13 @@ const ZONE_COLORS := {
 	"amber": Color(1.0, 0.8, 0.3),
 	"red": Color(1.0, 0.35, 0.3),
 }
+## A skip is neither a win nor a loss, so it stamps muted (issue #17 ruling).
+const STAMP_COLORS := {
+	Verdict.HIT: Color(0.45, 0.9, 0.45),
+	Verdict.MISS: Color(1.0, 0.35, 0.3),
+	Verdict.SKIP: Color(0.8, 0.8, 0.8, 0.55),
+}
+const EMOJI_FONT := preload("res://assets/fonts/twemoji_mozilla.ttf")
 
 var state := GameState.new()
 var schedule := DaySchedule.new()
@@ -93,7 +102,7 @@ var start_from_slot: String = ""
 var rng := RngSource.new()
 ## The evening's till, mirrored off the freetime stamp so the sleep beat can
 ## still read it after the slot boundary. Seeded to bed_mid_line_minutes (also
-## setup()'s own bed_clock default) at each day reset — not 0.0 — because a
+## setup()'s own bed_clock default) in _ready and at each day reset — not 0.0 — because a
 ## schedule that reaches "sleep" without passing through freetime (the lab,
 ## T9) would otherwise print "0:00" and hand the ledger a 31-hour night.
 var _bed_minute := 0.0
@@ -102,13 +111,21 @@ var _hosted: Minigame
 ## The SCENES key _hosted was mounted under, so the timer bar can tell the
 ## morning commute from the drive home (both are drive.tscn).
 var _hosted_key := ""
+## Today's verdicts in play order, for the strip.
+var _verdicts: Array[String] = []
+## What runs once the stamp's hold is over; invalid while nothing is held.
+var _after_stamp := Callable()
+var _stamp_left := 0.0
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
 @onready var _summary_label: Label = %SummaryLabel
 @onready var _day_label: Label = %DayLabel
 @onready var _dog_label: Label = %DogLabel
+@onready var _rank_label: Label = %RankLabel
 @onready var _poster_label: Label = %PosterLabel
+@onready var _strip_label: Label = %StripLabel
+@onready var _stamp_label: Label = %StampLabel
 @onready var _ending: Panel = %Ending
 @onready var _ending_label: Label = %EndingLabel
 @onready var _clock_label: Label = %ClockLabel
@@ -124,7 +141,10 @@ func _ready() -> void:
 	_ending_typer.bind(_ending_label)
 	_summary.visible = false
 	_ending.visible = false
+	for label in [_poster_label, _strip_label]:
+		_with_emoji_fallback(label)
 	clock = DayClock.new(cfg.morning_budget())
+	_bed_minute = float(cfg.bed_mid_line_minutes)
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	if start_from_slot != "":
 		while schedule.current() != start_from_slot and schedule.advance():
@@ -132,11 +152,24 @@ func _ready() -> void:
 	_start_slot()
 
 
+## The default font has no emoji; Twemoji backs it, as on the listening bubble.
+func _with_emoji_fallback(label: Label) -> void:
+	var font := FontVariation.new()
+	font.base_font = label.get_theme_font(&"font")
+	font.fallbacks = [EMOJI_FONT]
+	label.add_theme_font_override(&"font", font)
+
+
 ## The whole HUD: the clock only exists while a morning slot is up, and it is
 ## the only thing that converts real seconds into game-minutes.
 func _process(delta: float) -> void:
 	_update_timer_bar()
 	_clock_label.visible = _clock_running
+	# The stamp is presentation, like the gag: no clock is spent while it
+	# holds, nor on the frame it lets the next slot in.
+	if _after_stamp.is_valid():
+		_tick_stamp(delta)
+		return
 	if not _clock_running:
 		return
 	# A lost game's gag is presentation; the loss cost is the penalty, so the
@@ -213,11 +246,8 @@ func _start_slot() -> void:
 	_clock_running = slot in MORNING_TIMED or slot in EVENING_TIMED
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS[slot]]
 	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
-	_poster_label.text = "%s · savings %d / %d" % [
-		RankLadder.RANK_NAMES[state.rank],
-		state.wallet.savings,
-		cfg.retirement_target,
-	]
+	_rank_label.text = RankLadder.RANK_NAMES[state.rank]
+	_update_score()
 	var node := _mount(slot)
 	node.finished.connect(_on_finished.bind(slot, node), CONNECT_ONE_SHOT)
 	if slot == "freetime":
@@ -226,6 +256,10 @@ func _start_slot() -> void:
 		# would not resolve against the base class.
 		node.connect("game_played", _on_game_played)
 	node.setup(_hosted_params(slot))
+
+
+func _update_score() -> void:
+	_poster_label.text = "🦴 %d / %d to retire" % [state.wallet.savings, cfg.retirement_target]
 
 
 ## Instantiates `scene_key`'s scene into the host and makes it the hosted game.
@@ -356,6 +390,43 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		result["bed_minute"] = _bed_minute
 		_clock_running = false
 	StatEffects.apply(slot, result, state, cfg)
+	var verdict := Verdict.of(slot, result)
+	if verdict == "":
+		_continue_day(slot, result)
+		return
+	_verdicts.append(verdict)
+	_strip_label.text = Verdict.strip(_verdicts)
+	_stamp_label.text = verdict
+	_stamp_label.add_theme_color_override("font_color", STAMP_COLORS[verdict])
+	_stamp_label.visible = true
+	_hold_stamp(_continue_day.bind(slot, result))
+
+
+## The one place the stamp holds the day: `next` (whatever the finished game
+## leads to, in or out of band) runs once stamp_hold_seconds of frames pass.
+func _hold_stamp(next: Callable) -> void:
+	_after_stamp = next
+	_stamp_left = cfg.stamp_hold_seconds
+	if _stamp_left <= 0.0:
+		_release_stamp()
+
+
+func _tick_stamp(delta: float) -> void:
+	_stamp_left -= delta
+	if _stamp_left <= 0.0:
+		_release_stamp()
+
+
+func _release_stamp() -> void:
+	var next := _after_stamp
+	_after_stamp = Callable()
+	_stamp_label.visible = false
+	next.call()
+
+
+## Where a finished slot leads: the late beat, the pan, rank news, the next
+## slot or the summary. Effects are already applied; this only routes.
+func _continue_day(slot: String, result: Dictionary) -> void:
 	if slot == "drive" and clock.overrun() > 0.0:
 		_show_late_beat()
 		return
@@ -409,25 +480,16 @@ func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 
 
 ## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
-## schedule.current() stays "dinner" while the pan is up. Its own tail applies
-## StatEffects, which the shared beat tail does not: a beat has nothing to
-## bank and a dinner does. The clock keeps running, which IS the point —
-## cooking is what takeout buys you out of.
+## schedule.current() stays "dinner" while the pan is up. Unlike a beat it
+## finishes through the slot tail, _on_finished, because a dinner has effects
+## to bank and a verdict to stamp. The clock keeps running, which IS the
+## point — cooking is what takeout buys you out of.
 func _show_cooking() -> void:
 	_clock_running = true
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS["cooking"]]
 	var node := _mount("cooking")
-	node.finished.connect(_on_cooking_finished.bind(node), CONNECT_ONE_SHOT)
+	node.finished.connect(_on_finished.bind("cooking", node), CONNECT_ONE_SHOT)
 	node.setup(_hosted_params("cooking"))
-
-
-func _on_cooking_finished(result: Dictionary, node: Node) -> void:
-	node.queue_free()
-	StatEffects.apply("cooking", result, state, cfg)
-	if schedule.advance():
-		_start_slot()
-	else:
-		_show_summary()
 
 
 ## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
@@ -453,6 +515,7 @@ func _show_late_beat() -> void:
 func _show_summary() -> void:
 	_clock_running = false
 	var report := StatEffects.close_day(state, cfg)
+	_update_score()
 	var events: Array = report.events
 	var lines: Array[String] = ["day %d done" % state.day]
 	if events.has("sick_no_pay"):
@@ -518,11 +581,7 @@ func _performance_word() -> String:
 func _on_next_day_pressed() -> void:
 	_summary.visible = false
 	state.start_next_day(cfg)
-	clock = DayClock.new(cfg.morning_budget())
-	_evening = false
-	_bed_minute = float(cfg.bed_mid_line_minutes)
-	schedule.set_slots(DaySchedule.build(state, cfg))
-	_start_slot()
+	_begin_day()
 
 
 func _on_restart_pressed() -> void:
@@ -530,9 +589,16 @@ func _on_restart_pressed() -> void:
 	_ending_typer.skip()
 	_ending_label.text = ""
 	state = GameState.new()
+	_ending.visible = false
+	_begin_day()
+
+
+## A fresh morning for whatever `state` is now: new clock, empty strip.
+func _begin_day() -> void:
 	clock = DayClock.new(cfg.morning_budget())
 	_evening = false
 	_bed_minute = float(cfg.bed_mid_line_minutes)
+	_verdicts.clear()
+	_strip_label.text = ""
 	schedule.set_slots(DaySchedule.build(state, cfg))
-	_ending.visible = false
 	_start_slot()
