@@ -10,6 +10,10 @@ var _logic: WakeLogic
 @onready var _bar: ProgressBar = %WakeBar
 
 
+func _art_folder() -> String:
+	return "wake"
+
+
 func setup(params: Dictionary) -> void:
 	_logic = WakeLogic.new(params)
 	_start(params)

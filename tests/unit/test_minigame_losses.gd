@@ -18,6 +18,8 @@ const LISTENING := "res://scenes/minigames/listening.tscn"
 const QUICK := {"time_limit": 0.1, "fail_gag_seconds": 0.05}
 const LONG := {"time_limit": 100.0, "fail_gag_seconds": 0.05}
 const WAIT := 0.5
+## Holds no art, so PropArt always draws the emoji placeholder.
+const NO_ART_ROOT := "res://tests/fixtures/props/none"
 
 const TIMED := [
 	[WAKE, {"mash_target": 50, "decay_per_sec": 0.0}],
@@ -35,6 +37,9 @@ const SKIPPABLE_CHORES := [
 
 func _host(path: String, params: Dictionary, extra: Dictionary = {}) -> Minigame:
 	var node: Minigame = load(path).instantiate()
+	# The loss rule is under test, not the art: an empty root keeps every gag
+	# its emoji whatever lands in assets/props (issue #24).
+	node.props_root = NO_ART_ROOT
 	add_child_autofree(node)
 	var merged := params.duplicate()
 	merged.merge(extra, true)

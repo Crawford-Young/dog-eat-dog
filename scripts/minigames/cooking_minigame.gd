@@ -88,6 +88,10 @@ var _flash_target: CanvasItem = null
 @onready var _typer := TypewriterLabel.new()
 
 
+func _art_folder() -> String:
+	return "cooking"
+
+
 func _ready() -> void:
 	add_child(_typer)
 	_typer.bind(_prompt)

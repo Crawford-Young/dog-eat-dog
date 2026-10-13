@@ -11,6 +11,10 @@ var _strokes_required: int = 6
 @onready var _bar: ProgressBar = %BrushBar
 
 
+func _art_folder() -> String:
+	return "brush"
+
+
 func setup(params: Dictionary) -> void:
 	_tracker = GestureTracker.new(GestureTracker.AXIS_X, params.amplitude)
 	_strokes_required = params.strokes_required
