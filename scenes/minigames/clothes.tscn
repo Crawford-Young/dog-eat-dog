@@ -31,37 +31,33 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="Shirt" type="ColorRect" parent="Items"]
+[node name="Shirt" type="Control" parent="Items"]
 offset_left = 60.0
 offset_top = 120.0
 offset_right = 140.0
 offset_bottom = 170.0
 mouse_filter = 2
-color = Color(0.9, 0.5, 0.5, 1)
 
-[node name="Pants" type="ColorRect" parent="Items"]
+[node name="Pants" type="Control" parent="Items"]
 offset_left = 60.0
 offset_top = 220.0
 offset_right = 140.0
 offset_bottom = 270.0
 mouse_filter = 2
-color = Color(0.5, 0.6, 0.9, 1)
 
-[node name="Shoes" type="ColorRect" parent="Items"]
+[node name="Shoes" type="Control" parent="Items"]
 offset_left = 60.0
 offset_top = 320.0
 offset_right = 140.0
 offset_bottom = 370.0
 mouse_filter = 2
-color = Color(0.45, 0.35, 0.3, 1)
 
-[node name="Collar" type="ColorRect" parent="Items"]
+[node name="Collar" type="Control" parent="Items"]
 offset_left = 60.0
 offset_top = 420.0
 offset_right = 140.0
 offset_bottom = 470.0
 mouse_filter = 2
-color = Color(0.95, 0.8, 0.3, 1)
 
 [node name="Status" type="Label" parent="."]
 unique_name_in_owner = true
