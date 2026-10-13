@@ -18,6 +18,7 @@ const GAME_FOLDERS := [
 	["res://scenes/minigames/burst.tscn", "work_am"],
 	["res://scenes/minigames/triage.tscn", "work_pm"],
 	["res://scenes/minigames/listening.tscn", "lunch"],
+	["res://scenes/minigames/coffee.tscn", "coffee"],
 ]
 
 
@@ -90,6 +91,37 @@ func test_emoji_fallback_keeps_the_base_font_and_adds_twemoji() -> void:
 	assert_not_null(font)
 	assert_eq(font.base_font, base)
 	assert_eq(font.fallbacks, [PropArt.EMOJI_FONT])
+
+
+## Minigame._prop is every scene's art slot: the game's own folder, filling the
+## parent slot, and a placeholder centred at the slot's size.
+func test_a_prop_with_art_fills_its_slot_with_the_png() -> void:
+	var probe := ArtProbe.new()
+	probe.props_root = FIXTURE_ROOT
+	autofree(probe)
+	var art := probe._prop("gag", "💥", 40)
+	autofree(art)
+	assert_is(art, TextureRect, "the game's own folder, under its props root")
+	assert_eq([art.anchor_left, art.anchor_top, art.anchor_right, art.anchor_bottom],
+			[0.0, 0.0, 1.0, 1.0], "it fills the slot")
+
+
+func test_a_prop_without_art_is_its_placeholder_centred_at_its_size() -> void:
+	var probe := ArtProbe.new()
+	probe.props_root = FIXTURE_ROOT
+	autofree(probe)
+	var art := probe._prop("absent", "💥", 40)
+	autofree(art)
+	assert_is(art, Label)
+	var label := art as Label
+	assert_eq(label.text, "💥")
+	assert_eq(label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(label.vertical_alignment, VERTICAL_ALIGNMENT_CENTER)
+	assert_eq(label.get_theme_font_size(&"font_size"), 40)
+	assert_true(_draws(label.get_theme_font(&"font"), "💥"), "Twemoji backs it")
+	assert_eq([art.anchor_left, art.anchor_top, art.anchor_right, art.anchor_bottom],
+			[0.0, 0.0, 1.0, 1.0], "it fills the slot")
+	assert_eq(art.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 
 
 func test_a_gag_with_art_draws_the_png() -> void:

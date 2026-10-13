@@ -58,9 +58,9 @@ func session() -> TriageSession:
 
 
 func _ready() -> void:
-	_monitor_slot.add_child(_art("monitor", MONITOR_PLACEHOLDER, MONITOR_FONT_SIZE))
-	_reply_slot.add_child(_art("reply", REPLY_PLACEHOLDER, BIN_FONT_SIZE))
-	_trash_slot.add_child(_art("trash", TRASH_PLACEHOLDER, BIN_FONT_SIZE))
+	_monitor_slot.add_child(_prop("monitor", MONITOR_PLACEHOLDER, MONITOR_FONT_SIZE))
+	_reply_slot.add_child(_prop("reply", REPLY_PLACEHOLDER, BIN_FONT_SIZE))
+	_trash_slot.add_child(_prop("trash", TRASH_PLACEHOLDER, BIN_FONT_SIZE))
 
 
 func setup(params: Dictionary) -> void:
@@ -127,26 +127,13 @@ func _render() -> void:
 	var icons := _session.icons()
 	if not icons.is_empty():
 		var top: Array = ICONS[icons[0]]
-		_email_slot.add_child(_art(top[0], top[1], EMAIL_FONT_SIZE))
+		_email_slot.add_child(_prop(top[0], top[1], EMAIL_FONT_SIZE))
 	_clear(_pile)
 	for icon in icons.slice(1):
-		var art := _art(ICONS[icon][0], ICONS[icon][1], PILE_FONT_SIZE)
+		var art := _prop(ICONS[icon][0], ICONS[icon][1], PILE_FONT_SIZE)
 		art.custom_minimum_size = Vector2(PILE_FONT_SIZE, PILE_FONT_SIZE) * 1.2
 		_pile.add_child(art)
 	_tally.text = "sorted right: %d / %d" % [_session.correct, _session.emails_shown()]
-
-
-## A work_pm art slot filling its parent: the PNG, or `placeholder` centred at
-## `font_size`. PropArt makes it mouse-transparent either way.
-func _art(slot: String, placeholder: String, font_size: int) -> Control:
-	var art := PropArt.make(_art_folder(), slot, placeholder, props_root)
-	if art is Label:
-		var label := art as Label
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override(&"font_size", font_size)
-	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	return art
 
 
 ## Frees `parent`'s children now, so a count read this frame is current.

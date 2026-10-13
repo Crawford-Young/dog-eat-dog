@@ -41,9 +41,9 @@ func session() -> CoffeeSession:
 
 
 func _ready() -> void:
-	_desk_slot.add_child(_art("desk", DESK_PLACEHOLDER, DESK_FONT_SIZE))
-	_paw_slot.add_child(_art("paw", PAW_PLACEHOLDER, PAW_FONT_SIZE))
-	_cup_slot.add_child(_art("cup", CUP_PLACEHOLDER, CUP_FONT_SIZE))
+	_desk_slot.add_child(_prop("desk", DESK_PLACEHOLDER, DESK_FONT_SIZE))
+	_paw_slot.add_child(_prop("paw", PAW_PLACEHOLDER, PAW_FONT_SIZE))
+	_cup_slot.add_child(_prop("cup", CUP_PLACEHOLDER, CUP_FONT_SIZE))
 	_cup_slot.offset_left = -CUP_HALF_WIDTH
 	_cup_slot.offset_right = CUP_HALF_WIDTH
 
@@ -93,16 +93,3 @@ func _render() -> void:
 	_cup_slot.visible = _session.cup_on_screen()
 	_cup_slot.anchor_left = _session.position()
 	_cup_slot.anchor_right = _session.position()
-
-
-## A coffee art slot filling its parent: the PNG, or `placeholder` centred at
-## `font_size`. PropArt makes it mouse-transparent either way.
-func _art(slot: String, placeholder: String, font_size: int) -> Control:
-	var art := PropArt.make(_art_folder(), slot, placeholder, props_root)
-	if art is Label:
-		var label := art as Label
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override(&"font_size", font_size)
-	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	return art
