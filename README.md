@@ -32,7 +32,7 @@ Override the Godot binary with the `GODOT` env var.
 
 ## Losing a Game
 
-Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a little energy and performance (drive, work and free time are charged through their own rules instead).
+Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a little energy and performance (drive, drive home, work, coffee and free time are charged through their own rules instead).
 
 | Slot | Lost when |
 |---|---|
@@ -41,12 +41,15 @@ Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a lit
 | Clothes | the dog is not dressed at the timeout |
 | Breakfast | the timeout, or 0 of 3 hits |
 | Lunch | no hits |
-| Work | score below 0.5 |
+| Work (both shifts, burst and triage) | score below 0.5 |
 | Drive | arrival past 8:00 |
+| Drive home | home past 9:46 |
+| Coffee | a grab off the cup spills it: you pay, no buff (letting it pass is water, not a game) |
+| Dinner | the timer runs out: sad kibble, no dinner energy |
 | Cooking | the 3rd spoiled step, or the pan's timer |
 | Free time | bed in the late band |
 
-The HUD stays up across slots. A **HIT / MISS / SKIP** stamp flashes mid-screen after each game, and the strip under the day label keeps a ✅ / ❌ / – per game. A bar along the bottom counts down the game's timer (for the drive and free time it reads the clock instead). Top-right is 🦴 savings against the retire target; top-left is the dog's rank.
+The HUD stays up across slots. A **HIT / MISS / SKIP** stamp flashes mid-screen after each game, and the strip under the day label keeps a ✅ / ❌ / – per game. A bar along the bottom counts down the game's timer (for the drive, drive home and free time it reads the clock instead). Top-right is 🦴 savings against the retire target; top-left is the dog's rank.
 
 ## Web Export
 
@@ -66,9 +69,9 @@ just serve        # http://localhost:8060
 
 ## The Morning Clock
 
-Work starts at **8:00**. The dog wakes at 7:00, and everything from waking up to parking the car runs against that one stated deadline — the corner reads `7:42 · in by 8:00`. It ticks in real time while a morning slot is up and stops the moment the dog reaches the office; after that, time no longer matters.
+Work starts at **8:00**. The dog wakes at 7:15, and everything from waking up to parking the car runs against that one stated deadline — the corner reads `7:42 · in by 8:00`. It ticks in real time while a morning slot is up and stops the moment the dog reaches the office; after that, time no longer matters.
 
-Most of that hour is the commute. The five chores between the alarm and the car cost about ten minutes put together; the drive costs three times all of them combined, which is why traffic is the thing that makes you late.
+The commute is about ten seconds of driving for a clean run, and it is still the traffic that makes you late.
 
 The morning is meant to be a mad dash you can just barely make. A clean, fast one gets in early. One dawdle, one skipped chore, or a bad run of traffic does not.
 
@@ -92,14 +95,15 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Clothes | Drag each item onto the dog. Shoes bounce off until the pants are on; low energy means butterfingers, and a dropped item costs clock. **Mandatory — no skip** |
 | Breakfast | Click **or** press `Space` as the marker crosses the plate; a better hit is a bigger energy refill |
 | Drive | `A`/`D` (or `←`/`→`) to change lane across five lanes. Traffic comes in walls, usually with one lane open — but some walls block all five, and how fast the whole road is moving is rolled fresh each morning. A car ahead pins your speed until you weave around it. Walls shear apart as they roll, so a solid one always opens eventually; reading the stagger early is the skill. Miles-to-go and your speed read out beside the progress bar. **Nothing ever crashes** — bad driving costs time, not damage |
-| Work (typing) | Phrases stream until the shift timer runs out; throughput against your rank's par is the score. Wrong chars insert and block until `Backspace`d, so a jam costs throughput |
+| Work (morning) | Word burst — single words, each typed before its window closes; the score is words typed over words shown |
+| Work (afternoon) | Inbox triage — emails land; `A` sorts reply, `D` sorts trash, by the subject icon |
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
-| Drive home | Same lane controls as the morning commute, over a shorter road |
-| Dinner | Click a choice card (cook / takeout); cook opens the pan |
+| Drive home | Same lane controls and top speed as the morning commute, over a shorter road; get home by 9:46 or it is a MISS, paid for in evening minutes and sleep |
+| Dinner | Hold `A`/`D` (or `←`/`→`) to walk the dog to the pan (cook) or the phone (takeout) before the time runs out; the phone is greyed out when you cannot pay; cook opens the pan |
 | Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or the pan's own timer running out) burns the dinner and counts as a MISS |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |
-| Coffee cart | Click a choice card (buy / skip) — buy is disabled when you can't afford it |
+| Coffee cart | A cup slides across the desk; click or press `Space` to grab it as it passes the paw. A spilled cup still costs the price; letting the cup pass is water, and the cup is greyed when you can't pay |
 | Retire offer | Choice card, first thing in the morning once savings hit the target — retire ends the run |
 | Warning / rank news | No input — the cat's narration beat plays out (warning lands before work; rank news lands at the office right after afternoon work) |
 | Sick day | Mash `Space` to burrow into the blanket — a sick morning replaces the whole day |
@@ -117,6 +121,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
 | 3b | Evening clock + sleep economy — a banded bedtime clock, per-game clock cost, sleep-debt ledger acting through an energy ceiling, cooked dinner, ledger lines | done |
 | A | Minigame contract + losses + HUD — every playable slot can be lost (time limit or score rule, gag, HIT/MISS/SKIP stamp), day strip, savings-to-retire poster, autoplay misses | done |
+| B | Reworked games — word burst, inbox triage, 10 s drive, drive-home deadline, cup-grab coffee, walk-to-pan dinner, prop art slots, a per-game day ramp that speeds play up through the day | built, ride pending |
 
 ## Credits
 
