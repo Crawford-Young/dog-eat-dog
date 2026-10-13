@@ -2,13 +2,13 @@ class_name CookingSession
 extends RefCounted
 
 ## Dinner's recipe, as pure logic. Four verbs in a fixed order; a wrong verb or
-## a sloppy gesture spoils a step. Nothing here fails a dinner — no firing, no
-## death, and no ruined meal either. A spoiled step is a smaller payoff, and
-## since energy scales with the score, a bad cook eats badly.
+## a sloppy gesture spoils a step. Nothing here fails a dinner: a spoiled step
+## is a smaller payoff, and since energy scales with the score, a bad cook eats
+## badly. The pan minigame owns the loss rule (its spoil limit and time limit,
+## issue #17) and still reports this session's score when it loses.
 ##
-## Skill is SPEED, and speed is charged by the evening clock rather than scored
-## here: the longer the pan takes, the later the bedtime. That is why this class
-## has no timer.
+## Speed is charged by the evening clock rather than scored here: the longer
+## the pan takes, the later the bedtime. That is why this class has no timer.
 
 const VERBS: PackedStringArray = ["chop", "transfer", "stir", "pour"]
 

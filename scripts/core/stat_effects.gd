@@ -21,11 +21,11 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 			pass  # getting up is its own reward
 		"brush":
 			if not result.get("skipped", false):
-				state.apply_energy(cfg.selfcare_restore)
+				_restore_unless_lost(result, state, cfg)
 				state.brushed_today = true
 		"shower":
 			if not result.get("skipped", false):
-				state.apply_energy(cfg.selfcare_restore)
+				_restore_unless_lost(result, state, cfg)
 				state.showered_today = true
 		"clothes":
 			pass  # mandatory; fumbles already cost clock
@@ -96,6 +96,13 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 	if result.get("failed", false) and slot in LOSS_COST_SLOTS:
 		state.performance = clampf(state.performance - cfg.fail_performance_cost, 0.0, 1.0)
 		state.apply_energy(-cfg.fail_energy_cost)
+
+
+## A lost brush or shower still counts as done (no skip penalty tomorrow), but
+## forfeits its restore, so the loss cost is the whole net (user revision, #17).
+static func _restore_unless_lost(result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
+	if not result.get("failed", false):
+		state.apply_energy(cfg.selfcare_restore)
 
 
 static func close_day(state: GameState, cfg: BalanceConfig) -> Dictionary:

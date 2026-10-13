@@ -2,10 +2,15 @@ extends Minigame
 
 ## A fixed-length shift: phrases stream, the timer is the boss. Green = typed,
 ## red = jammed wrong keys — Backspace is the only way forward. Score is
-## throughput vs the rank's par.
+## throughput vs the rank's par; a shift under fail_score is a MISS that keeps
+## its real score, because the work EMA reads it (issue #17).
+
+const FAIL_GAG := "📉"
 
 var _shift: WorkShift
 var _par_units: int = 3
+## A shift scoring under this is a MISS; 0 (no param) never misses.
+var _fail_score: float = 0.0
 
 @onready var _text: RichTextLabel = %WorkText
 @onready var _timer_bar: ProgressBar = %ShiftBar
@@ -16,7 +21,8 @@ func setup(params: Dictionary) -> void:
 	_shift = WorkShift.new(params.tier, params.get("wrong_cap", TypingSession.DEFAULT_WRONG_CAP), RngSource.from_params(params))
 	_start_countdown(params.shift_time)
 	_par_units = params.par_units
-	_start()
+	_fail_score = params.get("fail_score", 0.0)
+	_start(params)
 	_render()
 
 
@@ -27,7 +33,11 @@ func _process(_delta: float) -> void:
 
 ## The shift timer is the base countdown: the shift ends when it runs out.
 func _on_timeout() -> void:
-	_finish(_shift.score(_par_units))
+	var score := _shift.score(_par_units)
+	if score < _fail_score:
+		_fail(FAIL_GAG, {"score": score})
+	else:
+		_finish(score)
 
 
 func _render() -> void:

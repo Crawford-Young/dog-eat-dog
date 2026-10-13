@@ -2,6 +2,9 @@ extends Minigame
 
 ## Scrub the stink spots: circle the mouse around each spot until it's clean,
 ## then the next one appears. Skippable — the stink follows you (summary line).
+## Running out of time is a MISS; a skip never is (issue #17).
+
+const FAIL_GAG := "🤢🚿"
 
 var _tracker: CircleTracker
 var _spots_left: int = 2
@@ -22,7 +25,7 @@ func setup(params: Dictionary) -> void:
 	_revolutions_required = params.revolutions
 	_min_radius = params.min_radius
 	_place_spot()
-	_start()
+	_start(params)
 
 
 func _place_spot() -> void:
@@ -45,6 +48,10 @@ func _process(_delta: float) -> void:
 			_finish(1.0)
 		else:
 			_place_spot()
+
+
+func _on_timeout() -> void:
+	_fail(FAIL_GAG)
 
 
 func _input(event: InputEvent) -> void:

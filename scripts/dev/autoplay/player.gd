@@ -426,11 +426,9 @@ func _listen(node: Node) -> void:
 ## until it shines, pour by holding SPACE until the line.
 func _cook(node: Node) -> void:
 	for i in LOOP_CAP_FRAMES:
+		if not node.get("_running"):
+			return  # finished, or lost and playing its gag
 		var session: CookingSession = node.get("_session")
-		if session == null or session.is_done():
-			if not await _wait(node, 1):
-				return
-			continue
 		var verb := CookingSession.VERBS[session.index]
 		var ok := true
 		match verb:

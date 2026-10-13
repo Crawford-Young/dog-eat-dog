@@ -228,3 +228,81 @@ func test_wake_and_brush_params_have_no_par_time() -> void:
 	var cfg := BalanceConfig.new()
 	assert_false(Difficulty.wake_params(50.0, cfg).has("par_time"))
 	assert_false(Difficulty.brush_params(50.0, cfg).has("par_time"))
+
+
+## Issue #17: each timed game's time_limit lerps base -> max on the same
+## deficit as its difficulty. Base is the sharp p90 from the #11 baseline, max
+## the sharp p90 measured at full deficit.
+func test_the_time_limit_bases_are_the_sharp_p90_baseline() -> void:
+	assert_almost_eq(cfg.wake_time_limit_base, 3.7, 0.0001)
+	assert_almost_eq(cfg.brush_time_limit_base, 2.3, 0.0001)
+	assert_almost_eq(cfg.shower_time_limit_base, 3.5, 0.0001)
+	assert_almost_eq(cfg.clothes_time_limit_base, 4.2, 0.0001)
+	assert_almost_eq(cfg.breakfast_time_limit_base, 2.3, 0.0001)
+	assert_almost_eq(cfg.cook_time_limit_base, 6.4, 0.0001)
+
+
+func test_the_time_limit_maxes_are_the_full_deficit_p90() -> void:
+	assert_almost_eq(cfg.wake_time_limit_max, 17.0, 0.0001)
+	assert_almost_eq(cfg.brush_time_limit_max, 3.3, 0.0001)
+	assert_almost_eq(cfg.shower_time_limit_max, 7.0, 0.0001)
+	assert_almost_eq(cfg.clothes_time_limit_max, 6.1, 0.0001)
+	assert_almost_eq(cfg.breakfast_time_limit_max, cfg.breakfast_time_limit_base, 0.0001,
+			"breakfast's beats take the same time at any energy")
+	assert_almost_eq(cfg.cook_time_limit_max, cfg.cook_time_limit_base, 0.0001,
+			"so do the pan's")
+
+
+func _limits(energy: float) -> Array:
+	return [
+		Difficulty.wake_params(energy, cfg).time_limit,
+		Difficulty.brush_params(energy, cfg).time_limit,
+		Difficulty.shower_params(energy, cfg).time_limit,
+		Difficulty.dress_params(energy, cfg).time_limit,
+		Difficulty.breakfast_params(energy, cfg).time_limit,
+		Difficulty.cooking_params(energy, cfg).time_limit,
+	]
+
+
+func test_each_time_limit_lerps_from_base_to_max_on_the_deficit() -> void:
+	var names := ["wake", "brush", "shower", "clothes", "breakfast", "cook"]
+	for i in names.size():
+		cfg.set("%s_time_limit_base" % names[i], 10.0 + i)
+		cfg.set("%s_time_limit_max" % names[i], 30.0 + i)
+	var fresh := _limits(100.0)
+	var half := _limits(50.0)
+	var wrecked := _limits(0.0)
+	for i in names.size():
+		assert_almost_eq(fresh[i], 10.0 + i, 0.0001, "%s at full energy is the base" % names[i])
+		assert_almost_eq(half[i], 20.0 + i, 0.0001, "%s halfway is halfway" % names[i])
+		assert_almost_eq(wrecked[i], 30.0 + i, 0.0001, "%s at empty is the max" % names[i])
+
+
+func test_untimed_games_get_no_time_limit() -> void:
+	# Drive and free time are judged by the clock at slot end; work keeps its
+	# shift timer; lunch runs its fixed beats.
+	assert_false(Difficulty.drive_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.drive_home_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.typing_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.listening_params(50.0, cfg).has("time_limit"))
+	assert_false(Difficulty.temptation_params(50.0, cfg, 0.0).has("time_limit"))
+
+
+func test_the_loss_thresholds_are_the_issue_17_rulings() -> void:
+	assert_almost_eq(cfg.work_fail_score, 0.5, 0.0001)
+	assert_gt(cfg.lunch_fail_score, 0.0, "a lunch with no hits scores 0 and misses")
+	assert_lt(cfg.lunch_fail_score, 1.0 / 3.0, "one hit of three is not a miss")
+	assert_eq(cfg.breakfast_fail_hits, 1, "0 of 3 hits misses")
+	assert_eq(cfg.cook_spoil_limit, 3)
+
+
+func test_each_scored_game_gets_its_loss_threshold() -> void:
+	cfg.work_fail_score = 0.42
+	cfg.lunch_fail_score = 0.07
+	cfg.breakfast_fail_hits = 2
+	cfg.cook_spoil_limit = 4
+	assert_eq(Difficulty.typing_params(50.0, cfg).fail_score, 0.42)
+	assert_eq(Difficulty.typing_params(50.0, cfg, 2, 1).fail_score, 0.42)
+	assert_eq(Difficulty.listening_params(50.0, cfg).fail_score, 0.07)
+	assert_eq(Difficulty.breakfast_params(50.0, cfg).fail_hits, 2)
+	assert_eq(Difficulty.cooking_params(50.0, cfg).spoil_limit, 4)

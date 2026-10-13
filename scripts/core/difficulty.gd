@@ -2,6 +2,9 @@ class_name Difficulty
 
 ## Maps current energy (0-100) + BalanceConfig to per-minigame params.
 ## deficit = 0.0 at full energy, 1.0 at empty. All knobs lerp on deficit.
+## The loss knobs (issue #17) ride along: a timed game gets a "time_limit"
+## lerped on the same deficit as its difficulty, a scored one its MISS floor. Drive and free time get neither —
+## game.gd judges them off the DayClock at slot end.
 
 
 static func _deficit(energy: float) -> float:
@@ -25,6 +28,7 @@ static func wake_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"mash_target": roundi(lerpf(cfg.wake_mash_base, cfg.wake_mash_max, d)),
 		"decay_per_sec": lerpf(0.0, cfg.wake_decay_max, d),
+		"time_limit": lerpf(cfg.wake_time_limit_base, cfg.wake_time_limit_max, d),
 	}
 
 
@@ -33,6 +37,7 @@ static func brush_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	return {
 		"strokes_required": roundi(lerpf(cfg.brush_strokes_base, cfg.brush_strokes_max, d)),
 		"amplitude": cfg.brush_amplitude,
+		"time_limit": lerpf(cfg.brush_time_limit_base, cfg.brush_time_limit_max, d),
 	}
 
 
@@ -42,6 +47,7 @@ static func typing_params(energy: float, cfg: BalanceConfig, boost_tiers: int = 
 		"wrong_cap": cfg.typing_wrong_cap,
 		"shift_time": cfg.typing_shift_time,
 		"par_units": cfg.typing_par_units[clampi(rank, 0, cfg.typing_par_units.size() - 1)],
+		"fail_score": cfg.work_fail_score,
 	}
 
 
@@ -51,12 +57,16 @@ static func shower_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 		"spots": roundi(lerpf(cfg.shower_spots_base, cfg.shower_spots_max, d)),
 		"revolutions": cfg.shower_revolutions,
 		"min_radius": cfg.shower_min_radius,
+		"time_limit": lerpf(cfg.shower_time_limit_base, cfg.shower_time_limit_max, d),
 	}
 
 
 static func dress_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	var d := _deficit(energy)
-	return {"fumble_chance": lerpf(cfg.dress_fumble_base, cfg.dress_fumble_max, d)}
+	return {
+		"fumble_chance": lerpf(cfg.dress_fumble_base, cfg.dress_fumble_max, d),
+		"time_limit": lerpf(cfg.clothes_time_limit_base, cfg.clothes_time_limit_max, d),
+	}
 
 
 static func breakfast_params(energy: float, cfg: BalanceConfig) -> Dictionary:
@@ -65,6 +75,8 @@ static func breakfast_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 		"window": lerpf(cfg.breakfast_window_base, cfg.breakfast_window_min, d),
 		"speed": cfg.breakfast_beat_speed,
 		"beats": cfg.breakfast_beats,
+		"time_limit": lerpf(cfg.breakfast_time_limit_base, cfg.breakfast_time_limit_max, d),
+		"fail_hits": cfg.breakfast_fail_hits,
 	}
 
 
@@ -109,11 +121,14 @@ static func drive_home_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 ## A wrecked dog gets more slack per step, not fewer steps — the recipe's shape
 ## is constant across every energy tier, only the sloppiness allowance moves.
 static func cooking_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	var d := _deficit(energy)
 	return {
-		"tolerance": lerpf(cfg.cook_tolerance_base, cfg.cook_tolerance_max, _deficit(energy)),
-		"window": lerpf(cfg.cook_window_base, cfg.cook_window_min, _deficit(energy)),
+		"tolerance": lerpf(cfg.cook_tolerance_base, cfg.cook_tolerance_max, d),
+		"window": lerpf(cfg.cook_window_base, cfg.cook_window_min, d),
 		"beat_speed": cfg.cook_beat_speed,
 		"text_speed": cfg.typewriter_chars_per_sec,
+		"time_limit": lerpf(cfg.cook_time_limit_base, cfg.cook_time_limit_max, d),
+		"spoil_limit": cfg.cook_spoil_limit,
 	}
 
 
@@ -127,6 +142,7 @@ static func listening_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 		"window": lerpf(cfg.listening_window_base, cfg.listening_window_min, d),
 		"tier": clarity_tier(energy),
 		"text_speed": lerpf(cfg.listening_text_speed_base, cfg.listening_text_speed_max, d),
+		"fail_score": cfg.lunch_fail_score,
 	}
 
 

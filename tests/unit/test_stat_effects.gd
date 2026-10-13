@@ -304,7 +304,8 @@ func _won_and_lost(slot: String, result: Dictionary) -> Array[GameState]:
 
 
 func test_a_lost_chore_costs_performance_and_energy_on_top() -> void:
-	for slot in ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]:
+	# brush and shower also forfeit their restore — pinned on their own below.
+	for slot in ["wake", "clothes", "breakfast", "lunch", "cooking"]:
 		var pair := _won_and_lost(slot, {"score": 0.0, "skipped": false})
 		assert_almost_eq(pair[0].performance - pair[1].performance,
 				cfg.fail_performance_cost, 0.0001, "%s pays the performance cost" % slot)
@@ -341,3 +342,21 @@ func test_the_loss_cost_clamps_performance_at_zero() -> void:
 func test_the_loss_cost_defaults_match_the_ruling() -> void:
 	assert_eq(cfg.fail_performance_cost, 0.01)
 	assert_eq(cfg.fail_energy_cost, 3.0)
+
+
+## Issue #17 revision: a lost brush or shower forfeits selfcare_restore but
+## still counts as done, so tomorrow's skip penalty does not land. Net: the
+## loss energy cost alone.
+func test_a_lost_brush_or_shower_forfeits_its_restore() -> void:
+	for slot in ["brush", "shower"]:
+		var s := GameState.new()
+		s.energy = 50.0
+		s.performance = 0.5
+		StatEffects.apply(slot, {"score": 0.0, "skipped": false, "failed": true}, s, cfg)
+		assert_almost_eq(s.energy, 50.0 - cfg.fail_energy_cost, 0.0001, "%s nets the loss cost only" % slot)
+		assert_almost_eq(s.performance, 0.5 - cfg.fail_performance_cost, 0.0001, slot)
+
+
+func test_a_lost_shower_still_counts_as_showered() -> void:
+	var pair := _won_and_lost("shower", {"score": 0.0, "skipped": false})
+	assert_true(pair[1].showered_today, "no stink line, no skip penalty tomorrow")

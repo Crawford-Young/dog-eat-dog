@@ -245,3 +245,19 @@ func test_the_gag_falls_back_to_the_balance_default() -> void:
 	var cfg := BalanceConfig.new()
 	assert_eq(Minigame.DEFAULT_FAIL_GAG_SECONDS, cfg.fail_gag_seconds)
 	assert_between(cfg.fail_gag_seconds, 1.0, 2.0, "the gag is a beat, not a scene")
+
+
+func test_a_lost_game_is_gagging_until_it_reports() -> void:
+	var probe := _probe()
+	probe._start(QUICK_GAG)
+	assert_false(probe.is_gagging(), "a live game is not gagging")
+	probe._fail("💥")
+	assert_true(probe.is_gagging(), "the gag is up")
+	await wait_seconds(0.3)
+	assert_false(probe.is_gagging(), "the gag is over once the result reports")
+
+
+func test_a_finished_game_never_gags() -> void:
+	var probe := _probe()
+	probe._finish(1.0)
+	assert_false(probe.is_gagging())
