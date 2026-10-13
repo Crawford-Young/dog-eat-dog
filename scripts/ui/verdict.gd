@@ -18,7 +18,8 @@ const MARKS := {HIT: "✅", MISS: "❌", SKIP: "–"}
 
 
 ## "" for a slot that is not a game. A loss outranks a skip, though a failed
-## game closes its skip button, so a result never carries both.
+## game goes dead to input (`_running` gates its SkipButton), so a result
+## never carries both.
 static func of(slot: String, result: Dictionary) -> String:
 	if slot not in COUNTED_SLOTS:
 		return ""

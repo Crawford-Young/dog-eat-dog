@@ -704,7 +704,7 @@ func test_chronic_lateness_eventually_makes_the_dog_sick() -> void:
 func test_the_wobble_telegraphs_the_debt_sick_day_a_night_early() -> void:
 	# Every ladder/sick consequence telegraphs one day ahead. The ceiling adds a
 	# new ROUTE to the sick morning, so the existing telegraph has to cover it —
-	# it does, for free, because game.gd:379 already runs is_sick_morning over
+	# it does, for free, because game.gd already runs is_sick_morning (in _show_summary) over
 	# _tomorrow_energy and _tomorrow_energy clamps to the ceiling.
 	var cfg := BalanceConfig.new()
 	var main := _fresh_main()

@@ -17,9 +17,12 @@ signal finished(result: Dictionary)
 const DEFAULT_FAIL_GAG_SECONDS := 1.5
 const GAG_FONT := preload("res://assets/fonts/twemoji_mozilla.ttf")
 const GAG_FONT_SIZE := 160
+## The gag pops from this fraction of full size over this many seconds.
+const GAG_START_SCALE := 0.4
+const GAG_POP_SECONDS := 0.25
 
 ## True from _start() until the game finishes; never true again after that.
-## Read by name (`get("_running")`) by the dev autoplay bot.
+## The dev autoplay bot reads it through the public `is_running()`.
 var _running: bool = false
 var _finished: bool = false
 var _countdown_total: float = 0.0
@@ -175,7 +178,7 @@ func _show_gag(gag: String) -> void:
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(label)
 	label.pivot_offset = size / 2.0
-	label.scale = Vector2(0.4, 0.4)
+	label.scale = Vector2.ONE * GAG_START_SCALE
 	var pop := label.create_tween()
-	pop.tween_property(label, "scale", Vector2.ONE, 0.25) \
+	pop.tween_property(label, "scale", Vector2.ONE, GAG_POP_SECONDS) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

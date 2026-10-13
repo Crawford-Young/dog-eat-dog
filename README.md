@@ -28,7 +28,25 @@ A cute chibi dog climbs the corporate ladder in a pastel all-animal office. The 
 
 Override the Godot binary with the `GODOT` env var.
 
-`just autoplay` prints a markdown report: per slot, `n`, median / p90 / max seconds, median score and a `misses` column (games lost, i.e. `failed`), plus late arrivals, sick days and final rank and savings. `out=` also writes the same tally as JSON (`misses` is a per-slot map; wall time is omitted so runs diff byte-for-byte). Give `out=` forward slashes — backslashes get eaten and the write fails with "could not write".
+`just autoplay` prints a markdown report: per slot, `n`, median / p90 / max seconds, median score and a `misses` column (games lost, i.e. `failed`), plus late arrivals, sick days and final rank and savings. `out=` also writes the same tally as JSON (`misses` is a per-slot map; wall time is omitted so runs diff byte-for-byte). A missed game's seconds include its ~1.5 s gag. Give `out=` forward slashes — backslashes get eaten and the write fails with "could not write".
+
+## Losing a Game
+
+Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a little energy and performance (drive, work and free time are charged through their own rules instead).
+
+| Slot | Lost when |
+|---|---|
+| Wake | the bar is not full at the timeout |
+| Brush / Shower | the timeout |
+| Clothes | the dog is not dressed at the timeout |
+| Breakfast | the timeout, or 0 of 3 hits |
+| Lunch | no hits |
+| Work | score below 0.5 |
+| Drive | arrival past 8:00 |
+| Cooking | the 3rd spoiled step, or the pan's timer |
+| Free time | bed in the late band |
+
+The HUD stays up across slots. A **HIT / MISS / SKIP** stamp flashes mid-screen after each game, and the strip under the day label keeps a ✅ / ❌ / – per game. A bar along the bottom counts down the game's timer (for the drive and free time it reads the clock instead). Top-right is 🦴 savings against the retire target; top-left is the dog's rank.
 
 ## Web Export
 
@@ -78,7 +96,7 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
 | Drive home | Same lane controls as the morning commute, over a shorter road |
 | Dinner | Click a choice card (cook / takeout); cook opens the pan |
-| Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or running out the clock) burns the dinner and counts as a MISS |
+| Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or the pan's own timer running out) burns the dinner and counts as a MISS |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |
 | Coffee cart | Click a choice card (buy / skip) — buy is disabled when you can't afford it |
