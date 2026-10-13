@@ -247,7 +247,9 @@ func _params_for(activity: String) -> Dictionary:
 		"freetime", "sleep":
 			return _params_for_debt(activity, _selected_debt())
 		"dinner":
-			return {"text_speed": cfg.typewriter_chars_per_sec}
+			var walk := Difficulty.dinner_params(energy, cfg)
+			walk["can_afford"] = true
+			return walk
 		_:
 			return {}
 

@@ -339,11 +339,12 @@ func _limits(energy: float) -> Array:
 		Difficulty.dress_params(energy, cfg).time_limit,
 		Difficulty.breakfast_params(energy, cfg).time_limit,
 		Difficulty.cooking_params(energy, cfg).time_limit,
+		Difficulty.dinner_params(energy, cfg).time_limit,
 	]
 
 
 func test_each_time_limit_lerps_from_base_to_max_on_the_deficit() -> void:
-	var names := ["wake", "brush", "shower", "clothes", "breakfast", "cook"]
+	var names := ["wake", "brush", "shower", "clothes", "breakfast", "cook", "dinner"]
 	for i in names.size():
 		cfg.set("%s_time_limit_base" % names[i], 10.0 + i)
 		cfg.set("%s_time_limit_max" % names[i], 30.0 + i)
@@ -354,6 +355,46 @@ func test_each_time_limit_lerps_from_base_to_max_on_the_deficit() -> void:
 		assert_almost_eq(fresh[i], 10.0 + i, 0.0001, "%s at full energy is the base" % names[i])
 		assert_almost_eq(half[i], 20.0 + i, 0.0001, "%s halfway is halfway" % names[i])
 		assert_almost_eq(wrecked[i], 30.0 + i, 0.0001, "%s at empty is the max" % names[i])
+
+
+## Dinner is a walk to the pan or the phone (#18). The walk itself never moves
+## with energy or the day: only its time limit scales, on the deficit.
+func test_dinner_params_carry_the_walk() -> void:
+	var p := Difficulty.dinner_params(50.0, cfg)
+	assert_almost_eq(p.speed, cfg.dinner_walk_speed, 0.0001)
+	assert_almost_eq(p.start, cfg.dinner_walk_start, 0.0001)
+
+
+func test_energy_never_changes_the_walk_only_its_limit() -> void:
+	var fresh := Difficulty.dinner_params(100.0, cfg)
+	var wrecked := Difficulty.dinner_params(0.0, cfg)
+	assert_eq(wrecked.speed, fresh.speed, "a tired dog walks no slower")
+	assert_eq(wrecked.start, fresh.start)
+	assert_gt(wrecked.time_limit, fresh.time_limit, "it gets more time instead")
+
+
+func test_the_shipped_walk_makes_neither_target_free() -> void:
+	# Each target is a real walk from the start, and the fresh limit still
+	# covers the longer one with room for a sharp dog to take the screen in.
+	var p := Difficulty.dinner_params(100.0, cfg)
+	var session := DinnerSession.new(p)
+	var to_pan := session.seconds_to(DinnerSession.PAN)
+	var to_phone := session.seconds_to(DinnerSession.PHONE)
+	assert_gt(to_pan, 0.5, "the pan is a walk")
+	assert_gt(to_phone, 0.5, "and so is the phone")
+	assert_gt(p.time_limit, maxf(to_pan, to_phone) + 1.0, "the fresh limit covers either walk")
+
+
+## Dinner's limits are set from the bot (#18, seeds 1-5 x 10 days): the base
+## clears sharp's slowest p90 walk (2.23 s) with room to spare, and the max
+## clears sloppy's slowest walk (3.27 s) at the low energies it reaches dinner
+## with - while sloppy's best evening (energy 52) still gets more than that.
+func test_the_dinner_limits_are_set_from_the_bots_walks() -> void:
+	assert_almost_eq(cfg.dinner_time_limit_base, 3.0, 0.0001)
+	assert_almost_eq(cfg.dinner_time_limit_max, 4.5, 0.0001)
+	assert_gt(cfg.dinner_time_limit_base, 2.23 + 0.5, "sharp p90, comfortably")
+	assert_gt(Difficulty.dinner_params(52.0, cfg).time_limit, 3.27 + 0.3,
+			"sloppy's slowest walk, even on its best evening")
 
 
 func test_untimed_games_get_no_time_limit() -> void:
@@ -506,17 +547,18 @@ func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
 
 
 func test_day_progress_is_the_share_of_counted_slots_already_played() -> void:
-	# Twelve of A_DAY's slots are counted games; the retire offer, the warning,
-	# dinner and sleep are not.
+	# Thirteen of A_DAY's slots are counted games; the retire offer, the
+	# warning and sleep are not.
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 0), 0.0, 0.0001, "nothing played yet")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 12.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 13.0, 0.0001,
 			"the retire offer is not a game")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 12.0, 0.0001, "breakfast")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 7.0 / 12.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 13.0, 0.0001, "breakfast")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 7.0 / 13.0, 0.0001,
 			"work_am: the cup grab is a game now, the warning is not")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 11.0 / 12.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 11.0 / 13.0, 0.0001,
 			"dinner: the drive home is a game (home_by, #18)")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 11.0 / 12.0, 0.0001, "freetime")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 12.0 / 13.0, 0.0001,
+			"freetime: the dinner walk is a game too (#18)")
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 15), 1.0, 0.0001, "sleep: every game played")
 
 

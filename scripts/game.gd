@@ -316,11 +316,9 @@ func _params_for(slot: String) -> Dictionary:
 		"freetime":
 			return Difficulty.temptation_params(state.energy, cfg, state.ledger.debt_minutes)
 		"dinner":
-			return {
-				"text_speed": cfg.typewriter_chars_per_sec,
-				"disabled_choices":
-					[] if state.wallet.savings >= cfg.takeout_price else ["takeout"],
-			}
+			var walk := Difficulty.dinner_params(state.energy, cfg)
+			walk["can_afford"] = state.wallet.savings >= cfg.takeout_price
+			return walk
 		"sleep":
 			# The night was recorded when freetime ended, so both of these
 			# read a ledger that already moved. Debt is stated ONCE, here,

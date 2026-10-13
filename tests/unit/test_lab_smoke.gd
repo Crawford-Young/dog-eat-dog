@@ -163,6 +163,22 @@ func test_the_coffee_button_launches_it() -> void:
 	assert_eq(lab.get_node("%Host").get_child_count(), 1)
 
 
+func test_dinner_launches_the_walk_with_a_phone_the_dog_can_pay_for() -> void:
+	var lab := _fresh_lab()
+	lab._launch("dinner")
+	var hosted: Node = lab.get_node("%Host").get_child(0)
+	assert_true(hosted.session() is DinnerSession, "the dinner button hosts the walk")
+	assert_true(hosted.session().can_afford(), "the lab dog can always order")
+	assert_true(hosted.has_countdown(), "against its energy-scaled limit")
+	assert_true(hosted.is_running())
+
+
+func test_the_dinner_button_launches_it() -> void:
+	var lab := _fresh_lab()
+	lab.get_node("%Activities/Dinner").pressed.emit()
+	assert_eq(lab.get_node("%Host").get_child_count(), 1)
+
+
 func test_work_am_launches_the_word_burst() -> void:
 	var lab := _fresh_lab()
 	lab._launch("work_am")

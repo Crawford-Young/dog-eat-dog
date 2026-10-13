@@ -58,7 +58,7 @@ text = "inbox triage (work pm)"
 text = "listening (lunch)"
 
 [node name="Dinner" type="Button" parent="Menu/MenuBox/Activities"]
-text = "dinner"
+text = "dinner (walk to pan or phone)"
 
 [node name="Cooking" type="Button" parent="Menu/MenuBox/Activities"]
 text = "cooking (dinner, cook choice)"

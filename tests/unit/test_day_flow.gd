@@ -1163,9 +1163,9 @@ func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
 		"lunch": {"score": 0.0, "skipped": false, "failed": true},
 	})
 	# wake brush shower clothes breakfast drive work_am lunch work_pm
-	# drive_home cooking freetime — dinner and sleep leave no mark, and neither
+	# drive_home dinner cooking freetime — sleep leaves no mark, and neither
 	# does a coffee left to pass (the walk's water).
-	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅")
+	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅ ✅")
 
 
 func test_the_strip_starts_each_new_day_empty() -> void:
@@ -1213,9 +1213,9 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_eq(main.schedule.current(), "breakfast")
-	# Four of the day's twelve games are behind it: 1 + 4 / 12 * (2.0 - 1).
+	# Four of the day's thirteen games are behind it: 1 + 4 / 13 * (2.0 - 1).
 	assert_almost_eq(main._params_for("breakfast").speed,
-			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 12.0), 0.0001)
+			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 13.0), 0.0001)
 
 
 func test_coffee_is_the_cup_grab_and_its_cup_rides_the_days_progress() -> void:
@@ -1293,3 +1293,80 @@ func test_work_pm_is_the_inbox_triage_and_its_mail_rides_the_days_progress() -> 
 	assert_true(_current_minigame(host).session() is TriageSession, "work PM hosts the triage")
 	# Three of the day's four games are behind it: 1 + 0.75 * (2.0 - 1).
 	assert_almost_eq(main._params_for("work_pm").speed, 1.75, 0.0001)
+
+
+# --- dinner walk (issue #18, step 8) ------------------------------------------
+
+
+const KIBBLE := {"score": 0.0, "skipped": false, "failed": true}
+
+
+## Hosts dinner as the evening's first slot, with freetime after it.
+func _at_dinner(main: Control) -> Minigame:
+	main.schedule.set_slots(["dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	return _current_minigame(main.get_node("%MinigameHost"))
+
+
+func test_dinner_is_the_walk_and_its_limit_scales_with_energy() -> void:
+	var main := _fresh_main()
+	main.state.energy = 30.0
+	var node := _at_dinner(main)
+	assert_true(node.session() is DinnerSession, "dinner hosts the walk, not a card")
+	assert_true(node.has_countdown(), "and the walk is timed")
+	var expected: Dictionary = Difficulty.dinner_params(30.0, main.cfg)
+	assert_almost_eq(main._params_for("dinner").time_limit, expected.time_limit, 0.0001)
+	assert_almost_eq(main._params_for("dinner").speed, expected.speed, 0.0001)
+
+
+func test_a_dog_that_cannot_pay_gets_a_phone_it_cannot_use() -> void:
+	var main := _fresh_main()
+	main.state.wallet.savings = main.cfg.takeout_price - 1
+	assert_false(main._params_for("dinner").can_afford)
+	main.state.wallet.savings = main.cfg.takeout_price
+	assert_true(main._params_for("dinner").can_afford, "exactly the price is enough")
+
+
+func test_the_dinner_bar_reads_the_walks_countdown() -> void:
+	var main := _fresh_main()
+	var bar: Range = main.get_node("%TimerBar")
+	var node := _at_dinner(main)
+	main._process(0.0)
+	assert_true(bar.visible, "the walk shows its countdown")
+	assert_almost_eq(bar.value, 1.0, 0.0001, "full as the walk starts")
+	node._countdown_left = node._countdown_total * 0.25
+	main._process(0.0)
+	assert_almost_eq(bar.value, 0.25, 0.0001, "the countdown, not the evening clock")
+
+
+func test_the_dinner_walk_spends_the_evening_clock() -> void:
+	var main := _fresh_main()
+	_at_dinner(main)
+	main._process(1.0)
+	assert_almost_eq(main.clock.elapsed, main.cfg.clock_scale, 0.0001)
+
+
+func test_a_timed_out_dinner_is_a_miss_that_pays_the_loss_cost_and_hosts_no_pan() -> void:
+	var main := _held_main()
+	var host: Control = main.get_node("%MinigameHost")
+	main.state.energy = 50.0
+	main.state.wallet.savings = 100
+	var performance: float = main.state.performance
+	_at_dinner(main).finished.emit(KIBBLE.duplicate())
+	assert_eq(_stamp(main).text, "MISS", "the sad kibble is the walk's MISS")
+	assert_eq(_strip(main), "❌")
+	assert_almost_eq(main.state.energy, 50.0 - main.cfg.fail_energy_cost, 0.0001,
+			"no dinner energy, and the loss energy on top")
+	assert_almost_eq(main.state.performance, performance - main.cfg.fail_performance_cost, 0.0001)
+	assert_eq(main.state.wallet.savings, 100, "no takeout bill")
+	main._process(main.cfg.stamp_hold_seconds + 0.01)
+	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/freetime.tscn",
+			"kibble hosts no pan: the evening moves on to free time")
+	assert_eq(main.schedule.current(), "freetime")
+
+
+func test_either_walk_stamps_a_hit() -> void:
+	for choice in ["cook", "takeout"]:
+		var main := _held_main()
+		_at_dinner(main).finished.emit({"score": 1.0, "skipped": false, "choice": choice})
+		assert_eq(_stamp(main).text, "HIT", choice)

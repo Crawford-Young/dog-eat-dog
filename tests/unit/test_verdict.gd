@@ -5,9 +5,10 @@ extends GutTest
 ## the beats and cards that are not games.
 
 const PLAYABLE: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "dinner", "cooking",
+		"freetime"]
 const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick",
-		"dinner", "late_arrival", "rank_news"]
+		"late_arrival", "rank_news"]
 
 
 func test_the_counted_slots_are_the_loss_tables_playable_slots() -> void:
@@ -47,6 +48,15 @@ func test_a_clean_grab_is_a_hit_and_a_spill_a_miss() -> void:
 ## either - the cup passing is not a ducked chore.
 func test_letting_the_cup_pass_has_no_verdict() -> void:
 	assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": "skip"}), "")
+
+
+## Either walk is a HIT, whichever end the dog reached; running out of time
+## before reaching one is the sad-kibble MISS.
+func test_reaching_the_pan_or_the_phone_is_a_hit_and_a_timeout_a_miss() -> void:
+	for choice in ["cook", "takeout"]:
+		assert_eq(Verdict.of("dinner", {"score": 1.0, "skipped": false, "choice": choice}),
+				Verdict.HIT, choice)
+	assert_eq(Verdict.of("dinner", {"score": 0.0, "skipped": false, "failed": true}), Verdict.MISS)
 
 
 func test_the_strip_marks_each_verdict_in_order() -> void:

@@ -19,6 +19,7 @@ const GAME_FOLDERS := [
 	["res://scenes/minigames/triage.tscn", "work_pm"],
 	["res://scenes/minigames/listening.tscn", "lunch"],
 	["res://scenes/minigames/coffee.tscn", "coffee"],
+	["res://scenes/minigames/dinner.tscn", "dinner"],
 ]
 
 

@@ -37,9 +37,9 @@ extends RefCounted
 ##   coffee          "buy" (aim a press at the cup crossing the grab zone)
 ##                   | "skip" (water: let the cup pass); water when the cup
 ##                   is out of reach (unaffordable)
-##   cook_every      dinner: cook when day % cook_every == 0, else takeout;
-##                   1 = always cook. Falls back to cook when takeout is
-##                   disabled (not enough savings)
+##   cook_every      dinner: walk to the pan when day % cook_every == 0, else
+##                   to the phone (takeout); 1 = always cook. Walks to the pan
+##                   when takeout is out of reach (not enough savings)
 ##   freetime_games  games let through each night before logging off
 ##   retire          always take the retire offer (ends the run)
 

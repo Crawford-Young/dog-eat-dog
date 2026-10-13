@@ -117,6 +117,19 @@ static func cup_params(_energy: float, cfg: BalanceConfig, progress := 0.0) -> D
 	}
 
 
+## Dinner's walk to the pan or the phone. The walk is flat - no energy, no day
+## ramp - and only its time limit scales on the deficit, so a tired dog gets
+## more time to reach the same pan.
+static func dinner_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+	return {
+		"speed": cfg.dinner_walk_speed,
+		"start": cfg.dinner_walk_start,
+		"time_limit": lerpf(
+			cfg.dinner_time_limit_base, cfg.dinner_time_limit_max, _deficit(energy)
+		),
+	}
+
+
 static func shower_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	var d := _deficit(energy)
 	return {
