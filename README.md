@@ -24,8 +24,11 @@ A cute chibi dog climbs the corporate ladder in a pastel all-animal office. The 
 | `just cache` | Rebuild script-class cache (after new `class_name`) |
 | `just export-web` | Export the web build to `build/web/` |
 | `just serve` | Serve the web build on `:8060` |
+| `just autoplay days=N seed=S profile=sharp\|sloppy [out=C:/fwd/slashes.json]` | Headless bot plays N days and prints a per-slot report |
 
 Override the Godot binary with the `GODOT` env var.
+
+`just autoplay` prints a markdown report: per slot, `n`, median / p90 / max seconds, median score and a `misses` column (games lost, i.e. `failed`), plus late arrivals, sick days and final rank and savings. `out=` also writes the same tally as JSON (`misses` is a per-slot map; wall time is omitted so runs diff byte-for-byte). Give `out=` forward slashes — backslashes get eaten and the write fails with "could not write".
 
 ## Web Export
 
@@ -75,7 +78,7 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
 | Drive home | Same lane controls as the morning commute, over a shorter road |
 | Dinner | Click a choice card (cook / takeout); cook opens the pan |
-| Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack, and nothing fails dinner — a sloppy step is a smaller energy refill |
+| Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or running out the clock) burns the dinner and counts as a MISS |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |
 | Coffee cart | Click a choice card (buy / skip) — buy is disabled when you can't afford it |
@@ -95,6 +98,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | 2 | Ranks + economy — salary and living costs, rank ladder with warning-first demotion, coffee cart, sick days, retirement ending, energy carryover, lab day presets | done |
 | 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
 | 3b | Evening clock + sleep economy — a banded bedtime clock, per-game clock cost, sleep-debt ledger acting through an energy ceiling, cooked dinner, ledger lines | done |
+| A | Minigame contract + losses + HUD — every playable slot can be lost (time limit or score rule, gag, HIT/MISS/SKIP stamp), day strip, savings-to-retire poster, autoplay misses | in review |
 
 ## Credits
 
