@@ -175,16 +175,25 @@ func _art_folder() -> String:
 	return ""
 
 
-## Pops the game's gag.png when present, else the `gag` emoji, full size over
-## Twemoji — centred, mouse-transparent.
-func _show_gag(gag: String) -> void:
-	var art := PropArt.make(_art_folder(), "gag", gag, props_root, GAG_FONT)
+## One of the game's art slots, sized to fill the parent it is added to:
+## props/<folder>/<slot>.png when present, else `placeholder` centred at
+## `font_size` (in `font` when given, else the label's own font over
+## Twemoji). PropArt makes it mouse-transparent either way.
+func _prop(slot: String, placeholder: String, font_size: int, font: Font = null) -> Control:
+	var art := PropArt.make(_art_folder(), slot, placeholder, props_root, font)
 	if art is Label:
 		var label := art as Label
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override(&"font_size", GAG_FONT_SIZE)
+		label.add_theme_font_size_override(&"font_size", font_size)
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return art
+
+
+## Pops the game's gag.png when present, else the `gag` emoji, full size over
+## Twemoji — centred, mouse-transparent.
+func _show_gag(gag: String) -> void:
+	var art := _prop("gag", gag, GAG_FONT_SIZE, GAG_FONT)
 	add_child(art)
 	art.pivot_offset = size / 2.0
 	art.scale = Vector2.ONE * GAG_START_SCALE

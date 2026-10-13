@@ -37,14 +37,7 @@ func session() -> BurstSession:
 
 
 func _ready() -> void:
-	var art := PropArt.make(_art_folder(), "monitor", MONITOR_PLACEHOLDER, props_root)
-	if art is Label:
-		var label := art as Label
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override(&"font_size", MONITOR_FONT_SIZE)
-	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_monitor_slot.add_child(art)
+	_monitor_slot.add_child(_prop("monitor", MONITOR_PLACEHOLDER, MONITOR_FONT_SIZE))
 
 
 func setup(params: Dictionary) -> void:
