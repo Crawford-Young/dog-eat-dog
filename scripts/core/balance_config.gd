@@ -112,21 +112,17 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var sick_burrow_time: float = 6.0
 
 # --- wave 3a: day clock + morning minigames ---
-@export var morning_start_minutes: int = 420
-## Work starts at 8:00. The morning is whatever is left between waking up and
-## being at the desk, so the deadline is the ONE tunable — there is no separate
-## budget to keep in sync with it. Primary playtest lever for this round.
-##
-## 510 -> 525 -> 480, and the last move is the only one grounded in a real ride.
-## A clean user playtest clocked in at 7:44 — a 44-minute morning against what
-## was then a 105-minute budget, arriving an hour early. That ride also settled
-## the split the earlier numbers only guessed at: the commute is ~33 of those 44
-## minutes, so THE OTHER FIVE MORNING SLOTS COST ABOUT 11 MINUTES BETWEEN THEM.
-## The 525 value had been set to preserve a 72-minute margin for those five
-## slots; that margin never existed. At 480 a clean morning arrives ~16 minutes
-## early and a bad traffic roll (10-15 minutes) lands on the wire, which is the
-## "possible but hard" the round was asked for. Retuning the drive's length or
-## band moves this number with it — the commute IS the morning.
+## The wake, and the morning's tuning lever: the drive and the five chores
+## before it decide when the dog arrives, and this is set so a clean sharp
+## morning arrives just before 8:00. Sharp bot, seeds 1-5 x 10 days
+## (just autoplay prints it): median 4.8 minutes early, late on 3 of 50
+## mornings, each one of the three slowest drives (14.0-16.0 s). The ledger
+## counts sleep from here, so moving it moves sleep_need_minutes and
+## sick_sleep_minutes by the same amount (420 -> 435 moved them 15, #18).
+@export var morning_start_minutes: int = 435
+## Work starts at 8:00. This is the deadline and stays put; the morning's budget
+## is derived from it (morning_budget()), never stored beside it. Tune the
+## morning through morning_start_minutes.
 @export var work_start_minutes: int = 480
 @export var clock_scale: float = 1.5
 @export var skip_time_cost: float = 8.0
@@ -152,16 +148,14 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var breakfast_energy_min: float = 2.0
 @export var breakfast_energy_max: float = 8.0
 @export var skip_breakfast_penalty: float = 4.0
-## The route is LONG on purpose, and its length is what buys the traffic its
-## speed. The weave cost (pin_gap + block_margin = 55 units) is fixed, while the
-## room between walls is length * 0.65 * (1 - the day roll) / (waves - 1) — so a
-## longer route is the only way to run fast traffic and still leave the dog room
-## to get around it. Measured 2026-07-29: at 400 units an ideal driver spent 44%
-## of the route pinned; at 900 with the same traffic it is 22%. The bill is paid
-## on the morning clock — the commute went from 18.2 to 32.9 game-minutes, and
-## `work_start_minutes` was moved to cover exactly that.
-@export var drive_length: float = 900.0
-@export var drive_top_speed: float = 50.0
+## The weave cost (pin_gap + block_margin = 55 units) is fixed, while the room
+## between walls is length * 0.65 * (1 - the day roll) / (waves - 1), so the
+## route has to stay long enough to leave room around every wall it ships
+## (test_weaving_to_the_open_lane_beats_holding_a_lane runs every wave count).
+## The time comes from top speed instead: 850 units at 100 is a ~10 s drive
+## (sharp bot median 10.1 s, p90 12.3 s). Drive home shares the top speed.
+@export var drive_length: float = 850.0
+@export var drive_top_speed: float = 100.0
 @export var drive_accel: float = 40.0
 @export var drive_pin_gap: float = 30.0
 @export var drive_block_margin: float = 25.0
@@ -169,16 +163,13 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var drive_switch_lag_max: float = 0.45
 ## Traffic comes in waves — one car in every lane but one. These are wave
 ## counts, not car counts: the commute scales by how many walls you weave
-## through.
+## through, from base (a fresh dog) to max (a wrecked one).
 ##
-## Base rose 3 -> 4 with the longer route, and it is not padding. On a 900-unit
-## route three walls leave so much open road that the dog is at top speed for
-## most of it, and the few pins it does take are behind the slowest cars in the
-## draw — measured, that reads as a SLOWER commute (pinned speed 20.5 mph at 3
-## waves vs 31.1 at 4) even though it is spent pinned less often. Four walls is
-## where the road feels busy and the pins read as traffic rather than as bad luck.
-@export var drive_waves_base: int = 4
-@export var drive_waves_max: int = 5
+## 3/4 on the 850-unit route: both counts pass the skill tests in
+## test_lane_sim, and the morning keeps one wall more than drive home's 2/3 at
+## every energy (test_difficulty), since both round a lerp on the same deficit.
+@export var drive_waves_base: int = 3
+@export var drive_waves_max: int = 4
 ## How far behind the car ahead of it a car settles, in its own lane. 20 units
 ## is 80px — wider than a 72px car, so traffic never overlaps on screen.
 @export var drive_car_min_gap: float = 20.0
@@ -214,9 +205,9 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## pins to the wall until the shear opens a lane. Skill becomes reading the
 ## stagger early rather than threading a gap that is not there.
 @export var drive_blocked_wave_chance: float = 0.25
-## Display only. The sim works in its own 400 units; these map that to a trip
-## the player can read while a bad roll is happening to them.
-@export var drive_route_miles: float = 9.0
+## Display only. These map the sim's route units to a trip the player can read
+## while a bad roll is happening to them (0.01 mile per unit, as on drive home).
+@export var drive_route_miles: float = 8.5
 @export var drive_display_top_mph: float = 60.0
 ## Work AM's word burst (#18): words stream for the whole shift, the timer
 ## ends it (no time_limit), and the score is words typed / words shown. Every
@@ -252,7 +243,9 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var bed_early_line_minutes: int = 1320
 @export var bed_mid_line_minutes: int = 1410
 ## What a night is supposed to be. Sleep shorter and the difference accrues.
-@export var sleep_need_minutes: float = 480.0
+## Counted to the wake (morning_start_minutes), so the two move together: 495
+## is the 23:00-to-7:15 night, which keeps 23:00 the square bedtime (#18).
+@export var sleep_need_minutes: float = 495.0
 ## A good week buys one late night, not immunity — this is how far below zero
 ## the ledger may bank.
 @export var sleep_bank_cap_minutes: float = 240.0
@@ -281,8 +274,10 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## energy under sick_energy_threshold, which builds another sick day tomorrow,
 ## forever. That breaks both "no firing, no death" and "sick day = exactly 1
 ## day". It must therefore stay comfortably ABOVE sleep_need_minutes, so one
-## sick day always pays debt down rather than accruing more.
-@export var sick_sleep_minutes: float = 720.0
+## sick day always pays debt down rather than accruing more. What it banks is
+## this minus sleep_need_minutes (240), so it moves with the need (720 -> 735
+## when the wake moved to 7:15, #18).
+@export var sick_sleep_minutes: float = 735.0
 ## Cooking's energy payoff, scaled by how few steps got spoiled: the meal is a
 ## minigame, so its value is earned.
 @export var cook_energy_min: float = 2.0

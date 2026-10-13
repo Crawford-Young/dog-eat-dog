@@ -4,10 +4,8 @@ extends Minigame
 ## slows you down, and slow is what costs (the day clock keeps running).
 
 var _sim: LaneSim
-var _route_length: float = 1.0
 var _route_miles: float = 0.0
 var _display_top_mph: float = 0.0
-var _top_speed: float = 1.0
 var _car_rects: Array[ColorRect] = []
 
 @onready var _road: ColorRect = %Road
@@ -24,17 +22,21 @@ func setup(params: Dictionary) -> void:
 	var sim_params := params.duplicate()
 	sim_params["cars"] = LaneSim.make_traffic(params, RngSource.from_params(params))
 	_sim = LaneSim.new(sim_params)
-	_route_length = params.length
 	_route_miles = params.route_miles
 	_display_top_mph = params.display_top_mph
-	_top_speed = params.top_speed
 	for car in _sim.cars():
 		var rect := ColorRect.new()
 		rect.size = Vector2(48, 72)
 		rect.color = Color(0.7, 0.55, 0.75, 1)
 		_road.add_child(rect)
 		_car_rects.append(rect)
+	_show_readouts()
 	_start()
+
+
+## The hosted road, for anything that has to read it (the autoplay bot).
+func sim() -> LaneSim:
+	return _sim
 
 
 func _lane_x(lane_index: int) -> float:
@@ -54,12 +56,18 @@ func _process(delta: float) -> void:
 		rect.position.y = _player.position.y \
 				- (car.pos - _sim.distance) * PIXELS_PER_UNIT
 		rect.visible = rect.position.y > -80.0 and rect.position.y < _road.size.y + 80.0
-	_progress.value = clampf(_sim.distance / _route_length, 0.0, 1.0)
-	_miles.text = "%.1f mi to go" % (_route_miles * (1.0 - _progress.value))
-	_speedo.text = "%d mph" % roundi(_sim.speed / _top_speed * _display_top_mph)
+	_show_readouts()
 	_honk.visible = _sim.pinned
 	if _sim.is_done():
 		_finish(1.0)
+
+
+## Progress, miles and speedo, all read off the sim — written in setup() too,
+## so the scene's design-time label text never reaches the screen.
+func _show_readouts() -> void:
+	_progress.value = clampf(_sim.distance / _sim.route_length(), 0.0, 1.0)
+	_miles.text = "%.1f mi to go" % (_route_miles * (1.0 - _progress.value))
+	_speedo.text = "%d mph" % roundi(_sim.speed / _sim.top_speed() * _display_top_mph)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -67,6 +67,7 @@ static func markdown(t: Dictionary) -> String:
 			_sum(overruns), median(overruns), overruns[-1],
 		]
 	lines.append("- late arrivals: %s" % late)
+	lines.append("- arrival margin (min before 8:00): %s" % _margin_text(t.get("margins", [])))
 	lines.append("- late-band nights: %d / %d" % [t.late_band_nights, t.nights])
 	lines.append("- running-on-fumes nights: %d / %d" % [t.fumes_nights, t.nights])
 	lines.append("- sick days: %d" % t.sick_days)
@@ -110,6 +111,15 @@ static func _score_text(scores: Array) -> String:
 	var sorted := scores.duplicate()
 	sorted.sort()
 	return "%.2f" % median(sorted)
+
+
+## Minutes before 8:00 at each drive's end, negative when late.
+static func _margin_text(margins: Array) -> String:
+	if margins.is_empty():
+		return "none"
+	var sorted := margins.duplicate()
+	sorted.sort()
+	return "median %.1f, min %.1f" % [median(sorted), sorted[0]]
 
 
 static func _sum(values: Array) -> float:

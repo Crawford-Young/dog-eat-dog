@@ -158,9 +158,9 @@ static func drive_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
-## The same road with the same rules, deliberately shorter. Two full commutes a
-## day is the failure mode this exists to prevent — the morning's commute is
-## already ~33 of its ~44 minutes (wave-3a reflect), and evening time belongs in
+## The same road with the same rules, deliberately shorter and with fewer walls.
+## Two full commutes a day is the failure mode this exists to prevent: the
+## commute is the morning's biggest single cost, and evening time belongs in
 ## cooking and freetime, where the choices are.
 static func drive_home_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	var params := drive_params(energy, cfg)

@@ -5,12 +5,18 @@ func _cfg() -> BalanceConfig:
 	return BalanceConfig.new()
 
 
+## The shipped wake minute. Debt is need minus sleep counted to the wake, so a
+## debt assertion only means something against the wake the game ships.
+func _wake(cfg: BalanceConfig) -> float:
+	return float(cfg.morning_start_minutes)
+
+
 func test_a_night_at_need_leaves_the_ledger_square() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	# Wake at 7:00 (minute 420); eight hours earlier is 23:00 (minute 1380).
-	var slept := ledger.record_night(1380.0, 420.0, cfg)
-	assert_eq(slept, 480.0)
+	# The need is sized so a 23:00 bed (minute 1380) sleeps exactly it.
+	var slept := ledger.record_night(1380.0, _wake(cfg), cfg)
+	assert_eq(slept, cfg.sleep_need_minutes)
 	assert_eq(ledger.debt_minutes, 0.0)
 
 
@@ -26,8 +32,8 @@ func test_the_night_wraps_past_midnight() -> void:
 func test_a_short_night_accrues_the_difference() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	ledger.record_night(1421.0, 420.0, cfg)
-	assert_eq(ledger.debt_minutes, 41.0, "480 needed, 439 slept")
+	ledger.record_night(1421.0, _wake(cfg), cfg)
+	assert_eq(ledger.debt_minutes, 41.0, "a 23:41 bed is 41 minutes past the square 23:00")
 
 
 func test_debt_compounds_across_nights() -> void:
@@ -36,16 +42,16 @@ func test_debt_compounds_across_nights() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
 	for _night in range(5):
-		ledger.record_night(1421.0, 420.0, cfg)
+		ledger.record_night(1421.0, _wake(cfg), cfg)
 	assert_eq(ledger.debt_minutes, 205.0, "five short nights cost five times one")
 
 
 func test_a_long_night_pays_debt_back() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	ledger.record_night(1421.0, 420.0, cfg)
-	# 21:30 (1290) to 7:00 is 570 minutes — 90 over need.
-	ledger.record_night(1290.0, 420.0, cfg)
+	ledger.record_night(1421.0, _wake(cfg), cfg)
+	# A 21:30 (1290) bed is 90 minutes before the square 23:00 — 90 over need.
+	ledger.record_night(1290.0, _wake(cfg), cfg)
 	assert_eq(ledger.debt_minutes, -49.0, "41 owed minus 90 banked")
 
 
@@ -54,7 +60,7 @@ func test_banked_surplus_is_capped() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
 	for _night in range(20):
-		ledger.record_night(1290.0, 420.0, cfg)
+		ledger.record_night(1290.0, _wake(cfg), cfg)
 	assert_eq(ledger.debt_minutes, -cfg.sleep_bank_cap_minutes)
 
 
@@ -64,7 +70,7 @@ func test_debt_is_capped_too() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
 	for _night in range(60):
-		ledger.record_night(1439.0, 420.0, cfg)
+		ledger.record_night(1439.0, _wake(cfg), cfg)
 	assert_eq(ledger.debt_minutes, cfg.sleep_debt_cap_minutes)
 
 
@@ -72,7 +78,7 @@ func test_no_debt_means_no_ceiling() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
 	assert_eq(ledger.max_energy(cfg), 100.0)
-	ledger.record_night(1290.0, 420.0, cfg)
+	ledger.record_night(1290.0, _wake(cfg), cfg)
 	assert_eq(ledger.max_energy(cfg), 100.0, "a banked surplus does not raise the ceiling past 100")
 
 
@@ -99,6 +105,7 @@ func test_a_maxed_ceiling_lands_under_the_sick_threshold() -> void:
 func test_ledger_text_states_the_night_in_hours_and_minutes() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
+	# 23:41 to a 7:00 wake: pure formatting, so the wake is pinned here.
 	var slept := ledger.record_night(1421.0, 420.0, cfg)
 	assert_string_contains(ledger.ledger_text(slept, cfg), "7h19")
 
@@ -106,14 +113,14 @@ func test_ledger_text_states_the_night_in_hours_and_minutes() -> void:
 func test_ledger_text_says_square_when_it_is_square() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	var slept := ledger.record_night(1380.0, 420.0, cfg)
+	var slept := ledger.record_night(1380.0, _wake(cfg), cfg)
 	assert_string_contains(ledger.ledger_text(slept, cfg), "square")
 
 
 func test_ledger_text_says_banked_on_any_surplus() -> void:
 	var cfg := _cfg()
 	var ledger := SleepLedger.new()
-	var slept := ledger.record_night(float(cfg.bed_early_line_minutes), 420.0, cfg)
+	var slept := ledger.record_night(float(cfg.bed_early_line_minutes), _wake(cfg), cfg)
 	assert_lt(ledger.debt_minutes, 0.0, "a bed on the early line sleeps past need")
 	assert_string_contains(ledger.ledger_text(slept, cfg), "banked")
 
@@ -187,7 +194,7 @@ func test_a_sick_day_banks_a_long_night() -> void:
 	assert_eq(
 		ledger.debt_minutes,
 		cfg.sleep_debt_cap_minutes + cfg.sleep_need_minutes - cfg.sick_sleep_minutes,
-		"720 slept against a 480 need pays 240 off a maxed 960",
+		"a sick day sleeps 240 past the need and pays that off a maxed debt",
 	)
 	assert_gt(
 		ledger.max_energy(cfg),
@@ -203,6 +210,32 @@ func test_a_sick_day_has_to_out_sleep_the_need_or_the_loop_never_ends() -> void:
 	# outcome tests above would be the only witnesses.
 	var cfg := _cfg()
 	assert_gt(cfg.sick_sleep_minutes, cfg.sleep_need_minutes)
+
+
+func test_moving_the_wake_never_moves_what_a_bedtime_costs() -> void:
+	# The ledger counts sleep from the wake minute, so a later wake would quietly
+	# pay down every night's debt unless the need moves with it (issue #18: the
+	# wake moved 7:00 -> 7:15 for the ~10 s drive). The economy is anchored to
+	# the clock the player sees, not to the wake: a 23:00 bed is square, every
+	# minute later owes one, every minute earlier banks one.
+	var cfg := _cfg()
+	var wake := float(cfg.morning_start_minutes)
+	for bed in [1290.0, 1320.0, 1380.0, 1410.0, 1421.0, 1440.0, 1500.0]:
+		var ledger := SleepLedger.new()
+		ledger.record_night(bed, wake, cfg)
+		assert_eq(ledger.debt_minutes, bed - 1380.0,
+				"bed %s costs what it cost before the recalibration" % DayClock.format_minutes(int(bed)))
+
+
+func test_moving_the_wake_never_moves_what_a_sick_day_banks() -> void:
+	# The sick-day night is synthesized back from the wake, so the credit is
+	# sick_sleep_minutes - sleep_need_minutes; it stays the 240 the bank and
+	# debt caps were sized against.
+	var cfg := _cfg()
+	var ledger := SleepLedger.new()
+	ledger.debt_minutes = cfg.sleep_debt_cap_minutes
+	ledger.record_sick_day(cfg)
+	assert_eq(ledger.debt_minutes, cfg.sleep_debt_cap_minutes - 240.0)
 
 
 func test_a_sick_day_still_respects_the_bank_cap() -> void:

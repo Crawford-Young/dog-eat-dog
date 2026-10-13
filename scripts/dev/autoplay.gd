@@ -84,6 +84,9 @@ var _tally := {
 	## handler runs first, so the drive and free-time stamps are already on.
 	"misses": {},
 	"overruns": [],
+	## Minutes before 8:00 when each drive ends, negative when late: the
+	## number the wake (morning_start_minutes) is tuned against.
+	"margins": [],
 	"nights": 0,
 	"late_band_nights": 0,
 	"fumes_nights": 0,
@@ -220,6 +223,9 @@ func _open(node: Node) -> void:
 	(node as Minigame).finished.connect(
 		func(result: Dictionary) -> void: _record_score(slot, result, rank)
 	)
+	if slot == "drive":
+		(node as Minigame).finished.connect(func(_result: Dictionary) -> void:
+			_tally.margins.append(_game.clock.remaining() - _game.clock.overrun()))
 	_player.play(_current_slot, node, _game.state.day)
 
 

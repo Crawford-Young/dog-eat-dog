@@ -175,6 +175,15 @@ func test_the_road_has_five_lanes_and_the_dog_starts_in_the_middle() -> void:
 	assert_eq(LaneSim.new(_params()).lane, 2)
 
 
+func test_the_road_rules_a_driver_steers_by_are_readable() -> void:
+	# The autoplay bot steers off the top speed and the switch-block margin; it
+	# reads them through these, never through the sim's private fields.
+	var sim := LaneSim.new(_route_params())
+	assert_eq(sim.top_speed(), _route_top_speed)
+	assert_eq(sim.block_margin(), 25.0)
+	assert_eq(sim.route_length(), _route_length)
+
+
 func test_car_ahead_pins_speed() -> void:
 	var sim := LaneSim.new(_params([{"lane": 2, "pos": 5.0, "speed": 4.0}]))
 	_run(sim, 2.0)
@@ -345,7 +354,7 @@ func test_each_wall_that_stands_alone_is_back_computed_from_its_own_speed() -> v
 	#
 	# The band is PINNED here rather than read from the shipped config, because
 	# this test verifies the SOLVE, not the feel. Merging scales with the roll —
-	# spacing is 260 * (1 - roll) / (waves - 1) while a wave's speed spread
+	# spacing is length * 0.65 * (1 - roll) / (waves - 1) while a wave's speed spread
 	# displaces its spawn by a fixed amount — so any retune toward faster traffic
 	# merges more walls and starves the stand-alone population. Reading the
 	# shipped band would let a feel retune break a mechanism test (a faster band
@@ -454,30 +463,35 @@ func test_weaving_to_the_open_lane_beats_holding_a_lane() -> void:
 		"blocked_wave_chance": 0.0,
 		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
 	}
-	for seed_value in range(1, 9):
-		var traffic := _traffic(seed_value, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE, light)
-		var straight := _drive_route(LaneSim.new(_route_params(traffic)), false)
-		var weaving := _drive_route(LaneSim.new(_route_params(traffic)), true)
-		assert_lt(weaving.time, straight.time,
-				"seed %d pays nothing for skill" % seed_value)
+	# Every wall count a morning ships, not just the fresh dog's: the deficit
+	# lerps base -> max, so the counts in between are most mornings.
+	for waves in range(cfg.drive_waves_base, cfg.drive_waves_max + 1):
+		for seed_value in range(1, 9):
+			var traffic := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
+			var straight := _drive_route(LaneSim.new(_route_params(traffic)), false)
+			var weaving := _drive_route(LaneSim.new(_route_params(traffic)), true)
+			assert_lt(weaving.time, straight.time,
+					"seed %d pays nothing for skill at %d waves" % [seed_value, waves])
 
 
 func test_a_light_traffic_morning_can_still_be_driven_clean() -> void:
 	# Skill has to keep paying on the best roll the game deals. Light traffic is
-	# what leaves room: wall spacing is 260 * (1 - speed_fraction) / (waves - 1),
-	# so a SLOW day spreads the walls (104 units at 0.20) and a fast one packs
-	# them (52 at 0.60) — under the ~67 units clearing a wall costs.
+	# what leaves room: wall spacing is length * 0.65 * (1 - speed_fraction) /
+	# (waves - 1), so a SLOW day spreads the walls and a fast one packs them
+	# under the ~55 units (pin_gap + block_margin) clearing a wall costs.
 	var cfg := BalanceConfig.new()
 	var light := {
 		"blocked_wave_chance": 0.0, "car_speed_jitter": 0.0,
 		"day_speed_min": cfg.drive_day_speed_min, "day_speed_max": cfg.drive_day_speed_min,
 	}
 	var open_road := _drive_route(LaneSim.new(_route_params()), false)
-	for seed_value in range(1, 9):
-		var cars := _traffic(seed_value, cfg.drive_waves_base * LaneSim.CARS_PER_WAVE, light)
-		var run := _drive_route(LaneSim.new(_route_params(cars)), true)
-		assert_almost_eq(run.time, open_road.time, 0.5,
-				"seed %d cannot be driven clean on the lightest roll" % seed_value)
+	for waves in range(cfg.drive_waves_base, cfg.drive_waves_max + 1):
+		for seed_value in range(1, 9):
+			var cars := _traffic(seed_value, waves * LaneSim.CARS_PER_WAVE, light)
+			var run := _drive_route(LaneSim.new(_route_params(cars)), true)
+			assert_almost_eq(run.time, open_road.time, 0.5,
+					"seed %d cannot be driven clean on the lightest roll at %d waves"
+					% [seed_value, waves])
 
 
 func test_a_faster_car_settles_behind_a_slower_one_instead_of_passing_through() -> void:

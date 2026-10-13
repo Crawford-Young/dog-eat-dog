@@ -17,16 +17,15 @@ const START_LANE := LANES / 2
 const FIRST_WAVE_MEET := 0.20
 const LAST_WAVE_MEET := 0.85
 
-## Position jitter inside a wave, as a fraction of the route: ±6.3 units on the
-## shipped 900-unit route, well under the 30-unit pin gap, so a wave still reads
-## as a wall rather than a smear.
+## Position jitter inside a wave, as a fraction of the route: ±6.0 units on the
+## shipped 850-unit route (±3.2 on drive home's 450), well under the 30-unit pin
+## gap, so a wave still reads as a wall rather than a smear.
 ##
 ## Retuned 0.015 -> 0.007 when the route went 400 -> 900. This is a fraction of
 ## the route, but the thing it has to stay under — pin_gap — is ABSOLUTE, so
 ## lengthening the route silently doubled the smear toward the gap it is meant
-## to stay clear of. The fraction was re-solved to hold the same ±6 units it had
-## at 400; a future route change has to do the same, or walls stop reading as
-## walls without any tunable having been touched.
+## to stay clear of. A route change has to re-check it against
+## test_a_wave_reads_as_a_wall_not_a_smear.
 const WAVE_JITTER := 0.007
 
 var distance: float = 0.0
@@ -71,11 +70,11 @@ func _init(params: Dictionary) -> void:
 static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Array[Dictionary]:
 	var cars: Array[Dictionary] = []
 	var length: float = params.length
-	var top_speed: float = params.top_speed
+	var top: float = params.top_speed
 	var waves: int = int(params.car_count) / CARS_PER_WAVE
 	var jitter := length * WAVE_JITTER
-	var band_low: float = top_speed * params.day_speed_min
-	var band_high: float = top_speed * params.day_speed_max
+	var band_low: float = top * params.day_speed_min
+	var band_high: float = top * params.day_speed_max
 	var wave_jitter: float = params.wave_speed_jitter
 	var car_jitter: float = params.car_speed_jitter
 	var blocked_chance: float = params.blocked_wave_chance
@@ -90,7 +89,7 @@ static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Arra
 		# Spawned back from where the dog meets it, by however far THIS wave
 		# travels on the way there — per wave, now that every wave differs.
 		var spawn := length * lerpf(FIRST_WAVE_MEET, LAST_WAVE_MEET, t) \
-				* (1.0 - wave_speed / top_speed)
+				* (1.0 - wave_speed / top)
 		var blocked := rng.randf() < blocked_chance
 		if not blocked:
 			open_lane = (open_lane + 1 + rng.randi_range(0, LANES - 2)) % LANES
@@ -108,7 +107,7 @@ static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Arra
 				# solves to 1.0125 of top speed, which is how a car outran the
 				# dog the moment the band was raised for feel.
 				"speed": clampf(wave_speed * (1.0 + rng.randf_range(-car_jitter, car_jitter)),
-						top_speed * 0.05, top_speed * 0.95),
+						top * 0.05, top * 0.95),
 				# Generation metadata only — _init never copies it into the sim.
 				"wave": w,
 			})
@@ -133,6 +132,19 @@ static func make_traffic(params: Dictionary, rng: RandomNumberGenerator) -> Arra
 
 func cars() -> Array[Dictionary]:
 	return _cars
+
+
+func route_length() -> float:
+	return _length
+
+
+func top_speed() -> float:
+	return _top_speed
+
+
+## How close a car alongside in the target lane may be before it blocks a switch.
+func block_margin() -> float:
+	return _block_margin
 
 
 func request_switch(dir: int) -> void:
