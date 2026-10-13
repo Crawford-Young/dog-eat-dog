@@ -49,6 +49,16 @@ func current() -> String:
 	return _slots[_index]
 
 
+## A copy of the day, so a reader can never reshape it.
+func slots() -> Array[String]:
+	return _slots.duplicate()
+
+
+## Where the walk is in slots(): the current slot's position.
+func index() -> int:
+	return _index
+
+
 func advance() -> bool:
 	if _index >= _slots.size() - 1:
 		return false

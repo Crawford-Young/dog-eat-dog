@@ -5,10 +5,35 @@ class_name Difficulty
 ## The loss knobs (issue #17) ride along: a timed game gets a "time_limit"
 ## lerped on the same deficit as its difficulty, a scored one its MISS floor. Drive and free time get neither —
 ## game.gd judges them off the DayClock at slot end.
+## Play speed also rides an optional `progress` (0-1 through the day, see
+## day_progress) via day_ramp (issue #18); a time limit never does.
 
 
 static func _deficit(energy: float) -> float:
 	return 1.0 - clampf(energy, 0.0, 100.0) / 100.0
+
+
+## The play-speed multiplier `progress` (0-1) of the way through the day: 1.0
+## at the first game, cfg.day_ramp_speed_max at the last. Speed only — a game
+## that speeds up keeps its time limit, so the ramp never shrinks one (#18).
+static func day_ramp(progress: float, cfg: BalanceConfig) -> float:
+	return lerpf(1.0, cfg.day_ramp_speed_max, clampf(progress, 0.0, 1.0))
+
+
+## How far through the day position `at` sits: the counted games in
+## slots[0..at) over the counted games in `slots`. Counted is
+## Verdict.COUNTED_SLOTS, read live, so a slot that becomes a game moves the
+## ramp with it. Out-of-band games (cooking) ride the slot they hang off.
+## 0.0 for a day with no games.
+static func day_progress(slots: Array[String], at: int) -> float:
+	var played := 0
+	var total := 0
+	for i in slots.size():
+		if slots[i] in Verdict.COUNTED_SLOTS:
+			total += 1
+			if i < at:
+				played += 1
+	return float(played) / total if total > 0 else 0.0
 
 
 static func clarity_tier(energy: float) -> int:
@@ -69,11 +94,11 @@ static func dress_params(energy: float, cfg: BalanceConfig) -> Dictionary:
 	}
 
 
-static func breakfast_params(energy: float, cfg: BalanceConfig) -> Dictionary:
+static func breakfast_params(energy: float, cfg: BalanceConfig, progress := 0.0) -> Dictionary:
 	var d := _deficit(energy)
 	return {
 		"window": lerpf(cfg.breakfast_window_base, cfg.breakfast_window_min, d),
-		"speed": cfg.breakfast_beat_speed,
+		"speed": cfg.breakfast_beat_speed * day_ramp(progress, cfg),
 		"beats": cfg.breakfast_beats,
 		"time_limit": lerpf(cfg.breakfast_time_limit_base, cfg.breakfast_time_limit_max, d),
 		"fail_hits": cfg.breakfast_fail_hits,
