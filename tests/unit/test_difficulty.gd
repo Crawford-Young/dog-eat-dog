@@ -1,5 +1,10 @@
 extends GutTest
 
+## A full day with every optional beat in it, for day_progress.
+const A_DAY: Array[String] = ["wake", "retire_offer", "brush", "shower", "clothes", "breakfast",
+		"drive", "warning", "coffee", "work_am", "lunch", "work_pm", "drive_home", "dinner",
+		"freetime", "sleep"]
+
 var cfg: BalanceConfig
 
 
@@ -306,3 +311,99 @@ func test_each_scored_game_gets_its_loss_threshold() -> void:
 	assert_eq(Difficulty.listening_params(50.0, cfg).fail_score, 0.07)
 	assert_eq(Difficulty.breakfast_params(50.0, cfg).fail_hits, 2)
 	assert_eq(Difficulty.cooking_params(50.0, cfg).spoil_limit, 4)
+
+
+
+# --- day-progress escalation (issue #18, wave B step 2) ---
+
+
+func test_the_day_ramp_runs_from_no_ramp_to_the_max_across_the_day() -> void:
+	cfg.day_ramp_speed_max = 1.5
+	assert_almost_eq(Difficulty.day_ramp(0.0, cfg), 1.0, 0.0001, "the day starts at base speed")
+	assert_almost_eq(Difficulty.day_ramp(0.5, cfg), 1.25, 0.0001, "halfway is halfway")
+	assert_almost_eq(Difficulty.day_ramp(1.0, cfg), 1.5, 0.0001, "the day ends at the max")
+
+
+func test_the_day_ramp_clamps_progress_into_the_day() -> void:
+	cfg.day_ramp_speed_max = 1.5
+	assert_almost_eq(Difficulty.day_ramp(-1.0, cfg), 1.0, 0.0001)
+	assert_almost_eq(Difficulty.day_ramp(2.0, cfg), 1.5, 0.0001)
+
+
+func test_a_ramp_max_of_one_means_no_ramp() -> void:
+	cfg.day_ramp_speed_max = 1.0
+	for progress in [0.0, 0.4, 1.0]:
+		assert_almost_eq(Difficulty.day_ramp(progress, cfg), 1.0, 0.0001)
+
+
+func test_the_shipped_ramp_speeds_the_day_up() -> void:
+	assert_gt(cfg.day_ramp_speed_max, 1.0, "the shipped config ramps")
+
+
+func test_breakfast_beats_speed_up_with_the_day() -> void:
+	cfg.day_ramp_speed_max = 2.0
+	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg).speed, cfg.breakfast_beat_speed, 0.0001,
+			"no progress given is the start of the day")
+	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg, 0.5).speed,
+			cfg.breakfast_beat_speed * 1.5, 0.0001)
+	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg, 1.0).speed,
+			cfg.breakfast_beat_speed * 2.0, 0.0001)
+
+
+## Every game the day ramp reaches, keyed by its params' speed key. A game
+## that starts taking `progress` adds a row here and inherits the invariant
+## below: the ramp moves its speed and nothing else — never its time limit.
+func _ramped_games() -> Array[Dictionary]:
+	return [
+		{
+			"name": "breakfast",
+			"speed_key": "speed",
+			"params": func(energy: float, progress: float) -> Dictionary:
+				return Difficulty.breakfast_params(energy, cfg, progress),
+		},
+	]
+
+
+func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
+	cfg.day_ramp_speed_max = 3.0
+	for game in _ramped_games():
+		for energy in [0.0, 50.0, 100.0]:
+			var start: Dictionary = game.params.call(energy, 0.0)
+			var late: Dictionary = game.params.call(energy, 1.0)
+			assert_gt(late[game.speed_key], start[game.speed_key],
+					"%s speeds up at energy %s" % [game.name, energy])
+			for key in start:
+				if key != game.speed_key:
+					assert_eq(late[key], start[key],
+							"%s %s at energy %s does not ramp" % [game.name, key, energy])
+
+
+func test_day_progress_is_the_share_of_counted_slots_already_played() -> void:
+	# Ten of A_DAY's slots are counted games; the retire offer, the warning,
+	# the coffee cart, the drive home, dinner and sleep are not.
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 0), 0.0, 0.0001, "nothing played yet")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 0.1, 0.0001,
+			"the retire offer is not a game")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 0.4, 0.0001, "breakfast")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 0.6, 0.0001,
+			"work_am: the warning and the coffee cart are not games")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 0.9, 0.0001, "freetime")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 15), 1.0, 0.0001, "sleep: every game played")
+
+
+func test_day_progress_measures_by_position_not_by_name() -> void:
+	var twice: Array[String] = ["wake", "wake"]
+	assert_almost_eq(Difficulty.day_progress(twice, 1), 0.5, 0.0001,
+			"the second wake has the first behind it")
+
+
+func test_day_progress_only_counts_counted_slots() -> void:
+	# One game among slots that are never games: it is the whole day.
+	var one_game: Array[String] = ["retire_offer", "warning", "breakfast", "sleep"]
+	assert_eq(Difficulty.day_progress(one_game, 2), 0.0, "the game is still ahead")
+	assert_eq(Difficulty.day_progress(one_game, 3), 1.0, "the game is behind")
+
+
+func test_day_progress_of_a_day_with_no_games_is_zero() -> void:
+	var sick_day: Array[String] = ["retire_offer", "sick"]
+	assert_eq(Difficulty.day_progress(sick_day, 1), 0.0)

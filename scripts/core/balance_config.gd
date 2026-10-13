@@ -66,7 +66,8 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var clothes_time_limit_base: float = 4.2  # sharp p90, #11 baseline
 @export var clothes_time_limit_max: float = 6.1  # sharp p90 at d=1 (6.10), #17
 @export var breakfast_time_limit_base: float = 2.3  # sharp p90, #11 baseline
-## The beats run at a fixed speed, so the duration does not scale (d=1 p90 2.23).
+## The beat speed does not move with energy, so the duration does not scale
+## (d=1 p90 2.23). The day ramp speeds it up but never moves this limit.
 @export var breakfast_time_limit_max: float = 2.3  # = base, measured, #17
 @export var cook_time_limit_base: float = 6.4  # sharp p90, #11 baseline
 ## The verbs run at a fixed speed too (d=1 p90 6.43).
@@ -146,6 +147,10 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var breakfast_window_min: float = 0.12
 @export var breakfast_beat_speed: float = 1.6
 @export var breakfast_beats: int = 3
+## Day ramp (#18): play-speed multiplier at the day's last game, lerped from
+## 1.0 on day progress; speed only, never a time limit. Breakfast cliff: sharp
+## misses jump between 1.10 and 1.15 (each beat restarts at phase 0, p90 limit).
+@export var day_ramp_speed_max: float = 1.1
 @export var breakfast_energy_min: float = 2.0
 @export var breakfast_energy_max: float = 8.0
 @export var skip_breakfast_penalty: float = 4.0

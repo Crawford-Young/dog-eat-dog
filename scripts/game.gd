@@ -284,7 +284,7 @@ func _params_for(slot: String) -> Dictionary:
 		"clothes":
 			return Difficulty.dress_params(state.energy, cfg)
 		"breakfast":
-			return Difficulty.breakfast_params(state.energy, cfg)
+			return Difficulty.breakfast_params(state.energy, cfg, _day_progress())
 		"drive":
 			return Difficulty.drive_params(state.energy, cfg)
 		"work_am":
@@ -583,6 +583,11 @@ func _on_restart_pressed() -> void:
 	state = GameState.new()
 	_ending.visible = false
 	_begin_day()
+
+
+## How far through today the current slot is, 0-1 (the speed ramp, #18).
+func _day_progress() -> float:
+	return Difficulty.day_progress(schedule.slots(), schedule.index())
 
 
 ## A fresh morning for whatever `state` is now: new clock, empty strip.

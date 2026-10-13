@@ -81,3 +81,22 @@ func test_the_drive_home_sits_between_afternoon_work_and_dinner() -> void:
 	var home := slots.find("drive_home")
 	assert_gt(home, slots.find("work_pm"), "you leave the office after the office")
 	assert_lt(home, slots.find("dinner"), "and you cook after you get there")
+
+
+func test_the_schedule_reports_its_slots_and_position() -> void:
+	var d := DaySchedule.new()
+	var day: Array[String] = ["wake", "breakfast", "sleep"]
+	d.set_slots(day)
+	assert_eq(d.slots(), day)
+	assert_eq(d.index(), 0)
+	d.advance()
+	d.advance()
+	assert_eq(d.index(), 2)
+	d.set_slots(["sick"] as Array[String])
+	assert_eq(d.index(), 0, "a new day starts at its first slot")
+
+
+func test_the_reported_slots_cannot_rewrite_the_day() -> void:
+	var d := DaySchedule.new()
+	d.slots().append("extra")
+	assert_eq(d.slots(), DaySchedule.DEFAULT_SLOTS)

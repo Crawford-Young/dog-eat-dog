@@ -1162,3 +1162,14 @@ func _draws(font: Font, glyph: String) -> bool:
 		if (fallback as Font).has_char(glyph.unicode_at(0)):
 			return true
 	return false
+
+
+func test_breakfast_speed_rides_the_days_progress() -> void:
+	var main := _fresh_main()
+	main.cfg.day_ramp_speed_max = 2.0
+	var host: Control = main.get_node("%MinigameHost")
+	for slot in ["wake", "brush", "shower", "clothes"]:
+		_current_minigame(host).finished.emit(_result_for(slot, {}))
+	assert_eq(main.schedule.current(), "breakfast")
+	# Four of the day's ten games are behind it: 1 + 0.4 * (2.0 - 1).
+	assert_almost_eq(main._params_for("breakfast").speed, main.cfg.breakfast_beat_speed * 1.4, 0.0001)
