@@ -55,6 +55,9 @@ var _until_arrival: float = 0.0
 var _top_left: float = 0.0
 ## Seconds before the email on top reads; 0 once it does.
 var _focus_left: float = 0.0
+## Each resolved email, oldest first, for the probe: {correct, seconds}, with
+## seconds null for one that expired or was buried. Observation only.
+var _resolved: Array[Dictionary] = []
 
 
 ## `params` is Difficulty.triage_params' shape: window, gap and read_delay
@@ -147,6 +150,7 @@ func sort(reply: bool) -> int:
 		correct += 1
 	else:
 		wrong += 1
+	_resolve(right, _window - _top_left)
 	_pop_top()
 	return CORRECT if right else WRONG
 
@@ -164,6 +168,7 @@ func tick(delta: float) -> void:
 		rest -= step
 		if expiry:
 			expired += 1
+			_resolve(false, null)
 			_pop_top()
 		else:
 			_arrive()
@@ -180,6 +185,17 @@ func score() -> float:
 	return float(correct) / shown if shown > 0 else 0.0
 
 
+## The probe detail (#18 step 12): every resolved email, sorted right or not,
+## and the seconds from reaching the top to sorted (null if it expired or was
+## buried). The emails still waiting are left out, as score() leaves them out.
+func probe_detail() -> Dictionary:
+	return {"emails": _resolved.duplicate(true)}
+
+
+func _resolve(right: bool, seconds: Variant) -> void:
+	_resolved.append({"correct": right, "seconds": seconds})
+
+
 func _advance(seconds: float) -> void:
 	_until_arrival -= seconds
 	_top_left -= seconds
@@ -192,6 +208,7 @@ func _arrive() -> void:
 	var icon := _rng.randi_range(0, ICON_COUNT - 1)
 	if _inbox.size() >= _capacity:
 		buried += 1
+		_resolve(false, null)
 	else:
 		_inbox.append({"id": _next_id, "icon": icon})
 		if _inbox.size() == 1:

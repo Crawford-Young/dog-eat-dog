@@ -36,6 +36,10 @@ func session() -> BurstSession:
 	return _session
 
 
+func probe_detail() -> Dictionary:
+	return _session.probe_detail() if _session else {}
+
+
 func _ready() -> void:
 	_monitor_slot.add_child(_prop("monitor", MONITOR_PLACEHOLDER, MONITOR_FONT_SIZE))
 

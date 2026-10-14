@@ -51,6 +51,9 @@ var _tier: int
 var _rng: RandomNumberGenerator
 var _window: float
 var _left: float = 0.0
+## Each resolved word, oldest first, for the probe: {window, seconds}, with
+## seconds null for an expired word. Observation only; play never reads it.
+var _resolved: Array[Dictionary] = []
 
 
 ## Every word's window is `window` / `speed`.
@@ -90,6 +93,7 @@ func input_char(c: String) -> bool:
 	typed_count += 1
 	if typed_count >= word.length():
 		words_typed += 1
+		_resolve(_window - _left)
 		_next_word()
 	return true
 
@@ -101,6 +105,7 @@ func tick(delta: float) -> void:
 	while rest >= _left:
 		rest -= _left
 		words_missed += 1
+		_resolve(null)
 		_next_word()
 	_left -= rest
 
@@ -113,6 +118,17 @@ func words_shown() -> int:
 func score() -> float:
 	var shown := words_shown()
 	return float(words_typed) / shown if shown > 0 else 0.0
+
+
+## The probe detail (#18 step 12): every resolved word's window and the
+## seconds it took to type (null if it expired), and the typo count. The word
+## still on screen is left out, as score() leaves it out.
+func probe_detail() -> Dictionary:
+	return {"words": _resolved.duplicate(true), "typos": errors}
+
+
+func _resolve(seconds: Variant) -> void:
+	_resolved.append({"window": _window, "seconds": seconds})
 
 
 func _next_word() -> void:

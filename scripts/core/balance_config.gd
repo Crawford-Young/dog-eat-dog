@@ -259,10 +259,11 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## the clarity tier picks the word's length (longer as the dog fades), so the
 ## rank sets the bar and the dog's state decides how many words clear it.
 @export var burst_shift_time: float = 25.0
-## Rank 0 is 5.5 s, set so sloppy can promote again (it spends its day in the
-## mailroom otherwise: 2 of 5 seeds reach junior in 30 days at 5.5, 4 of 5 at
-## 6.0, none at 5.0 or at the old 3.0); ranks 1-2 are what sharp is measured on.
-@export var burst_word_windows: Array[float] = [5.5, 2.0, 1.15]
+## Rank 0 is 3.0 s (user ride 2026-10-14: typing needs to be harder). The
+## human is the target, so the sloppy bot's promotion is no longer the bar
+## (it promoted on 2 of 5 seeds only at 5.5); the windows and the burst ramp
+## are tuned from the play probes from here. Ranks 1-2 are sharp's measure.
+@export var burst_word_windows: Array[float] = [3.0, 2.0, 1.15]
 ## Work PM's inbox triage (#18): emails land every triage_arrival_gap seconds
 ## (each gap rolled within triage_arrival_jitter of it either side), over the
 ## day ramp's speed; the shift timer ends it (no time_limit), and the score is
@@ -358,6 +359,10 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## three slowest drives (10.8-12.5 s, the bad traffic rolls). At 21:45 any
 ## drive over 10.0 s is late (12 of 50).
 @export var home_by_minutes: int = 1306
+## The play probes (#18 step 12): one JSON line per finished game, appended to
+## user://probes.jsonl and printed with a [probe] prefix (ProbeLog). Never
+## written under a headless display, whatever this says.
+@export var probes_enabled: bool = true
 
 
 ## The morning's game-minute budget, derived. game.gd builds every DayClock

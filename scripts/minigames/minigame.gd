@@ -169,6 +169,13 @@ func _emit_result(extra: Dictionary) -> void:
 	finished.emit(result)
 
 
+## The game's own play detail for its probe line (#18 step 12), read by the
+## host once the game finishes. Override to report what the game already
+## tracks; read-only, never a gameplay input. Empty by default.
+func probe_detail() -> Dictionary:
+	return {}
+
+
 ## The game's art folder under assets/props (`props/<folder>/gag.png` draws
 ## the loss gag). Each losable game overrides it; "" draws only the emoji.
 func _art_folder() -> String:
