@@ -79,6 +79,14 @@ const ZONE_COLORS := {
 	"amber": Color(1.0, 0.8, 0.3),
 	"red": Color(1.0, 0.35, 0.3),
 }
+## The day-ramp max each ramped slot reads (Difficulty.*_params), so a probe
+## can state the ramp the game ran at; any other slot runs at 1.0.
+const RAMP_MAXES := {
+	"breakfast": "day_ramp_breakfast_max",
+	"coffee": "day_ramp_cup_max",
+	"work_am": "day_ramp_burst_max",
+	"work_pm": "day_ramp_triage_max",
+}
 ## A skip is neither a win nor a loss, so it stamps muted (issue #17 ruling).
 const STAMP_COLORS := {
 	Verdict.HIT: Color(0.45, 0.9, 0.45),
@@ -115,6 +123,11 @@ var _verdicts: Array[String] = []
 ## What runs once the stamp's hold is over; invalid while nothing is held.
 var _after_stamp := Callable()
 var _stamp_left := 0.0
+## The play probes (#18 step 12): null means none are written. Built in _ready
+## unless one is assigned first (tests point one at a temp path).
+var probes: ProbeLog
+## The hosted game's start state for its probe line, captured at mount.
+var _probe_start := {}
 
 @onready var _host: Control = %MinigameHost
 @onready var _summary: Panel = %Summary
@@ -144,6 +157,8 @@ func _ready() -> void:
 		PropArt.with_emoji_fallback(label)
 	clock = DayClock.new(cfg.morning_budget())
 	_bed_minute = float(cfg.bed_mid_line_minutes)
+	if probes == null and ProbeLog.should_write(cfg.probes_enabled, DisplayServer.get_name()):
+		probes = ProbeLog.new(ProbeLog.new_run_id())
 	schedule.set_slots(DaySchedule.build(state, cfg))
 	if start_from_slot != "":
 		while schedule.current() != start_from_slot and schedule.advance():
@@ -256,7 +271,7 @@ func _start_slot() -> void:
 		# on the freetime subclass, so a typed `node.game_played.connect(...)`
 		# would not resolve against the base class.
 		node.connect("game_played", _on_game_played)
-	node.setup(_hosted_params(slot))
+	_setup_hosted(node, slot)
 
 
 func _update_score() -> void:
@@ -270,6 +285,30 @@ func _mount(scene_key: String) -> Minigame:
 	_hosted = node
 	_hosted_key = scene_key
 	return node
+
+
+## Hands the mounted game its params, noting its start state for the probe.
+func _setup_hosted(node: Minigame, slot: String) -> void:
+	var params := _hosted_params(slot)
+	var progress := _day_progress()
+	_probe_start = {
+		"day": state.day,
+		"start_energy": state.energy,
+		"rank": state.rank,
+		"day_progress": progress,
+		"ramp": _ramp(slot, progress),
+		# The shift games run on shift_time, which is their countdown.
+		"time_limit": params.get("time_limit", params.get("shift_time")),
+		"mounted_msec": Time.get_ticks_msec(),
+	}
+	node.setup(params)
+
+
+## The day-ramp speed `slot` runs at `progress` through the day; 1.0 unramped.
+func _ramp(slot: String, progress: float) -> float:
+	if not RAMP_MAXES.has(slot):
+		return 1.0
+	return Difficulty.day_ramp(progress, cfg.get(RAMP_MAXES[slot]))
 
 
 ## A playable slot's params plus what game.gd hands every one of them.
@@ -393,6 +432,7 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 		_bed_minute = float(cfg.evening_start_minutes) + clock.elapsed
 		result["bed_minute"] = _bed_minute
 		_clock_running = false
+	_record_probe(slot, result, node)
 	StatEffects.apply(slot, result, state, cfg)
 	var verdict := Verdict.of(slot, result)
 	if verdict == "":
@@ -404,6 +444,37 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 	_stamp_label.add_theme_color_override("font_color", STAMP_COLORS[verdict])
 	_stamp_label.visible = true
 	_hold_stamp(_continue_day.bind(slot, result))
+
+
+## One probe line for a finished game (never a beat or card), from its result
+## as stamped and the start state noted at mount. Off without a recorder.
+func _record_probe(slot: String, result: Dictionary, node: Node) -> void:
+	if probes == null or not cfg.probes_enabled or slot not in Verdict.COUNTED_SLOTS:
+		return
+	var entry := _probe_start.duplicate()
+	var mounted: int = entry["mounted_msec"]
+	entry.erase("mounted_msec")
+	entry.merge({
+		"slot": slot,
+		"seconds": (Time.get_ticks_msec() - mounted) / 1000.0,
+		"score": result.get("score"),
+		"failed": result.get("failed", false),
+		"skipped": result.get("skipped", false),
+		"choice": result.get("choice"),
+		"clock_minute": _clock_minute(slot),
+		"detail": (node as Minigame).probe_detail(),
+	})
+	probes.record(entry)
+
+
+## The minute of day the slot's clock reads now, or null for a slot no clock
+## runs during (the office).
+func _clock_minute(slot: String) -> Variant:
+	if slot in MORNING_TIMED:
+		return cfg.morning_start_minutes + clock.elapsed
+	if slot in EVENING_TIMED:
+		return cfg.evening_start_minutes + clock.elapsed
+	return null
 
 
 ## The one place the stamp holds the day: `next` (whatever the finished game
@@ -493,7 +564,7 @@ func _show_cooking() -> void:
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS["cooking"]]
 	var node := _mount("cooking")
 	node.finished.connect(_on_finished.bind("cooking", node), CONNECT_ONE_SHOT)
-	node.setup(_hosted_params("cooking"))
+	_setup_hosted(node, "cooking")
 
 
 ## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
@@ -593,6 +664,8 @@ func _on_restart_pressed() -> void:
 	_ending_typer.skip()
 	_ending_label.text = ""
 	state = GameState.new()
+	if probes != null:
+		probes.run_id = ProbeLog.new_run_id()
 	_ending.visible = false
 	_begin_day()
 

@@ -78,6 +78,7 @@
 - **`home_by_minutes` is the drive home's deadline** (21:46). A miss is charged only through the evening clock and sleep ledger — no generic loss cost. Drive and drive home share top speed (`drive_top_speed` 100); do not split it.
 - **`clock_red_fraction` is 0.05** of the morning (the evening bands share it), so a clean sharp morning ends amber at the median, not red.
 - **The autoplay bot reads public accessors only** (`session()`, `LaneSim`), never a game's private fields.
+- **Play probes measure the human, not the bot.** Every finished counted game appends one JSON line (`ProbeLog`, `scripts/core/probe_log.gd`) to `user://probes.jsonl` (Windows: `%APPDATA%/Godot/app_userdata/Dog Eat Dog/`) and prints it as `[probe] <json>` (the web build's only readable copy); per-item detail comes from `Minigame.probe_detail()`. Gated by `probes_enabled`, never written under a headless display (GUT, autoplay, CI). Probes observe only: play never reads them, and the bot's reports stay byte-identical. Ride tuning reads these, the bot is a proxy (user ruling 2026-10-14).
 
 ## Status
 

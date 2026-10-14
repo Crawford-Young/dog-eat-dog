@@ -82,6 +82,19 @@ func grab() -> String:
 	return _outcome
 
 
+## The probe detail (#18 step 12): the outcome, the press offset from the
+## zone centre in track widths (null for a cup left to pass), the zone's
+## half-width to read it against, and whether the dog could pay.
+func probe_detail() -> Dictionary:
+	var pressed := _outcome == BUY or _outcome == SPILL
+	return {
+		"outcome": _outcome,
+		"offset": _position - _zone_center if pressed else null,
+		"half_zone": _zone_width / 2.0,
+		"can_afford": _can_afford,
+	}
+
+
 ## Slides the cup on; a cup that reaches the far edge undecided has passed.
 func tick(delta: float) -> void:
 	if _outcome != "":

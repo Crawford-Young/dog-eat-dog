@@ -224,6 +224,12 @@ func test_the_shipped_burst_tightens_with_rank() -> void:
 		assert_lt(table[i], table[i - 1])
 
 
+## Ride round 1 (2026-10-14): the human is the target, so a mailroom word
+## gets 3 s again; the probes, not a bot's promotion, tune it from here.
+func test_the_shipped_mailroom_word_window_is_three_seconds() -> void:
+	assert_almost_eq(cfg.burst_word_windows[0], 3.0, 0.0001)
+
+
 func test_burst_words_speed_up_with_the_day() -> void:
 	cfg.day_ramp_burst_max = 2.0
 	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 0.5).speed, 1.5, 0.0001)

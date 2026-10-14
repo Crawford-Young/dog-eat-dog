@@ -40,6 +40,10 @@ func session() -> CoffeeSession:
 	return _session
 
 
+func probe_detail() -> Dictionary:
+	return _session.probe_detail() if _session else {}
+
+
 func _ready() -> void:
 	_desk_slot.add_child(_prop("desk", DESK_PLACEHOLDER, DESK_FONT_SIZE))
 	_paw_slot.add_child(_prop("paw", PAW_PLACEHOLDER, PAW_FONT_SIZE))

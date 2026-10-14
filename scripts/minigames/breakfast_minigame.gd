@@ -33,6 +33,8 @@ var _pulse_t: float = 0.0
 var _flash_t: float = 0.0
 var _flash_color: Color = Color.WHITE
 var _active_prop: CanvasItem = null
+## Each press's offset from the lane centre, in lane widths, for the probe.
+var _offsets: Array[float] = []
 
 @onready var _marker: ColorRect = %Marker
 @onready var _zone: ColorRect = %HitZone
@@ -118,6 +120,7 @@ func _update_visuals() -> void:
 
 
 func _press() -> void:
+	_offsets.append(_beat.position - 0.5)
 	var hit := _beat.press()
 	if hit:
 		_hits += 1
@@ -132,6 +135,12 @@ func _press() -> void:
 		_fail(FAIL_GAG, {"score": score})
 	else:
 		_finish(score)
+
+
+## The probe detail (#18 step 12): each pressed beat's offset from the
+## centre (beats never pressed are absent) and the hit window's half-width.
+func probe_detail() -> Dictionary:
+	return {"offsets": _offsets.duplicate(), "half_window": _window / 2.0}
 
 
 func _on_timeout() -> void:
