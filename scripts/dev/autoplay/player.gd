@@ -395,8 +395,8 @@ func _choose(node: Node, wanted: String) -> void:
 	await _click(node, node.get_node("%Choices").get_node(wanted))
 
 
-## Take each word in for a reaction, then type its letters. The burst drops a
-## wrong key, so a typo costs the keystroke plus a reaction to notice it. An
+## Take each word in for a reaction, then type its letters. A wrong key loses
+## the word, so a typo costs that word plus a reaction to notice it. An
 ## expired word is just a new word to take in. Reads only the minigame's public
 ## session(); the shift timer ends the slot.
 func _burst(node: Node) -> void:

@@ -4,9 +4,10 @@ extends RefCounted
 ## Work AM's word burst (issue #18): single words, one at a time, each typed
 ## before its window runs out. A typed word serves the next at once; an expired
 ## one is a miss and serves the next too, so the stream never waits. A wrong
-## key is dropped (it costs only the time it took). Score = words typed / words
-## shown, where shown counts only resolved words — the word still on screen
-## when the shift ends never had its full window.
+## key loses the word: it is a miss, shown and not typed, and the next word
+## comes up at once (ride round 2, 2026-10-14: a typo has to cost). Score =
+## words typed / words shown, where shown counts only resolved words — the
+## word still on screen when the shift ends never had its full window.
 ##
 ## Every word gets the same window (the rank's, over play speed), and the
 ## clarity tier picks the word: the lower the tier, the longer the word, never
@@ -51,8 +52,8 @@ var _tier: int
 var _rng: RandomNumberGenerator
 var _window: float
 var _left: float = 0.0
-## Each resolved word, oldest first, for the probe: {window, seconds}, with
-## seconds null for an expired word. Observation only; play never reads it.
+## Each resolved word, oldest first, for the probe: {window, seconds, typo},
+## with seconds null for a word that expired or was lost to a typo. Observation only; play never reads it.
 var _resolved: Array[Dictionary] = []
 
 
@@ -85,15 +86,19 @@ func remaining() -> String:
 
 
 ## Types one character. True when it was the next letter (case-insensitive);
-## a completed word scores and serves the next.
+## a completed word scores and serves the next. A wrong key loses the word as
+## a miss and serves the next.
 func input_char(c: String) -> bool:
 	if c.to_lower() != word[typed_count]:
 		errors += 1
+		words_missed += 1
+		_resolve(null, true)
+		_next_word()
 		return false
 	typed_count += 1
 	if typed_count >= word.length():
 		words_typed += 1
-		_resolve(_window - _left)
+		_resolve(_window - _left, false)
 		_next_word()
 	return true
 
@@ -105,7 +110,7 @@ func tick(delta: float) -> void:
 	while rest >= _left:
 		rest -= _left
 		words_missed += 1
-		_resolve(null)
+		_resolve(null, false)
 		_next_word()
 	_left -= rest
 
@@ -120,15 +125,16 @@ func score() -> float:
 	return float(words_typed) / shown if shown > 0 else 0.0
 
 
-## The probe detail (#18 step 12): every resolved word's window and the
-## seconds it took to type (null if it expired), and the typo count. The word
+## The probe detail (#18 step 12): every resolved word's window, the seconds
+## it took to type (null if it expired or was lost), whether a typo lost it,
+## and the typo count. The word
 ## still on screen is left out, as score() leaves it out.
 func probe_detail() -> Dictionary:
 	return {"words": _resolved.duplicate(true), "typos": errors}
 
 
-func _resolve(seconds: Variant) -> void:
-	_resolved.append({"window": _window, "seconds": seconds})
+func _resolve(seconds: Variant, typo: bool) -> void:
+	_resolved.append({"window": _window, "seconds": seconds, "typo": typo})
 
 
 func _next_word() -> void:

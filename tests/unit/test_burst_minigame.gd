@@ -66,13 +66,13 @@ func test_typing_a_whole_word_scores_it() -> void:
 	assert_eq(node.session().words_typed, 1)
 
 
-func test_a_wrong_key_is_counted_and_typing_carries_on() -> void:
+func test_a_wrong_key_is_counted_and_loses_the_word() -> void:
 	var node := _minigame()
 	var word: String = node.session().word
 	_type(node, "z" if word[0] != "z" else "q")
 	assert_eq(node.session().errors, 1)
-	_type(node, word[0])
-	assert_eq(node.session().typed_count, 1)
+	assert_eq(node.session().words_missed, 1)
+	assert_ne(node.session().word, word, "the next word is up")
 
 
 func test_the_word_window_runs_down_with_the_frames() -> void:
