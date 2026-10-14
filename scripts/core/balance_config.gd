@@ -113,9 +113,8 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var coffee_crash_drain: float = 18.0
 @export var snack_price: int = 3
 @export var snack_buff_tiers: int = 1
-## Dinner is a choice (#18): takeout costs takeout_price and no clock beyond
-## the card's dwell; cook hosts the pan, which costs clock and no money
-## (dinner_takeout_energy).
+## Dinner is a choice (#18): takeout costs takeout_price and no clock; cook
+## hosts the pan, which costs clock and no money (dinner_takeout_energy).
 @export var takeout_price: int = 12
 @export var retirement_target: int = 4000
 @export var sick_energy_threshold: float = 12.0

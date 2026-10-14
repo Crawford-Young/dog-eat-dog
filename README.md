@@ -77,9 +77,9 @@ The clock's colour is the warning: **calm → amber → red** as 8:00 closes in,
 
 ## The Evening Clock
 
-The evening runs against a clock too, but it counts toward a bedtime instead of a deadline. It starts at **9:30** on the drive home and ticks through dinner and free time; the moment the dog logs off is its bedtime. Before **10:00** is an early night, before **11:30** a mid one, after that a late one. The corner always states the best night still available and when it runs out, and its colour drains toward that line — calm, amber, red — and stays red once the last line has passed.
+The evening runs against a clock too, but it counts toward a bedtime instead of a deadline. It starts at **9:30** on the drive home and ticks through cooking and free time (it waits while you pick dinner); the moment the dog logs off is its bedtime. Before **10:00** is an early night, before **11:30** a mid one, after that a late one. The corner always states the best night still available and when it runs out, and its colour drains toward that line — calm, amber, red — and stays red once the last line has passed.
 
-Every game played in free time costs 45 minutes of that clock, so "one more game" is a real trade. Dinner is the other trade: cooking costs clock, so bed comes later; takeout costs $12 and no clock beyond the moment spent choosing, and fills the dog about as much as a middling cook.
+Every game played in free time costs 45 minutes of that clock, so "one more game" is a real trade. Dinner is the other trade: cooking costs clock, so bed comes later; takeout costs $12 and no clock, and fills the dog about as much as a middling cook.
 
 Late nights go on a sleep ledger. A bedtime that leaves less than a full night adds to the dog's sleep debt; a long night pays it back, up to a banked surplus. Debt has exactly one effect: it lowers how awake the dog can get at all, so coffee and food stop refilling it to full. Enough chronic lateness reaches a sick day, and the sick day sleeps the debt back down — one sick day, never a spiral. The sleep beat prints one line about it each night: *banked*, *square*, *running short* or *running on fumes*. Debt is never a gauge on screen.
 
@@ -97,7 +97,7 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Work (afternoon) | Inbox triage — emails land; `A` sorts reply, `D` sorts trash, by the subject icon |
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
 | Drive home | Same lane controls and top speed as the morning commute, over a shorter road; get home by 9:46 or it is a MISS, paid for in evening minutes and sleep |
-| Dinner | A breather: an untimed card. Cook opens the pan, which spends evening clock, so bed comes later; takeout ($12, +8 energy) spends none beyond the moment spent choosing. Takeout is greyed out when you cannot pay |
+| Dinner | A breather: an untimed card. Cook opens the pan, which spends evening clock, so bed comes later; takeout ($12, +8 energy) spends none, and the clock waits while you choose. Takeout is greyed out when you cannot pay |
 | Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or the pan's own timer running out) burns the dinner and counts as a MISS |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |

@@ -69,8 +69,10 @@ const STINK_COPY := "the stink kept its own desk chair today"
 ## parking the car. Once the dog is at the office, time stops mattering.
 const MORNING_TIMED := ["wake", "brush", "shower", "clothes", "breakfast", "drive"]
 ## The slots the evening clock runs during. Sleep is NOT one of them: the bed
-## minute is settled the moment freetime ends, so the beat is a readout.
-const EVENING_TIMED := ["drive_home", "dinner", "cooking", "freetime"]
+## minute is settled the moment freetime ends, so the beat is a readout. Nor
+## is the dinner card: the clock waits while the dog picks (ride ruling
+## 2026-10-14), so only the pan that cook hosts spends the evening.
+const EVENING_TIMED := ["drive_home", "cooking", "freetime"]
 ## Chores that can be ducked out of. Skipping buys no time back — it costs a
 ## flat penalty, so ducking out is a stat trade, never a clock trade.
 const SKIP_SLOTS := ["brush", "shower", "breakfast"]
@@ -249,19 +251,28 @@ func _evening_hud() -> String:
 	]
 
 
+## One fresh clock per evening block, built from the derived span — game.gd is
+## still the only place a DayClock is constructed or spent. Keyed on ENTERING
+## the block rather than on drive_home specifically: a lab launch or any
+## reshaped schedule that starts mid-evening (the pan, from a day that starts
+## at dinner) would otherwise run the evening against a morning-shaped,
+## band-less clock, and band_name() would return "" into the HUD.
+func _enter_evening() -> void:
+	if _evening:
+		return
+	clock = DayClock.new(cfg.evening_budget())
+	clock.set_bands(BalanceConfig.BANDS, cfg.bed_band_lines())
+	_evening = true
+
+
 func _start_slot() -> void:
 	var slot := schedule.current()
-	if slot in EVENING_TIMED and not _evening:
-		# One fresh clock per block, built from the derived span — game.gd is
-		# still the only place a DayClock is constructed or spent. Keyed on
-		# ENTERING the block rather than on drive_home specifically: a lab
-		# launch or any reshaped schedule that starts mid-evening would
-		# otherwise run the evening against a morning-shaped, band-less clock,
-		# and band_name() would return "" into the HUD.
-		clock = DayClock.new(cfg.evening_budget())
-		clock.set_bands(BalanceConfig.BANDS, cfg.bed_band_lines())
-		_evening = true
+	if slot in EVENING_TIMED:
+		_enter_evening()
 	_clock_running = slot in MORNING_TIMED or slot in EVENING_TIMED
+	# Shown or hidden as the slot mounts, not on the next frame: a stamp that
+	# releases into an untimed slot would otherwise leave the clock up a frame.
+	_clock_label.visible = _clock_running
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS[slot]]
 	_dog_label.text = "dog is %s" % DOG_STATES[Difficulty.clarity_tier(state.energy)]
 	_rank_label.text = RankLadder.RANK_NAMES[state.rank]
@@ -584,10 +595,13 @@ func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 ## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
 ## schedule.current() stays "dinner" while the pan is up. Unlike a beat it
 ## finishes through the slot tail, _on_finished, because the pan has effects
-## to bank and a verdict to stamp. The clock keeps running, which IS the
-## point — cooking is what takeout buys you out of.
+## to bank and a verdict to stamp. The clock, held still at the dinner card,
+## runs again here, which IS the point — cooking is what takeout buys you out
+## of.
 func _show_cooking() -> void:
+	_enter_evening()
 	_clock_running = true
+	_clock_label.visible = true
 	_day_label.text = "day %d — %s" % [state.day, SLOT_LABELS["cooking"]]
 	var node := _mount("cooking")
 	node.finished.connect(_on_finished.bind("cooking", node), CONNECT_ONE_SHOT)

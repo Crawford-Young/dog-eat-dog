@@ -1357,7 +1357,7 @@ func _at_dinner(main: Control) -> Minigame:
 func test_dinner_is_an_untimed_card_of_cook_or_takeout() -> void:
 	var card := _at_dinner(_fresh_main())
 	assert_true(card is ChoiceCard, "dinner is a choice, not a game")
-	assert_false(card.has_countdown(), "a breather has no countdown")
+	assert_false(card.has_countdown(), "a breather has no clock on it")
 	var names: Array = card.get_node("%Choices").get_children().map(
 			func(button: Node) -> String: return String(button.name))
 	assert_eq(names, ["Cook", "Takeout"])
@@ -1392,11 +1392,78 @@ func test_the_dinner_card_shows_no_bar() -> void:
 	assert_false(main.get_node("%TimerBar").visible, "nothing on the card counts down")
 
 
-## EVENING_TIMED keeps dinner, as it did before wave B: the card is read on
-## the evening clock.
-func test_the_dinner_card_runs_on_the_evening_clock() -> void:
+## Ride ruling (user, 2026-10-14): "time shouldnt move when choosing dinner".
+## The evening clock holds still while the card is up, however long the dog
+## takes, so takeout really costs no clock.
+func test_the_clock_waits_while_the_dog_picks_dinner() -> void:
 	var main := _fresh_main()
-	_at_dinner(main)
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main._process(1.0)
+	var home: float = main.clock.elapsed
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(DONE.duplicate())
+	assert_eq(main.schedule.current(), "dinner", "precondition: the card is up")
+	main._process(30.0)
+	assert_eq(main.clock.elapsed, home, "no evening minute passes at the card")
+	assert_false(main.get_node("%ClockLabel").visible, "and the clock is off the HUD")
+
+
+## The stamp releasing into the card must not leave the clock showing for a
+## frame: the slot that starts says whether the clock label shows.
+func test_the_clock_label_hides_the_moment_the_card_mounts() -> void:
+	var main := _held_main()
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main._process(1.0)
+	assert_true(main.get_node("%ClockLabel").visible, "precondition: the drive home shows it")
+	_current_minigame(main.get_node("%MinigameHost")).finished.emit(DONE.duplicate())
+	main._process(main.cfg.stamp_hold_seconds + 0.01)
+	assert_eq(main.schedule.current(), "dinner", "precondition: the stamp let the card in")
+	assert_false(main.get_node("%ClockLabel").visible, "hidden on the frame the card mounts")
+
+
+## Only the pan spends the evening: it runs the evening clock at clock_scale,
+## exactly as it did while the card ticked too.
+func test_the_pan_spends_the_evening_clock_at_clock_scale() -> void:
+	var main := _fresh_main()
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main._process(1.0)
+	var home: float = main.clock.elapsed
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host).finished.emit(DONE.duplicate())
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false, "choice": "cook"})
+	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/cooking.tscn")
+	main._process(1.0)
+	assert_almost_eq(main.clock.elapsed, home + main.cfg.clock_scale, 0.0001,
+			"the drive home's minutes, kept (no reset, no refund), plus the pan's")
+	assert_true(main.get_node("%ClockLabel").visible, "the clock shows at the pan")
+
+
+## Takeout costs no clock: free time starts on the minute the drive home ended.
+func test_takeout_reaches_free_time_on_the_drive_homes_minute() -> void:
+	var main := _fresh_main()
+	main.state.wallet.savings = 100
+	main.schedule.set_slots(["drive_home", "dinner", "freetime", "sleep"] as Array[String])
+	main._start_slot()
+	main._process(1.0)
+	var home: float = main.clock.elapsed
+	var host: Control = main.get_node("%MinigameHost")
+	_current_minigame(host).finished.emit(DONE.duplicate())
+	main._process(30.0)
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false, "choice": "takeout"})
+	assert_eq(main.schedule.current(), "freetime")
+	assert_eq(main.clock.elapsed, home, "however long the card was up")
+
+
+## A day that starts at dinner (a reshaped schedule) still cooks on the
+## evening clock: the pan enters the evening block itself.
+func test_a_pan_hosted_from_a_dinner_first_day_runs_on_the_evening_clock() -> void:
+	var main := _fresh_main()
+	_at_dinner(main).finished.emit({"score": 1.0, "skipped": false, "choice": "cook"})
+	assert_true(main._evening, "the pan opened the evening")
+	assert_eq(main.clock.budget, main.cfg.evening_budget(), "on the evening's own clock")
+	assert_ne(main.clock.band_name(), "", "a banded one, so the HUD has a band to name")
 	main._process(1.0)
 	assert_almost_eq(main.clock.elapsed, main.cfg.clock_scale, 0.0001)
 
