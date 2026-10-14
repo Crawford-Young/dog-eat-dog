@@ -4,6 +4,8 @@ extends Minigame
 ## Generic choice screen: every Button child of %Choices carries its choice
 ## string in the button's name, lowercased (Cook -> "cook"). If the scene marks
 ## a %Prompt label, its authored copy types itself out when setup() runs.
+## params["disabled_choices"] greys those choices out (what the dog can't pay
+## for at the coffee cart).
 
 var _prompt_text: String = ""
 
@@ -23,6 +25,10 @@ func _ready() -> void:
 
 
 func setup(params: Dictionary) -> void:
+	var disabled: Array = params.get("disabled_choices", [])
+	for button in get_node("%Choices").get_children():
+		if button is Button:
+			button.disabled = button.name.to_lower() in disabled
 	_typer.play(_prompt_text, params.get("text_speed", Typewriter.DEFAULT_CHARS_PER_SEC))
 
 

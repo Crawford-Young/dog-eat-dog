@@ -102,19 +102,15 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 @export var promote_threshold: float = 0.7
 @export var promote_sustain_days: int = 3
 @export var demote_threshold: float = 0.25
+## The coffee cart is a shop (#18): coffee lifts work AM coffee_buff_tiers
+## clarity tiers and crashes coffee_crash_drain after it; a snack lifts work PM
+## snack_buff_tiers with no crash (user ruling 2026-10-14). "Both" is the two
+## prices together (shop_prices()); water is free.
 @export var coffee_price: int = 5
 @export var coffee_buff_tiers: int = 2
 @export var coffee_crash_drain: float = 18.0
-## The coffee cart's cup grab (#18): the cup crosses the track at
-## coffee_cup_speed track widths a second (the day ramp multiplies it), entering
-## coffee_cup_lead seconds in. The paw grabs it in a zone coffee_zone_width wide
-## around coffee_zone_center (both track fractions): 0.14 / 0.77 s is +-0.09 s
-## at the day's fastest, past a sharp press (sd 0.02 s) and short of a sloppy
-## one (sd 0.07 s).
-@export var coffee_cup_speed: float = 0.7
-@export var coffee_cup_lead: float = 1.0
-@export var coffee_zone_center: float = 0.7
-@export var coffee_zone_width: float = 0.14
+@export var snack_price: int = 3
+@export var snack_buff_tiers: int = 1
 @export var takeout_price: int = 12
 ## Dinner as a walk (#18): the dog starts dinner_walk_start of the way along a
 ## floor with the pan at 0 and the phone at 1, and walks dinner_walk_speed
@@ -181,14 +177,9 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## - triage: sharp misses 0% up to 3.0 and 15-22% only at 4-5 (a mail every
 ##   0.2 s), while sloppy loses its promotions above ~1.2 (its score is the
 ##   arrival rate, not the window); held at 1.1.
-## - cup: the grab zone is +-0.07 track widths, so the cup's speed at the
-##   day's end must keep half the zone above 3 sigma of sharp's press error
-##   (test_difficulty pins it: 1.67 at most); 1.5 forced to buy is 0 sharp
-##   spills and ~20% sloppy.
 @export var day_ramp_breakfast_max: float = 1.3
 @export var day_ramp_burst_max: float = 1.74
 @export var day_ramp_triage_max: float = 1.1
-@export var day_ramp_cup_max: float = 1.5
 @export var breakfast_energy_min: float = 2.0
 @export var breakfast_energy_max: float = 8.0
 @export var skip_breakfast_penalty: float = 4.0
@@ -369,6 +360,13 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## from this; nothing stores it.
 func morning_budget() -> float:
 	return maxf(work_start_minutes - morning_start_minutes, 0.0)
+
+
+## What each thing on the coffee cart costs, keyed by the card's choice. Both is
+## derived, never stored, so it can't drift from the two it bundles. Water is
+## free, so it is not here.
+func shop_prices() -> Dictionary:
+	return {"coffee": coffee_price, "snack": snack_price, "both": coffee_price + snack_price}
 
 
 ## The drive home's game-minute budget, derived from home_by_minutes the way

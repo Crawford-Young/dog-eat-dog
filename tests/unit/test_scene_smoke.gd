@@ -86,15 +86,45 @@ func test_sleep_scene_instantiates() -> void:
 func test_coffee_scene_instantiates() -> void:
 	var node = load("res://scenes/minigames/coffee.tscn").instantiate()
 	add_child_autofree(node)
-	node.setup(Difficulty.cup_params(50.0, BalanceConfig.new()))
+	node.setup({"text_speed": 30.0})
 	assert_not_null(node)
 
 
-## The grab routes SPACE and the click through _unhandled_input.
-func test_coffee_lets_the_mouse_reach_the_game() -> void:
+## A ChoiceCard greys out exactly the choices named in disabled_choices; the
+## rest stay clickable. The coffee cart is the card that uses it (#18).
+func test_a_choice_card_greys_out_only_the_disabled_choices() -> void:
 	var node: Minigame = load("res://scenes/minigames/coffee.tscn").instantiate()
 	add_child_autofree(node)
-	node.setup(Difficulty.cup_params(50.0, BalanceConfig.new()))
+	node.setup({"text_speed": 30.0, "disabled_choices": ["both", "coffee"]})
+	var choices: Node = node.get_node("%Choices")
+	assert_true((choices.get_node("Both") as Button).disabled)
+	assert_true((choices.get_node("Coffee") as Button).disabled)
+	assert_false((choices.get_node("Snack") as Button).disabled)
+	assert_false((choices.get_node("Water") as Button).disabled)
+
+
+func test_a_choice_card_with_no_disabled_choices_greys_out_nothing() -> void:
+	var node: Minigame = load("res://scenes/minigames/coffee.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text_speed": 30.0})
+	for button in node.get_node("%Choices").get_children():
+		assert_false((button as Button).disabled, String(button.name))
+
+
+## A choice card's buttons are exempt; everything else in the click path must
+## let the mouse through (wave-3a rule), so a click lands on the button.
+func test_the_coffee_card_lets_the_mouse_reach_its_buttons() -> void:
+	var node: Minigame = load("res://scenes/minigames/coffee.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text_speed": 30.0})
+	var blockers: Array = _mouse_blockers(node)
+	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
+
+
+func test_the_retire_offer_lets_the_mouse_reach_its_buttons() -> void:
+	var node: Minigame = load("res://scenes/minigames/retire_offer.tscn").instantiate()
+	add_child_autofree(node)
+	node.setup({"text_speed": 30.0})
 	var blockers: Array = _mouse_blockers(node)
 	assert_eq(blockers.size(), 0, "these nodes eat the click: %s" % str(blockers))
 

@@ -18,7 +18,7 @@ extends RefCounted
 ## The clarity tier is the read delay: the email on top is out of focus for
 ## `read_delay` seconds every time a new one reaches it, and a sort before it
 ## reads is dropped. A blurrier dog reads every email later, so it clears fewer
-## at any reaction speed and the energy and coffee levers cannot read
+## at any reaction speed and the energy and snack levers cannot read
 ## inverted (asserted for a fast and a slow actor). The read delay is the dog's
 ## eyes, not the inbox, so play speed does not shorten it.
 

@@ -45,9 +45,6 @@ text = "breakfast"
 [node name="Drive" type="Button" parent="Menu/MenuBox/Activities"]
 text = "drive (commute)"
 
-[node name="Coffee" type="Button" parent="Menu/MenuBox/Activities"]
-text = "coffee cart (cup grab)"
-
 [node name="Work_am" type="Button" parent="Menu/MenuBox/Activities"]
 text = "word burst (work am)"
 

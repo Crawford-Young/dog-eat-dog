@@ -84,7 +84,7 @@ static func burst_params(
 	}
 
 
-## Work PM's inbox triage. The clarity tier (plus any boost) picks the read
+## Work PM's inbox triage. The clarity tier (plus a snack's boost) picks the read
 ## delay, how long each email on top stays out of focus; the rank picks the
 ## window the email on top has; the day ramp is the inbox's speed. The shift
 ## timer ends it, so no time_limit.
@@ -103,18 +103,6 @@ static func triage_params(
 		"capacity": cfg.triage_inbox_capacity,
 		"speed": day_ramp(progress, cfg.day_ramp_triage_max),
 		"fail_score": cfg.work_fail_score,
-	}
-
-
-## The coffee cart's cup grab. The day ramp is the cup's speed. Energy does not
-## touch it: the grab is a reaction test with no limit to scale, so a tired dog
-## is never handed an easier cup.
-static func cup_params(_energy: float, cfg: BalanceConfig, progress := 0.0) -> Dictionary:
-	return {
-		"speed": cfg.coffee_cup_speed * day_ramp(progress, cfg.day_ramp_cup_max),
-		"lead": cfg.coffee_cup_lead,
-		"zone_center": cfg.coffee_zone_center,
-		"zone_width": cfg.coffee_zone_width,
 	}
 
 

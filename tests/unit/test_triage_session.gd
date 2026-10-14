@@ -342,7 +342,7 @@ func _play(params: Dictionary, react: float, seed_value: int) -> float:
 
 
 ## A blurrier dog reads every email later, so at any reaction speed a lower
-## tier never scores higher — the energy and coffee levers cannot read
+## tier never scores higher — the energy and snack levers cannot read
 ## inverted (the burst shipped that way once). Pinned on the shipped config
 ## for a fast and a slow actor at every rank.
 func test_a_lower_tier_never_scores_higher_for_a_fast_or_a_slow_actor() -> void:

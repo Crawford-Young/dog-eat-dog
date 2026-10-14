@@ -22,7 +22,6 @@ const SCENES := {
 	"drive": preload("res://scenes/minigames/drive.tscn"),
 	"drive_home": preload("res://scenes/minigames/drive.tscn"),
 	"cooking": preload("res://scenes/minigames/cooking.tscn"),
-	"coffee": preload("res://scenes/minigames/coffee.tscn"),
 	"work_am": preload("res://scenes/minigames/burst.tscn"),
 	"work_pm": preload("res://scenes/minigames/triage.tscn"),
 	"listening": preload("res://scenes/minigames/listening.tscn"),
@@ -43,8 +42,8 @@ const DAY_SCENE := preload("res://scenes/main.tscn")
 
 var cfg: BalanceConfig = preload("res://resources/balance_default.tres")
 var _current_activity: String = ""
-## How far through the day the ramped games (breakfast, the cup, work AM and
-## PM) play, 0-1; built in _ready beside the rank row. Zero is the start of the
+## How far through the day the ramped games (breakfast, work AM and PM)
+## play, 0-1; built in _ready beside the rank row. Zero is the start of the
 ## day, where every ramp multiplies by 1.
 var _progress_slider: HSlider
 
@@ -91,7 +90,7 @@ func _add_progress_row() -> void:
 	var rank_row := _rank_option.get_parent()
 	var row := HBoxContainer.new()
 	var label := Label.new()
-	label.text = "day progress (breakfast, coffee, work)"
+	label.text = "day progress (breakfast, work)"
 	_progress_slider = HSlider.new()
 	_progress_slider.min_value = 0.0
 	_progress_slider.max_value = 1.0
@@ -262,10 +261,6 @@ func _params_for(activity: String) -> Dictionary:
 			return Difficulty.drive_home_params(energy, cfg)
 		"cooking":
 			return Difficulty.cooking_params(energy, cfg)
-		"coffee":
-			var cup := Difficulty.cup_params(energy, cfg, progress)
-			cup["can_afford"] = true
-			return cup
 		"work_am":
 			return Difficulty.burst_params(energy, cfg, 0, _rank_option.selected, progress)
 		"work_pm":

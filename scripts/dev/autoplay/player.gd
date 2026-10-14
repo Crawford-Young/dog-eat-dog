@@ -4,8 +4,8 @@ extends RefCounted
 ## to decide WHAT to press (lane state, the word on screen, spot positions, beat
 ## timing) and then presses it through Hands, as real InputEvents. It reads a
 ## game through public accessors where the game has them (the session() of the
-## burst, the triage, the cup and the walk), and never calls a method that acts, a button's pressed
-## signal or a game.gd handler.
+## burst, the triage and the walk; a card's buttons), and never calls a method
+## that acts, a button's pressed signal or a game.gd handler.
 ##
 ## Every coroutine re-checks that its node is still hosted after each await,
 ## so a node that finished mid-gesture is simply abandoned.
@@ -60,11 +60,11 @@ func play(slot: String, node: Node, day: int) -> void:
 		"drive", "drive_home":
 			_drive(node)
 		"coffee":
-			_coffee(node)
+			choose(node, profile.coffee)
 		"dinner":
 			_dinner(node, day % int(profile.cook_every) == 0)
 		"retire_offer":
-			_choose(node, "Retire")
+			choose(node, ["retire"])
 		"work_am":
 			_burst(node)
 		"work_pm":
@@ -358,20 +358,6 @@ func _lane_value(sim: LaneSim, lane: int) -> float:
 	return nearest.speed * 10.0 + (nearest.pos - sim.distance) * 0.05
 
 
-## The cup grab. A "buy" dog presses once, aimed at the cup crossing the middle
-## of the zone, with the profile's beat_sd of timing error (the cup is seen
-## coming for its lead-in, so this is aim, not a reaction to a surprise). A
-## "water" dog, or one that cannot pay (the cup is out of reach), lets it pass.
-## Reads only the minigame's public session().
-func _coffee(node: Node) -> void:
-	var session: CoffeeSession = node.session()
-	if profile.coffee != "buy" or not session.can_afford():
-		return
-	var aim := session.seconds_to_zone() + _rng.randfn(0.0, profile.beat_sd)
-	if await _wait(node, roundi(aim / FRAME)):
-		hands.tap(KEY_SPACE)
-
-
 ## Dinner: take the kitchen in for a reaction, then hold the key toward the
 ## pan (cook) or the phone (takeout) until the walk ends - the pan when takeout
 ## is out of reach. Reads only the minigame's public session(); the key is let
@@ -389,10 +375,24 @@ func _dinner(node: Node, cook: bool) -> void:
 	hands.key(keycode, false)
 
 
-func _choose(node: Node, wanted: String) -> void:
+## A choice card: after a reaction, click the first of `choices` (in order of
+## preference) whose button is not greyed out. A choice names its button the
+## way ChoiceCard does, lowercased. No live button among them clicks nothing.
+func choose(node: Node, choices: Array) -> void:
 	if not await _think(node):
 		return
-	await _click(node, node.get_node("%Choices").get_node(wanted))
+	var button := _first_live_choice(node, choices)
+	if button != null:
+		await _click(node, button)
+
+
+func _first_live_choice(node: Node, choices: Array) -> Button:
+	var buttons := node.get_node("%Choices").get_children()
+	for choice in choices:
+		for button in buttons:
+			if button is Button and button.name.to_lower() == choice and not button.disabled:
+				return button
+	return null
 
 
 ## Take each word in for a reaction, then type its letters. A wrong key loses

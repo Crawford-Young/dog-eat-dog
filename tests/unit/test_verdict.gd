@@ -5,8 +5,7 @@ extends GutTest
 ## the beats and cards that are not games.
 
 const PLAYABLE: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "coffee", "work_am", "lunch", "work_pm", "drive_home", "dinner", "cooking",
-		"freetime"]
+		"drive", "work_am", "lunch", "work_pm", "drive_home", "dinner", "cooking", "freetime"]
 const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick",
 		"late_arrival", "rank_news"]
 
@@ -38,16 +37,12 @@ func test_a_slot_that_is_not_a_game_has_no_verdict() -> void:
 		assert_eq(Verdict.of(slot, {"score": 0.0, "skipped": true, "failed": true}), "", slot)
 
 
-func test_a_clean_grab_is_a_hit_and_a_spill_a_miss() -> void:
-	assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": "buy"}), Verdict.HIT)
-	assert_eq(Verdict.of("coffee",
-			{"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}), Verdict.MISS)
-
-
-## Water is a choice, not a game result: no stamp, no strip mark, and not a SKIP
-## either - the cup passing is not a ducked chore.
-func test_letting_the_cup_pass_has_no_verdict() -> void:
-	assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": "skip"}), "")
+## The coffee cart is a shop (#18), a breather and not a game: whatever the
+## dog buys, there is no stamp and no strip mark.
+func test_the_coffee_cart_is_never_a_game() -> void:
+	assert_false("coffee" in Verdict.COUNTED_SLOTS)
+	for choice in ["coffee", "snack", "both", "water"]:
+		assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": choice}), "", choice)
 
 
 ## Either walk is a HIT, whichever end the dog reached; running out of time

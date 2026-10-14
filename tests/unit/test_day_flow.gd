@@ -14,13 +14,16 @@ extends GutTest
 ## main._process(delta) by hand or spend on main.clock directly.
 
 const FAKE_RESULTS := {
-	"coffee": {"score": 1.0, "skipped": false, "choice": "skip"},
+	"coffee": {"score": 1.0, "skipped": false, "choice": "water"},
 	"dinner": {"score": 1.0, "skipped": false, "choice": "cook"},
 	"freetime": {"score": 0.33, "skipped": false, "choice": "logoff", "games_played": 2},
 	"retire_offer": {"score": 1.0, "skipped": false, "choice": "stay"},
 }
-const BUY_COFFEE := {"score": 1.0, "skipped": false, "choice": "buy"}
-const SPILL_COFFEE := {"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}
+const BUY_COFFEE := {"score": 1.0, "skipped": false, "choice": "coffee"}
+const BUY_SNACK := {"score": 1.0, "skipped": false, "choice": "snack"}
+const BUY_BOTH := {"score": 1.0, "skipped": false, "choice": "both"}
+## The cart's four buttons, keyed by the choice each reports.
+const SHOP_BUTTONS := {"coffee": "Coffee", "snack": "Snack", "both": "Both", "water": "Water"}
 const RETIRE := {"score": 1.0, "skipped": false, "choice": "retire"}
 const BAD_WORK := {"score": 0.0, "skipped": false}
 const SKIPPED := {"score": 0.0, "skipped": true}
@@ -124,7 +127,7 @@ func test_a_whole_day_runs_through_to_the_summary() -> void:
 
 func test_a_full_day_pays_the_days_salary() -> void:
 	# QA ruling (issue #8): close_day nets the margin over living costs, not
-	# the raw salary. This fixed walk buys no coffee/takeout (coffee "skip",
+	# the raw salary. This fixed walk buys no coffee/takeout (coffee "water",
 	# dinner "cook"), so the only drain past the paycheque is the daily
 	# living cost.
 	var main := _fresh_main()
@@ -214,6 +217,44 @@ func test_coffee_lifts_the_morning_burst_tier_only() -> void:
 	assert_eq(sober._params_for("work_am").tier, clear, "no coffee, no lift")
 	assert_gt(buyer._params_for("work_am").tier, clear, "coffee lifts the morning burst tier")
 	assert_eq(buyer._params_for("work_pm").tier, clear, "the buff is morning-only")
+
+
+## The snack is the afternoon's coffee (#18): one triage tier, and no crash.
+func test_a_snack_lifts_the_afternoon_triage_tier_only_and_never_crashes() -> void:
+	var buyer := _fresh_main()
+	buyer.state.wallet.savings = 20
+	buyer.state.energy = 30.0
+	_walk(buyer, {"coffee": BUY_SNACK}, "lunch")
+	var sober := _fresh_main()
+	sober.state.wallet.savings = 20
+	sober.state.energy = 30.0
+	_walk(sober, {}, "lunch")
+	assert_eq(buyer.state.energy, sober.state.energy, "a snack costs money, not energy")
+	assert_eq(buyer.state.wallet.savings, 20 - buyer.cfg.snack_price, "the cart takes its three")
+	var clear := Difficulty.clarity_tier(sober.state.energy)
+	assert_lt(clear, 4, "precondition: below the top tier, where a lift can show")
+	assert_eq(sober._params_for("work_pm").tier, clear, "no snack, no lift")
+	assert_eq(buyer._params_for("work_pm").tier, clear + buyer.cfg.snack_buff_tiers,
+			"the snack lifts the afternoon triage tier")
+	assert_eq(buyer._params_for("work_am").tier, sober._params_for("work_am").tier,
+			"and leaves the morning burst alone")
+	for main in [buyer, sober]:
+		_current_minigame(main.get_node("%MinigameHost")).finished.emit(_result_for("work_pm", {}))
+	assert_eq(buyer.state.energy, sober.state.energy, "no crash after the afternoon")
+
+
+func test_both_spends_eight_and_lifts_both_shifts() -> void:
+	var buyer := _fresh_main()
+	buyer.state.wallet.savings = 20
+	buyer.state.energy = 30.0
+	_walk(buyer, {"coffee": BUY_BOTH}, "coffee")
+	var sober := _fresh_main()
+	sober.state.wallet.savings = 20
+	sober.state.energy = 30.0
+	_walk(sober, {}, "coffee")
+	assert_eq(buyer.state.wallet.savings, 12, "coffee and a snack: 20 - 8")
+	assert_gt(buyer._params_for("work_am").tier, sober._params_for("work_am").tier)
+	assert_gt(buyer._params_for("work_pm").tier, sober._params_for("work_pm").tier)
 
 
 func test_a_sick_morning_is_one_unpaid_day_in_the_blanket() -> void:
@@ -1164,7 +1205,7 @@ func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
 	})
 	# wake brush shower clothes breakfast drive work_am lunch work_pm
 	# drive_home dinner cooking freetime — sleep leaves no mark, and neither
-	# does a coffee left to pass (the walk's water).
+	# does the coffee cart, a breather (#18).
 	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅ ✅")
 
 
@@ -1213,59 +1254,64 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_eq(main.schedule.current(), "breakfast")
-	# Four of the day's thirteen games are behind it: 1 + 4 / 13 * (2.0 - 1).
+	# Four of the day's twelve games are behind it: 1 + 4 / 12 * (2.0 - 1).
 	assert_almost_eq(main._params_for("breakfast").speed,
-			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 13.0), 0.0001)
+			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 12.0), 0.0001)
 
 
-func test_coffee_is_the_cup_grab_and_its_cup_rides_the_days_progress() -> void:
+func test_coffee_is_a_shop_card_of_four() -> void:
 	var main := _fresh_main()
-	main.cfg.day_ramp_cup_max = 2.0
 	main.schedule.set_slots(["wake", "coffee", "work_am"] as Array[String])
 	main._start_slot()
 	var host: Control = main.get_node("%MinigameHost")
 	_current_minigame(host).finished.emit(_result_for("wake", {}))
 	assert_eq(main.schedule.current(), "coffee")
-	assert_true(_current_minigame(host).session() is CoffeeSession, "the cart hosts the cup grab")
-	# One of the day's three games is behind it: 1 + 1 / 3 * (2.0 - 1).
-	assert_almost_eq(main._params_for("coffee").speed,
-			main.cfg.coffee_cup_speed * (1.0 + 1.0 / 3.0), 0.0001)
+	var card := _current_minigame(host)
+	assert_true(card is ChoiceCard, "the cart is an untimed card")
+	assert_false(card.has_countdown(), "a breather has no clock on it")
+	var names: Array = card.get_node("%Choices").get_children().map(
+			func(button: Node) -> String: return String(button.name))
+	assert_eq(names, ["Coffee", "Snack", "Both", "Water"])
 
 
-func test_a_dog_that_cannot_pay_gets_a_cup_it_cannot_grab() -> void:
+## Each button names its price, read from the config so a retune shows up as
+## a failing label rather than a cart that lies about its prices.
+func test_each_shop_button_states_its_price() -> void:
 	var main := _fresh_main()
-	main.state.wallet.savings = main.cfg.coffee_price - 1
-	assert_false(main._params_for("coffee").can_afford)
-	main.state.wallet.savings = main.cfg.coffee_price
-	assert_true(main._params_for("coffee").can_afford, "exactly the price is enough")
+	main.schedule.set_slots(["coffee"] as Array[String])
+	main._start_slot()
+	var choices: Node = _current_minigame(main.get_node("%MinigameHost")).get_node("%Choices")
+	var prices: Dictionary = main.cfg.shop_prices()
+	for choice in prices:
+		var label: String = (choices.get_node(SHOP_BUTTONS[choice]) as Button).text
+		assert_string_contains(label, "$%d" % prices[choice], choice)
+	assert_string_contains((choices.get_node("Water") as Button).text, "free")
 
 
-func test_a_clean_grab_stamps_a_hit_and_a_spill_a_miss_but_water_stamps_nothing() -> void:
-	var grab := _held_main()
-	_finish(grab, "coffee", BUY_COFFEE.duplicate())
-	assert_eq(_stamp(grab).text, "HIT")
-	assert_eq(_strip(grab), "✅")
-	var spill := _held_main()
-	_finish(spill, "coffee", SPILL_COFFEE.duplicate())
-	assert_eq(_stamp(spill).text, "MISS")
-	assert_eq(_strip(spill), "❌")
-	var water := _held_main()
-	_finish(water, "coffee", FAKE_RESULTS.coffee.duplicate())
-	assert_false(_stamp(water).visible, "letting it pass is a choice, not a result")
-	assert_eq(_strip(water), "")
+## #18: "an option the dog can't afford is greyed out", exactly then, at every
+## savings around the prices; water is always there.
+func test_each_shop_option_is_greyed_out_exactly_when_unaffordable() -> void:
+	var cfg := BalanceConfig.new()
+	var prices: Dictionary = cfg.shop_prices()
+	for savings in [0, 2, 3, 4, 5, 7, 8, 20]:
+		var main := _fresh_main()
+		main.state.wallet.savings = savings
+		main.schedule.set_slots(["coffee"] as Array[String])
+		main._start_slot()
+		var choices: Node = _current_minigame(main.get_node("%MinigameHost")).get_node("%Choices")
+		for choice in SHOP_BUTTONS:
+			var unaffordable: bool = prices.get(choice, 0) > savings
+			assert_eq((choices.get_node(SHOP_BUTTONS[choice]) as Button).disabled, unaffordable,
+					"%s at $%d" % [choice, savings])
 
 
-func test_a_spilled_cup_costs_the_price_and_nothing_else() -> void:
-	var spiller := _fresh_main()
-	spiller.state.wallet.savings = 20
-	_walk(spiller, {"coffee": SPILL_COFFEE}, "coffee")
-	var sober := _fresh_main()
-	sober.state.wallet.savings = 20
-	_walk(sober, {}, "coffee")
-	assert_eq(spiller.state.wallet.savings, 20 - spiller.cfg.coffee_price, "the cart took its five")
-	assert_false(spiller.state.coffee_today, "and there is no coffee")
-	assert_eq(spiller.state.energy, sober.state.energy, "no loss energy cost")
-	assert_eq(spiller.state.performance, sober.state.performance, "no loss performance cost")
+func test_whatever_the_cart_sells_there_is_no_stamp_and_no_mark() -> void:
+	for choice in SHOP_BUTTONS:
+		var main := _held_main()
+		main.state.wallet.savings = 20
+		_finish(main, "coffee", {"score": 1.0, "skipped": false, "choice": choice})
+		assert_false(_stamp(main).visible, choice)
+		assert_eq(_strip(main), "", choice)
 
 
 func test_work_am_is_the_word_burst_and_its_words_ride_the_days_progress() -> void:
