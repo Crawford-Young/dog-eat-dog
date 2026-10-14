@@ -224,10 +224,13 @@ func test_the_shipped_burst_tightens_with_rank() -> void:
 		assert_lt(table[i], table[i - 1])
 
 
-## Ride round 1 (2026-10-14): the human is the target, so a mailroom word
-## gets 3 s again; the probes, not a bot's promotion, tune it from here.
-func test_the_shipped_mailroom_word_window_is_three_seconds() -> void:
-	assert_almost_eq(cfg.burst_word_windows[0], 3.0, 0.0001)
+## Ride round 2 (2026-10-14): the windows are tuned to the human's pace from
+## the probes, the same 2/3 cut at every rank.
+func test_the_shipped_word_windows_are_the_ride_tuned_ones() -> void:
+	var expected := [2.0, 1.33, 0.77]
+	assert_eq(cfg.burst_word_windows.size(), expected.size())
+	for i in expected.size():
+		assert_almost_eq(cfg.burst_word_windows[i], expected[i], 0.0001, "rank %d" % i)
 
 
 func test_burst_words_speed_up_with_the_day() -> void:

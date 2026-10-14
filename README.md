@@ -95,7 +95,7 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Clothes | Drag each item onto the dog. Shoes bounce off until the pants are on; low energy means butterfingers, and a dropped item costs clock. **Mandatory — no skip** |
 | Breakfast | Click **or** press `Space` as the marker crosses the plate; a better hit is a bigger energy refill |
 | Drive | `A`/`D` (or `←`/`→`) to change lane across five lanes. Traffic comes in walls, usually with one lane open — but some walls block all five, and how fast the whole road is moving is rolled fresh each morning. A car ahead pins your speed until you weave around it. Walls shear apart as they roll, so a solid one always opens eventually; reading the stagger early is the skill. Miles-to-go and your speed read out beside the progress bar. **Nothing ever crashes** — bad driving costs time, not damage |
-| Work (morning) | Word burst — single words, each typed before its window closes; the score is words typed over words shown |
+| Work (morning) | Word burst — single words, each typed before its window closes, and a wrong key loses the word; the score is words typed over words shown |
 | Work (afternoon) | Inbox triage — emails land; `A` sorts reply, `D` sorts trash, by the subject icon |
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
 | Drive home | Same lane controls and top speed as the morning commute, over a shorter road; get home by 9:46 or it is a MISS, paid for in evening minutes and sleep |

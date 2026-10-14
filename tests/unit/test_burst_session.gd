@@ -63,13 +63,20 @@ func test_typing_the_whole_word_scores_it_and_serves_the_next() -> void:
 	assert_ne(s.word, first, "never the same word twice in a row")
 
 
-func test_a_wrong_key_does_not_advance_and_counts_an_error() -> void:
+## Ride round 2 (2026-10-14): a wrong key loses the word, so a typo costs it.
+func test_a_wrong_key_loses_the_word_and_serves_the_next() -> void:
 	var s := _session()
-	var wrong := "z" if s.word[0] != "z" else "q"
+	var first := s.word
+	assert_true(s.input_char(first[0]))
+	var wrong := "z" if first[1] != "z" else "q"
 	assert_false(s.input_char(wrong))
-	assert_eq(s.typed_count, 0)
 	assert_eq(s.errors, 1)
-	assert_true(s.input_char(s.word[0]), "the right key still lands after a wrong one")
+	assert_eq(s.words_missed, 1, "shown, not typed")
+	assert_eq(s.words_typed, 0)
+	assert_ne(s.word, first, "the next word is up")
+	assert_eq(s.typed_count, 0, "and starts untyped")
+	assert_almost_eq(s.time_left(), WINDOW, 0.0001, "with its whole window")
+	assert_almost_eq(s.score(), 0.0, 0.0001)
 
 
 func test_capitals_type_their_lower_case_letter() -> void:

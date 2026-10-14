@@ -9,7 +9,8 @@ const FAIL_GAG := "🚫"
 ## work_am/monitor.png draws the desk monitor; until it exists, this emoji.
 const MONITOR_PLACEHOLDER := "🖥️"
 const MONITOR_FONT_SIZE := 260
-## How long the next letter shows red after a wrong key.
+## How long the next word's first letter shows red after a wrong key lost
+## the last word.
 const WRONG_FLASH_SECONDS := 0.2
 
 var _session: BurstSession

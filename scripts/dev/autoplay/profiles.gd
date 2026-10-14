@@ -19,8 +19,8 @@ extends RefCounted
 ##   late_pass        chance of letting the marker go by once before pressing
 ##   char_frames      mean frames between typed characters in work AM's
 ##                    burst; char_sd jitter
-##   typo             chance a key is wrong: a burst letter (dropped, and a
-##                    reaction to notice) or a triage sort (the other bin, so
+##   typo             chance a key is wrong: a burst letter (loses the word,
+##                    and a reaction to notice) or a triage sort (the other bin, so
 ##                    the email is filed wrong)
 ##   hold_sd          release error on a hold meter, in meter units (0..1)
 ##   gesture_px       nod / shake stroke length; gesture_frames per stroke

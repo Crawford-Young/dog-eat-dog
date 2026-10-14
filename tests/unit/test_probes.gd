@@ -184,15 +184,19 @@ func test_burst_times_each_resolved_word_against_its_window() -> void:
 	s.tick(0.5)
 	for c in s.remaining():
 		s.input_char(c)
-	assert_false(s.input_char("#"), "a typo")
 	s.tick(2.5)
+	assert_false(s.input_char("#"), "a typo")
 	var d := s.probe_detail()
 	assert_eq(d.typos, 1)
-	assert_eq(d.words.size(), 2, "the typed word and the expired one; not the one on screen")
+	assert_eq(d.words.size(), 3, "typed, expired, typo-lost; not the one on screen")
 	assert_almost_eq(d.words[0].window, 2.0, 0.0001, "the window over play speed")
 	assert_almost_eq(d.words[0].seconds, 0.5, 0.0001)
+	assert_eq(d.words[0].typo, false)
 	assert_almost_eq(d.words[1].window, 2.0, 0.0001)
 	assert_eq(d.words[1].seconds, null, "an expired word was never typed")
+	assert_eq(d.words[1].typo, false, "an expiry is not a typo")
+	assert_eq(d.words[2].seconds, null, "a typo-lost word was never typed")
+	assert_eq(d.words[2].typo, true)
 
 
 func test_triage_reports_each_resolved_email_right_or_not_and_how_fast() -> void:

@@ -259,11 +259,11 @@ const BANDS: PackedStringArray = ["early", "mid", "late"]
 ## the clarity tier picks the word's length (longer as the dog fades), so the
 ## rank sets the bar and the dog's state decides how many words clear it.
 @export var burst_shift_time: float = 25.0
-## Rank 0 is 3.0 s (user ride 2026-10-14: typing needs to be harder). The
-## human is the target, so the sloppy bot's promotion is no longer the bar
-## (it promoted on 2 of 5 seeds only at 5.5); the windows and the burst ramp
-## are tuned from the play probes from here. Ranks 1-2 are sharp's measure.
-@export var burst_word_windows: Array[float] = [3.0, 2.0, 1.15]
+## Tuned to the human from the ride probes (user ride 2026-10-14): words took
+## a median ~0.9 s against a 2.15 s window (3.0 s at ramp 1.4) and 1 of 46
+## expired, so every rank is cut to 2/3 of [3.0, 2.0, 1.15]. The sloppy bot's
+## promotion is not the bar; the human is.
+@export var burst_word_windows: Array[float] = [2.0, 1.33, 0.77]
 ## Work PM's inbox triage (#18): emails land every triage_arrival_gap seconds
 ## (each gap rolled within triage_arrival_jitter of it either side), over the
 ## day ramp's speed; the shift timer ends it (no time_limit), and the score is
