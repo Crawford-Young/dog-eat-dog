@@ -32,7 +32,7 @@ Override the Godot binary with the `GODOT` env var.
 
 ## Losing a Game
 
-Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a little energy and performance (drive, drive home, work and free time are charged through their own rules instead). The coffee cart is a breather, not a game: nothing there can be lost.
+Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a little energy and performance (drive, drive home, work and free time are charged through their own rules instead). The coffee cart and the dinner choice are breathers, not games: nothing there can be lost (the pan that cook opens can).
 
 | Slot | Lost when |
 |---|---|
@@ -44,7 +44,6 @@ Every playable slot can be lost. A loss pops a gag, then a MISS, and costs a lit
 | Work (both shifts, burst and triage) | score below 0.5 |
 | Drive | arrival past 8:00 |
 | Drive home | home past 9:46 |
-| Dinner | the timer runs out: sad kibble, no dinner energy |
 | Cooking | the 3rd spoiled step, or the pan's timer |
 | Free time | bed in the late band |
 
@@ -80,7 +79,7 @@ The clock's colour is the warning: **calm → amber → red** as 8:00 closes in,
 
 The evening runs against a clock too, but it counts toward a bedtime instead of a deadline. It starts at **9:30** on the drive home and ticks through dinner and free time; the moment the dog logs off is its bedtime. Before **10:00** is an early night, before **11:30** a mid one, after that a late one. The corner always states the best night still available and when it runs out, and its colour drains toward that line — calm, amber, red — and stays red once the last line has passed.
 
-Every game played in free time costs 45 minutes of that clock, so "one more game" is a real trade. Cooking dinner costs clock; takeout costs bone-bucks and none.
+Every game played in free time costs 45 minutes of that clock, so "one more game" is a real trade. Dinner is the other trade: cooking costs clock, so bed comes later; takeout costs $12 and no clock beyond the moment spent choosing, and fills the dog about as much as a middling cook.
 
 Late nights go on a sleep ledger. A bedtime that leaves less than a full night adds to the dog's sleep debt; a long night pays it back, up to a banked surplus. Debt has exactly one effect: it lowers how awake the dog can get at all, so coffee and food stop refilling it to full. Enough chronic lateness reaches a sick day, and the sick day sleeps the debt back down — one sick day, never a spiral. The sleep beat prints one line about it each night: *banked*, *square*, *running short* or *running on fumes*. Debt is never a gauge on screen.
 
@@ -98,7 +97,7 @@ Late nights go on a sleep ledger. A bedtime that leaves less than a full night a
 | Work (afternoon) | Inbox triage — emails land; `A` sorts reply, `D` sorts trash, by the subject icon |
 | Lunch (listening) | Mouse gestures — nod (vertical strokes) / shake (horizontal strokes) on cue |
 | Drive home | Same lane controls and top speed as the morning commute, over a shorter road; get home by 9:46 or it is a MISS, paid for in evening minutes and sleep |
-| Dinner | Hold `A`/`D` (or `←`/`→`) to walk the dog to the pan (cook) or the phone (takeout) before the time runs out; the phone is greyed out when you cannot pay; cook opens the pan |
+| Dinner | A breather: an untimed card. Cook opens the pan, which spends evening clock, so bed comes later; takeout ($12, +8 energy) spends none beyond the moment spent choosing. Takeout is greyed out when you cannot pay |
 | Cooking | Four steps (chop, transfer, stir, pour). Chop and transfer are click-or-`Space` presses timed to the beat; stir is hold-and-circle with the mouse, released at the shine; pour is hold click-or-`Space`, released at the line. A tired dog gets more slack. A sloppy step is a smaller energy refill, but a third spoiled step (or the pan's own timer running out) burns the dinner and counts as a MISS |
 | Freetime | Mouse is captured and pulled toward "one more game" — hovering the game auto-plays it, and each game costs clock; the pull is stronger the more sleep debt you carry. Deliberately click **Log off** to end the night |
 | Sleep | No input — bedtime is the evening clock's reading at log-off, with the night's ledger line |
@@ -120,7 +119,7 @@ Design specs and wave checklists live in the private planning-docs repo (`~/code
 | 3a | Morning clock — the whole morning races a stated 8:00 arrival with a calm/amber/red HUD, shower / clothes / breakfast / five-lane commute minigames, traffic that rolls its own luck each morning, shift-timer work typing, lateness debit at the office | done |
 | 3b | Evening clock + sleep economy — a banded bedtime clock, per-game clock cost, sleep-debt ledger acting through an energy ceiling, cooked dinner, ledger lines | done |
 | A | Minigame contract + losses + HUD — every playable slot can be lost (time limit or score rule, gag, HIT/MISS/SKIP stamp), day strip, savings-to-retire poster, autoplay misses | done |
-| B | Reworked games — word burst, inbox triage, 10 s drive, drive-home deadline, a coffee-cart shop (coffee, snack, both or water), walk-to-pan dinner, prop art slots, a per-game day ramp that speeds play up through the day | built, ride pending |
+| B | Reworked games — word burst, inbox triage, 10 s drive, drive-home deadline, a coffee-cart shop (coffee, snack, both or water), dinner as a choice (cook or takeout), prop art slots, a per-game day ramp that speeds play up through the day | built, ride pending |
 
 ## Credits
 

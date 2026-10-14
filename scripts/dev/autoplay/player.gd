@@ -4,8 +4,8 @@ extends RefCounted
 ## to decide WHAT to press (lane state, the word on screen, spot positions, beat
 ## timing) and then presses it through Hands, as real InputEvents. It reads a
 ## game through public accessors where the game has them (the session() of the
-## burst, the triage and the walk; a card's buttons), and never calls a method
-## that acts, a button's pressed signal or a game.gd handler.
+## burst and the triage; a card's buttons), and never calls a method that
+## acts, a button's pressed signal or a game.gd handler.
 ##
 ## Every coroutine re-checks that its node is still hosted after each await,
 ## so a node that finished mid-gesture is simply abandoned.
@@ -62,7 +62,8 @@ func play(slot: String, node: Node, day: int) -> void:
 		"coffee":
 			choose(node, profile.coffee)
 		"dinner":
-			_dinner(node, day % int(profile.cook_every) == 0)
+			# Takeout when the day calls for it, cook when it is greyed out.
+			choose(node, ["cook"] if day % int(profile.cook_every) == 0 else ["takeout", "cook"])
 		"retire_offer":
 			choose(node, ["retire"])
 		"work_am":
@@ -356,23 +357,6 @@ func _lane_value(sim: LaneSim, lane: int) -> float:
 	if nearest.is_empty() or nearest.pos - sim.distance > lookahead:
 		return top * 10.0 + lookahead * 0.05
 	return nearest.speed * 10.0 + (nearest.pos - sim.distance) * 0.05
-
-
-## Dinner: take the kitchen in for a reaction, then hold the key toward the
-## pan (cook) or the phone (takeout) until the walk ends - the pan when takeout
-## is out of reach. Reads only the minigame's public session(); the key is let
-## go when the node finishes, or is lost to the time limit.
-func _dinner(node: Node, cook: bool) -> void:
-	var session: DinnerSession = node.session()
-	if not await _think(node):
-		return
-	var to_pan := cook or not session.can_afford()
-	var keycode := KEY_A if to_pan else KEY_D
-	hands.key(keycode, true)
-	for i in LOOP_CAP_FRAMES:
-		if not _is_live(node) or not await _wait(node, 1):
-			break
-	hands.key(keycode, false)
 
 
 ## A choice card: after a reaction, click the first of `choices` (in order of

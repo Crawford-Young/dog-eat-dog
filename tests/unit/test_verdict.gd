@@ -5,8 +5,8 @@ extends GutTest
 ## the beats and cards that are not games.
 
 const PLAYABLE: Array[String] = ["wake", "brush", "shower", "clothes", "breakfast",
-		"drive", "work_am", "lunch", "work_pm", "drive_home", "dinner", "cooking", "freetime"]
-const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick",
+		"drive", "work_am", "lunch", "work_pm", "drive_home", "cooking", "freetime"]
+const EXEMPT: Array[String] = ["warning", "sleep", "retire_offer", "sick", "coffee", "dinner",
 		"late_arrival", "rank_news"]
 
 
@@ -45,13 +45,13 @@ func test_the_coffee_cart_is_never_a_game() -> void:
 		assert_eq(Verdict.of("coffee", {"score": 1.0, "skipped": false, "choice": choice}), "", choice)
 
 
-## Either walk is a HIT, whichever end the dog reached; running out of time
-## before reaching one is the sad-kibble MISS.
-func test_reaching_the_pan_or_the_phone_is_a_hit_and_a_timeout_a_miss() -> void:
+## Dinner is a choice (#18), a breather and not a game: cook or takeout, there
+## is no stamp and no strip mark. The pan that cook hosts is the game.
+func test_the_dinner_choice_is_never_a_game() -> void:
+	assert_false("dinner" in Verdict.COUNTED_SLOTS)
 	for choice in ["cook", "takeout"]:
-		assert_eq(Verdict.of("dinner", {"score": 1.0, "skipped": false, "choice": choice}),
-				Verdict.HIT, choice)
-	assert_eq(Verdict.of("dinner", {"score": 0.0, "skipped": false, "failed": true}), Verdict.MISS)
+		assert_eq(Verdict.of("dinner", {"score": 1.0, "skipped": false, "choice": choice}), "", choice)
+	assert_true("cooking" in Verdict.COUNTED_SLOTS, "the pan is still a game")
 
 
 func test_the_strip_marks_each_verdict_in_order() -> void:

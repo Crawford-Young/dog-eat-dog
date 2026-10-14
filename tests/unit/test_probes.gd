@@ -185,6 +185,43 @@ func test_every_coffee_choice_writes_its_line() -> void:
 		assert_eq(_lines()[0].choice, choice)
 
 
+## Dinner is the other breather (#18): takeout or cook, one choice-only line
+## with the savings the dog chose with. The pan cook hosts is a game, so it
+## writes its own full line when it finishes.
+func test_the_dinner_choice_writes_a_choice_only_line() -> void:
+	var main: Control = load("res://scenes/main.tscn").instantiate()
+	main.cfg = main.cfg.duplicate()
+	main.cfg.stamp_hold_seconds = 0.0
+	main.probes = ProbeLog.new("run-t", TMP)
+	main.start_from_slot = "dinner"
+	main.state.wallet.savings = 30
+	main.state.energy = 41.0
+	add_child_autofree(main)
+	_hosted(main).finished.emit({"score": 1.0, "skipped": false, "choice": "takeout"})
+	var lines := _lines()
+	assert_eq(lines.size(), 1)
+	assert_eq(lines[0], {
+		"run": "run-t",
+		"day": 1.0,
+		"slot": "dinner",
+		"choice": "takeout",
+		"start_energy": 41.0,
+		"savings": 30.0,
+	}, "slot, choice, start energy and savings, and nothing a game reports")
+	assert_eq(main.state.wallet.savings, 30 - main.cfg.takeout_price, "the order still went through")
+
+
+func test_cook_writes_its_choice_line_and_the_pan_its_own() -> void:
+	var main := _main("dinner")
+	_hosted(main).finished.emit({"score": 1.0, "skipped": false, "choice": "cook"})
+	assert_eq(_lines().size(), 1, "the choice, before the pan is played")
+	assert_eq(_lines()[0].choice, "cook")
+	_hosted(main).finished.emit({"score": 1.0, "skipped": false})
+	assert_eq(_lines().size(), 2)
+	assert_eq(_lines()[1].slot, "cooking")
+	assert_true(_lines()[1].has("detail"), "the pan is a game and reports like one")
+
+
 func test_a_shift_game_reports_its_shift_as_the_time_limit() -> void:
 	var main := _main("work_am")
 	_hosted(main).finished.emit({"score": 1.0, "skipped": false, "failed": false})

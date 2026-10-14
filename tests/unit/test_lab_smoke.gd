@@ -156,20 +156,12 @@ func test_the_lab_has_no_coffee_activity() -> void:
 	assert_false(lab.SCENES.has("coffee"))
 
 
-func test_dinner_launches_the_walk_with_a_phone_the_dog_can_pay_for() -> void:
+## Dinner is a choice card now (#18), with nothing to feel in isolation: the
+## pan cook hosts keeps its own cooking launcher.
+func test_the_lab_has_no_dinner_activity() -> void:
 	var lab := _fresh_lab()
-	lab._launch("dinner")
-	var hosted: Node = lab.get_node("%Host").get_child(0)
-	assert_true(hosted.session() is DinnerSession, "the dinner button hosts the walk")
-	assert_true(hosted.session().can_afford(), "the lab dog can always order")
-	assert_true(hosted.has_countdown(), "against its energy-scaled limit")
-	assert_true(hosted.is_running())
-
-
-func test_the_dinner_button_launches_it() -> void:
-	var lab := _fresh_lab()
-	lab.get_node("%Activities/Dinner").pressed.emit()
-	assert_eq(lab.get_node("%Host").get_child_count(), 1)
+	assert_null(lab.get_node_or_null("%Activities/Dinner"))
+	assert_false(lab.SCENES.has("dinner"))
 
 
 func test_work_am_launches_the_word_burst() -> void:
@@ -215,7 +207,7 @@ func test_preset_cfg_other_presets_return_cfg_unchanged() -> void:
 
 func test_every_evening_activity_has_a_launcher() -> void:
 	var lab := _fresh_lab()
-	for activity in ["cooking", "drive_home", "dinner", "freetime", "sleep"]:
+	for activity in ["cooking", "drive_home", "freetime", "sleep"]:
 		assert_true(lab.SCENES.has(activity), "the lab cannot reach '%s'" % activity)
 
 

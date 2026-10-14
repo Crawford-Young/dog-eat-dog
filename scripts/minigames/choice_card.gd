@@ -5,7 +5,7 @@ extends Minigame
 ## string in the button's name, lowercased (Cook -> "cook"). If the scene marks
 ## a %Prompt label, its authored copy types itself out when setup() runs.
 ## params["disabled_choices"] greys those choices out (what the dog can't pay
-## for at the coffee cart).
+## for at the coffee cart, or takeout on a broke evening).
 
 var _prompt_text: String = ""
 

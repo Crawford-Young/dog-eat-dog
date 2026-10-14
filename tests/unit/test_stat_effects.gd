@@ -113,8 +113,8 @@ func test_lunch_does_not_touch_performance() -> void:
 
 
 ## The pan pays the cooking energy, scaled by how the cooking session actually
-## went — a bad cook can score below takeout's flat gain. The dinner walk
-## itself pays none (see test_the_dinner_walk_itself_pays_no_cooking_energy).
+## went — a bad cook can score below takeout's flat gain. The dinner card
+## itself pays none (see test_the_dinner_card_itself_pays_no_cooking_energy).
 func test_cooking_pays_energy_by_how_well_it_went() -> void:
 	var cfg := BalanceConfig.new()
 	var clean := GameState.new()
@@ -142,7 +142,7 @@ func test_takeout_costs_money_and_cooking_costs_none() -> void:
 	assert_eq(cook.wallet.savings, 100, "cooking is free, it just is not fast")
 
 
-func test_the_dinner_walk_itself_pays_no_cooking_energy() -> void:
+func test_the_dinner_card_itself_pays_no_cooking_energy() -> void:
 	# One meal, one energy source: the pan grants it, scaled by the score.
 	var cfg := BalanceConfig.new()
 	var state := GameState.new()
@@ -256,21 +256,13 @@ func test_the_cart_never_touches_energy_or_performance() -> void:
 		assert_eq(s.performance, GameState.new().performance, choice)
 
 
-## A dinner that timed out is the sad kibble (#18): no takeout energy, no
-## takeout bill, and the generic loss cost, since nothing else charges it.
-func test_a_timed_out_dinner_is_kibble_and_pays_the_loss_cost() -> void:
-	var s := GameState.new()
-	s.wallet.credit(50)
-	s.energy = 50.0
-	StatEffects.apply("dinner", {"score": 0.0, "skipped": false, "failed": true}, s, cfg)
-	assert_eq(s.wallet.savings, 50, "no takeout was ordered")
-	assert_almost_eq(s.energy, 50.0 - cfg.fail_energy_cost, 0.0001,
-			"no dinner energy, and the loss energy on top")
-	assert_almost_eq(s.performance, 0.5 - cfg.fail_performance_cost, 0.0001)
-
-
-func test_coffee_is_not_a_loss_cost_slot() -> void:
+## The breathers are no games, so they never fail (#18): neither the coffee
+## cart nor the dinner choice pays the loss cost. The pan cook hosts still does.
+func test_the_breathers_are_not_loss_cost_slots() -> void:
 	assert_false("coffee" in StatEffects.LOSS_COST_SLOTS)
+	assert_false("dinner" in StatEffects.LOSS_COST_SLOTS)
+	assert_eq(StatEffects.LOSS_COST_SLOTS,
+			["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"])
 
 
 func test_coffee_crash_drains_after_morning_work() -> void:
@@ -297,13 +289,33 @@ func test_a_snack_never_crashes() -> void:
 		assert_eq(snacked.energy, sober.energy, slot)
 
 
-func test_takeout_costs_money_cook_is_free() -> void:
+## Takeout fills the dog about as much as a median cook (user ruling
+## 2026-10-14), so the trade is money against bedtime: $12 for +8 energy.
+func test_takeout_spends_twelve_and_gives_eight() -> void:
+	assert_eq(cfg.takeout_price, 12)
+	assert_eq(cfg.dinner_takeout_energy, 8.0)
 	var s := GameState.new()
 	s.wallet.credit(50)
+	s.energy = 50.0
 	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "takeout"}, s, cfg)
-	assert_eq(s.wallet.savings, 50 - cfg.takeout_price)
-	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "cook"}, s, cfg)
-	assert_eq(s.wallet.savings, 50 - cfg.takeout_price)
+	assert_eq(s.wallet.savings, 50 - 12)
+	assert_eq(s.energy, 50.0 + 8.0)
+
+
+func test_takeout_fills_about_as_much_as_a_median_cook() -> void:
+	assert_almost_eq(cfg.dinner_takeout_energy, lerpf(cfg.cook_energy_min, cfg.cook_energy_max, 0.5),
+			0.0001)
+
+
+## The card greys takeout out when the dog is broke; a takeout that reaches
+## StatEffects anyway buys nothing, as an unaffordable coffee does.
+func test_a_takeout_the_dog_cannot_pay_for_buys_nothing() -> void:
+	var s := GameState.new()
+	s.wallet.credit(cfg.takeout_price - 1)
+	s.energy = 50.0
+	StatEffects.apply("dinner", {"score": 1.0, "skipped": false, "choice": "takeout"}, s, cfg)
+	assert_eq(s.wallet.savings, cfg.takeout_price - 1, "the wallet refuses the bill whole")
+	assert_eq(s.energy, 50.0, "and no food comes")
 
 
 func test_sick_beat_sets_recovery_from_mash_score() -> void:
@@ -383,7 +395,7 @@ func _won_and_lost(slot: String, result: Dictionary) -> Array[GameState]:
 
 func test_a_lost_chore_costs_performance_and_energy_on_top() -> void:
 	# brush and shower also forfeit their restore — pinned on their own below.
-	for slot in ["wake", "clothes", "breakfast", "lunch", "dinner", "cooking"]:
+	for slot in ["wake", "clothes", "breakfast", "lunch", "cooking"]:
 		var pair := _won_and_lost(slot, {"score": 0.0, "skipped": false})
 		assert_almost_eq(pair[0].performance - pair[1].performance,
 				cfg.fail_performance_cost, 0.0001, "%s pays the performance cost" % slot)

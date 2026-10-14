@@ -1204,9 +1204,9 @@ func test_the_strip_marks_every_game_of_the_day_in_order() -> void:
 		"lunch": {"score": 0.0, "skipped": false, "failed": true},
 	})
 	# wake brush shower clothes breakfast drive work_am lunch work_pm
-	# drive_home dinner cooking freetime — sleep leaves no mark, and neither
-	# does the coffee cart, a breather (#18).
-	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅ ✅")
+	# drive_home cooking freetime — sleep leaves no mark, and neither do the
+	# breathers, the coffee cart and the dinner choice (#18).
+	assert_eq(_strip(main), "✅ – ✅ ✅ ❌ ✅ ✅ ❌ ✅ ✅ ✅ ✅")
 
 
 func test_the_strip_starts_each_new_day_empty() -> void:
@@ -1254,9 +1254,9 @@ func test_breakfast_speed_rides_the_days_progress() -> void:
 	for slot in ["wake", "brush", "shower", "clothes"]:
 		_current_minigame(host).finished.emit(_result_for(slot, {}))
 	assert_eq(main.schedule.current(), "breakfast")
-	# Four of the day's twelve games are behind it: 1 + 4 / 12 * (2.0 - 1).
+	# Four of the day's eleven games are behind it: 1 + 4 / 11 * (2.0 - 1).
 	assert_almost_eq(main._params_for("breakfast").speed,
-			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 12.0), 0.0001)
+			main.cfg.breakfast_beat_speed * (1.0 + 4.0 / 11.0), 0.0001)
 
 
 func test_coffee_is_a_shop_card_of_four() -> void:
@@ -1341,10 +1341,10 @@ func test_work_pm_is_the_inbox_triage_and_its_mail_rides_the_days_progress() -> 
 	assert_almost_eq(main._params_for("work_pm").speed, 1.75, 0.0001)
 
 
-# --- dinner walk (issue #18, step 8) ------------------------------------------
+# --- dinner choice (issue #18, breather revision) -----------------------------
 
 
-const KIBBLE := {"score": 0.0, "skipped": false, "failed": true}
+const TAKEOUT := {"score": 1.0, "skipped": false, "choice": "takeout"}
 
 
 ## Hosts dinner as the evening's first slot, with freetime after it.
@@ -1354,65 +1354,82 @@ func _at_dinner(main: Control) -> Minigame:
 	return _current_minigame(main.get_node("%MinigameHost"))
 
 
-func test_dinner_is_the_walk_and_its_limit_scales_with_energy() -> void:
+func test_dinner_is_an_untimed_card_of_cook_or_takeout() -> void:
+	var card := _at_dinner(_fresh_main())
+	assert_true(card is ChoiceCard, "dinner is a choice, not a game")
+	assert_false(card.has_countdown(), "a breather has no countdown")
+	var names: Array = card.get_node("%Choices").get_children().map(
+			func(button: Node) -> String: return String(button.name))
+	assert_eq(names, ["Cook", "Takeout"])
+
+
+## Read from the config, so a retune shows up as a failing label rather than
+## a card that lies about the price.
+func test_the_takeout_button_states_its_price() -> void:
 	var main := _fresh_main()
-	main.state.energy = 30.0
-	var node := _at_dinner(main)
-	assert_true(node.session() is DinnerSession, "dinner hosts the walk, not a card")
-	assert_true(node.has_countdown(), "and the walk is timed")
-	var expected: Dictionary = Difficulty.dinner_params(30.0, main.cfg)
-	assert_almost_eq(main._params_for("dinner").time_limit, expected.time_limit, 0.0001)
-	assert_almost_eq(main._params_for("dinner").speed, expected.speed, 0.0001)
+	var choices: Node = _at_dinner(main).get_node("%Choices")
+	assert_string_contains((choices.get_node("Takeout") as Button).text,
+			"$%d" % main.cfg.takeout_price)
 
 
-func test_a_dog_that_cannot_pay_gets_a_phone_it_cannot_use() -> void:
+## #18: takeout is greyed out when the dog is broke, exactly then; cook is
+## always there.
+func test_takeout_is_greyed_out_exactly_when_unaffordable() -> void:
+	var price: int = BalanceConfig.new().takeout_price
+	for savings in [0, price - 1, price, price + 1, 100]:
+		var main := _fresh_main()
+		main.state.wallet.savings = savings
+		var choices: Node = _at_dinner(main).get_node("%Choices")
+		assert_eq((choices.get_node("Takeout") as Button).disabled, savings < price,
+				"takeout at $%d" % savings)
+		assert_false((choices.get_node("Cook") as Button).disabled, "cook at $%d" % savings)
+
+
+func test_the_dinner_card_shows_no_bar() -> void:
 	var main := _fresh_main()
-	main.state.wallet.savings = main.cfg.takeout_price - 1
-	assert_false(main._params_for("dinner").can_afford)
-	main.state.wallet.savings = main.cfg.takeout_price
-	assert_true(main._params_for("dinner").can_afford, "exactly the price is enough")
-
-
-func test_the_dinner_bar_reads_the_walks_countdown() -> void:
-	var main := _fresh_main()
-	var bar: Range = main.get_node("%TimerBar")
-	var node := _at_dinner(main)
+	_at_dinner(main)
 	main._process(0.0)
-	assert_true(bar.visible, "the walk shows its countdown")
-	assert_almost_eq(bar.value, 1.0, 0.0001, "full as the walk starts")
-	node._countdown_left = node._countdown_total * 0.25
-	main._process(0.0)
-	assert_almost_eq(bar.value, 0.25, 0.0001, "the countdown, not the evening clock")
+	assert_false(main.get_node("%TimerBar").visible, "nothing on the card counts down")
 
 
-func test_the_dinner_walk_spends_the_evening_clock() -> void:
+## EVENING_TIMED keeps dinner, as it did before wave B: the card is read on
+## the evening clock.
+func test_the_dinner_card_runs_on_the_evening_clock() -> void:
 	var main := _fresh_main()
 	_at_dinner(main)
 	main._process(1.0)
 	assert_almost_eq(main.clock.elapsed, main.cfg.clock_scale, 0.0001)
 
 
-func test_a_timed_out_dinner_is_a_miss_that_pays_the_loss_cost_and_hosts_no_pan() -> void:
-	var main := _held_main()
+func test_takeout_spends_twelve_gives_eight_and_hosts_no_pan() -> void:
+	var main := _fresh_main()
 	var host: Control = main.get_node("%MinigameHost")
 	main.state.energy = 50.0
 	main.state.wallet.savings = 100
-	var performance: float = main.state.performance
-	_at_dinner(main).finished.emit(KIBBLE.duplicate())
-	assert_eq(_stamp(main).text, "MISS", "the sad kibble is the walk's MISS")
-	assert_eq(_strip(main), "❌")
-	assert_almost_eq(main.state.energy, 50.0 - main.cfg.fail_energy_cost, 0.0001,
-			"no dinner energy, and the loss energy on top")
-	assert_almost_eq(main.state.performance, performance - main.cfg.fail_performance_cost, 0.0001)
-	assert_eq(main.state.wallet.savings, 100, "no takeout bill")
-	main._process(main.cfg.stamp_hold_seconds + 0.01)
+	_at_dinner(main).finished.emit(TAKEOUT.duplicate())
+	assert_eq(main.state.wallet.savings, 88)
+	assert_almost_eq(main.state.energy, 58.0, 0.0001)
 	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/freetime.tscn",
-			"kibble hosts no pan: the evening moves on to free time")
-	assert_eq(main.schedule.current(), "freetime")
+			"takeout hosts no pan: the evening moves on to free time")
 
 
-func test_either_walk_stamps_a_hit() -> void:
+## Whatever the dog eats, the choice gets no stamp and no strip mark; the pan
+## cook hosts is the game that does.
+func test_whatever_the_dog_eats_there_is_no_stamp_and_no_mark() -> void:
 	for choice in ["cook", "takeout"]:
 		var main := _held_main()
+		main.state.wallet.savings = 100
 		_at_dinner(main).finished.emit({"score": 1.0, "skipped": false, "choice": choice})
-		assert_eq(_stamp(main).text, "HIT", choice)
+		assert_false(_stamp(main).visible, choice)
+		assert_eq(_strip(main), "", choice)
+
+
+func test_cook_hosts_the_pan_at_once_and_the_pan_is_stamped() -> void:
+	var main := _held_main()
+	var host: Control = main.get_node("%MinigameHost")
+	_at_dinner(main).finished.emit({"score": 1.0, "skipped": false, "choice": "cook"})
+	assert_eq(_current_minigame(host).scene_file_path, "res://scenes/minigames/cooking.tscn",
+			"no stamp hold before the pan")
+	_current_minigame(host).finished.emit({"score": 1.0, "skipped": false})
+	assert_eq(_stamp(main).text, "HIT", "the pan is the game")
+	assert_eq(_strip(main), "✅")
