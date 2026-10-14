@@ -28,7 +28,8 @@ extends SceneTree
 ## Policy, deterministic per profile:
 ##                    sharp            sloppy
 ##   orient           0.8-1.0 s        1.2-1.6 s (every hosted screen)
-##   coffee           water            buy (water when unaffordable)
+##   coffee           both, else       water
+##                    coffee, else water (the first it can afford)
 ##   dinner           always cook      cook every 3rd day, else takeout
 ##                                     (cook when takeout is unaffordable)
 ##   free-time games  0                2 per night

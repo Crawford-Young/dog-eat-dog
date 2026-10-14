@@ -196,6 +196,17 @@ func test_coffee_boost_caps_at_top_tier() -> void:
 	assert_eq(p.tier, 4)
 
 
+func test_a_snack_lifts_the_triage_tier_one_and_its_read_delay_with_it() -> void:
+	var p := Difficulty.triage_params(30.0, cfg, cfg.snack_buff_tiers)
+	var tier := Difficulty.clarity_tier(30.0) + 1
+	assert_eq(p.tier, tier)
+	assert_eq(p.read_delay, cfg.triage_read_delays[tier])
+
+
+func test_a_snack_boost_caps_at_top_tier() -> void:
+	assert_eq(Difficulty.triage_params(90.0, cfg, cfg.snack_buff_tiers).tier, 4)
+
+
 func test_the_burst_tier_is_the_clarity_tier_without_a_boost() -> void:
 	assert_eq(Difficulty.burst_params(100.0, cfg).tier, 4)
 	assert_eq(Difficulty.burst_params(50.0, cfg).tier, Difficulty.clarity_tier(50.0))
@@ -464,16 +475,13 @@ func test_each_game_ramps_to_its_own_max() -> void:
 	cfg.day_ramp_breakfast_max = 1.0
 	cfg.day_ramp_burst_max = 2.0
 	cfg.day_ramp_triage_max = 3.0
-	cfg.day_ramp_cup_max = 4.0
 	assert_almost_eq(Difficulty.breakfast_params(50.0, cfg, 1.0).speed, cfg.breakfast_beat_speed, 0.0001)
 	assert_almost_eq(Difficulty.burst_params(50.0, cfg, 0, 0, 1.0).speed, 2.0, 0.0001)
 	assert_almost_eq(Difficulty.triage_params(50.0, cfg, 0, 0, 1.0).speed, 3.0, 0.0001)
-	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 1.0).speed, cfg.coffee_cup_speed * 4.0, 0.0001)
 
 
 func test_the_shipped_ramp_speeds_the_day_up() -> void:
-	for ramp_max in [cfg.day_ramp_breakfast_max, cfg.day_ramp_burst_max,
-			cfg.day_ramp_triage_max, cfg.day_ramp_cup_max]:
+	for ramp_max in [cfg.day_ramp_breakfast_max, cfg.day_ramp_burst_max, cfg.day_ramp_triage_max]:
 		assert_gt(ramp_max, 1.0, "the shipped config ramps")
 
 
@@ -510,53 +518,13 @@ func _ramped_games() -> Array[Dictionary]:
 			"params": func(energy: float, progress: float) -> Dictionary:
 				return Difficulty.triage_params(energy, cfg, 0, 1, progress),
 		},
-		{
-			"name": "coffee cup",
-			"speed_key": "speed",
-			"params": func(energy: float, progress: float) -> Dictionary:
-				return Difficulty.cup_params(energy, cfg, progress),
-		},
 	]
-
-
-func test_the_cup_params_carry_the_tunables() -> void:
-	var p := Difficulty.cup_params(50.0, cfg)
-	assert_eq(p.speed, cfg.coffee_cup_speed, "no progress given is the start of the day")
-	assert_eq(p.zone_center, cfg.coffee_zone_center)
-	assert_eq(p.zone_width, cfg.coffee_zone_width)
-	assert_eq(p.lead, cfg.coffee_cup_lead)
-
-
-func test_the_cup_speeds_up_with_the_day() -> void:
-	cfg.day_ramp_cup_max = 2.0
-	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 0.5).speed,
-			cfg.coffee_cup_speed * 1.5, 0.0001)
-	assert_almost_eq(Difficulty.cup_params(50.0, cfg, 1.0).speed,
-			cfg.coffee_cup_speed * 2.0, 0.0001)
-
-
-## Energy never changes the cup: a tired dog gets no easier a grab, and no
-## harder a one either (the clarity and limit levers sit on the other games).
-func test_energy_never_changes_the_cup() -> void:
-	for progress in [0.0, 0.6]:
-		assert_eq(Difficulty.cup_params(0.0, cfg, progress), Difficulty.cup_params(100.0, cfg, progress))
-
-
-func test_the_shipped_cup_gives_a_sloppy_hand_a_chance_and_a_sharp_one_a_certainty() -> void:
-	# Half the zone, in seconds the cup spends either side of its centre, at the
-	# day's fastest: wider than a sharp press's timing error, narrower than a
-	# sloppy one's (beat_sd 0.02 and 0.07 in the autoplay profiles).
-	var p := Difficulty.cup_params(50.0, cfg, 1.0)
-	var half_seconds: float = p.zone_width / 2.0 / p.speed
-	assert_gt(half_seconds, 0.02 * 3.0, "sharp is inside the zone 3 sigma out")
-	assert_lt(half_seconds, 0.07 * 2.0, "sloppy lands outside it now and then")
 
 
 func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
 	cfg.day_ramp_breakfast_max = 3.0
 	cfg.day_ramp_burst_max = 3.0
 	cfg.day_ramp_triage_max = 3.0
-	cfg.day_ramp_cup_max = 3.0
 	for game in _ramped_games():
 		for energy in [0.0, 50.0, 100.0]:
 			var start: Dictionary = game.params.call(energy, 0.0)
@@ -570,17 +538,17 @@ func test_the_day_ramp_moves_only_speed_never_a_time_limit() -> void:
 
 
 func test_day_progress_is_the_share_of_counted_slots_already_played() -> void:
-	# Thirteen of A_DAY's slots are counted games; the retire offer, the
-	# warning and sleep are not.
+	# Twelve of A_DAY's slots are counted games; the retire offer, the
+	# warning, the coffee cart and sleep are not.
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 0), 0.0, 0.0001, "nothing played yet")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 13.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 2), 1.0 / 12.0, 0.0001,
 			"the retire offer is not a game")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 13.0, 0.0001, "breakfast")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 7.0 / 13.0, 0.0001,
-			"work_am: the cup grab is a game now, the warning is not")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 11.0 / 13.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 5), 4.0 / 12.0, 0.0001, "breakfast")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 9), 6.0 / 12.0, 0.0001,
+			"work_am: neither the warning nor the coffee cart (a shop, #18) is a game")
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 13), 10.0 / 12.0, 0.0001,
 			"dinner: the drive home is a game (home_by, #18)")
-	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 12.0 / 13.0, 0.0001,
+	assert_almost_eq(Difficulty.day_progress(A_DAY, 14), 11.0 / 12.0, 0.0001,
 			"freetime: the dinner walk is a game too (#18)")
 	assert_almost_eq(Difficulty.day_progress(A_DAY, 15), 1.0, 0.0001, "sleep: every game played")
 

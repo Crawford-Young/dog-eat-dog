@@ -124,18 +124,65 @@ func test_a_finished_game_writes_one_probe_with_its_start_state() -> void:
 	assert_eq(p.detail, {}, "a game with no detail hook reports an empty one")
 
 
-func test_the_probe_carries_the_stamped_miss_and_the_choice() -> void:
-	var main := _main("coffee")
-	_hosted(main).finished.emit({"score": 0.0, "skipped": false, "failed": true, "choice": "spill"})
+func test_the_probe_carries_the_stamped_miss() -> void:
+	var main := _main("work_pm")
+	_hosted(main).finished.emit({"score": 0.0, "skipped": false, "failed": true})
 	var p: Dictionary = _lines()[0]
-	assert_eq(p.slot, "coffee")
+	assert_eq(p.slot, "work_pm")
 	assert_eq(p.failed, true)
-	assert_eq(p.choice, "spill")
 	assert_eq(p.clock_minute, null, "the office runs no clock")
 	assert_gt(p.day_progress, 0.0)
-	assert_almost_eq(p.ramp, Difficulty.day_ramp(p.day_progress, main.cfg.day_ramp_cup_max), 0.0001,
-			"the cup rides its own day ramp")
-	assert_true(p.detail.has("outcome"), "the cup's own detail rides along")
+	assert_almost_eq(p.ramp, Difficulty.day_ramp(p.day_progress, main.cfg.day_ramp_triage_max),
+			0.0001, "the triage rides its own day ramp")
+	assert_true(p.detail.has("emails"), "the triage's own detail rides along")
+
+
+func test_the_probe_carries_a_games_choice() -> void:
+	var main := _main("freetime")
+	_hosted(main).finished.emit(
+			{"score": 0.33, "skipped": false, "choice": "logoff", "games_played": 2})
+	var p: Dictionary = _lines()[0]
+	assert_eq(p.slot, "freetime")
+	assert_eq(p.choice, "logoff")
+
+
+# --- breathers ---------------------------------------------------------------
+
+
+## A breather is no game, so it writes a choice-only line (#18): what the dog
+## picked, with the energy and the savings it picked with, so a ride shows
+## whether every option gets taken. The savings are read before the purchase.
+func test_the_coffee_cart_writes_a_choice_only_line() -> void:
+	var main: Control = load("res://scenes/main.tscn").instantiate()
+	main.cfg = main.cfg.duplicate()
+	main.cfg.stamp_hold_seconds = 0.0
+	main.probes = ProbeLog.new("run-t", TMP)
+	main.start_from_slot = "coffee"
+	main.state.wallet.savings = 20
+	main.state.energy = 47.0
+	add_child_autofree(main)
+	_hosted(main).finished.emit({"score": 1.0, "skipped": false, "choice": "both"})
+	var lines := _lines()
+	assert_eq(lines.size(), 1)
+	assert_eq(lines[0], {
+		"run": "run-t",
+		"day": 1.0,
+		"slot": "coffee",
+		"choice": "both",
+		"start_energy": 47.0,
+		"savings": 20.0,
+	}, "slot, choice, start energy and savings, and nothing a game reports")
+	assert_eq(main.state.wallet.savings, 12, "the purchase still went through")
+
+
+func test_every_coffee_choice_writes_its_line() -> void:
+	for choice in ["coffee", "snack", "both", "water"]:
+		_remove_tmp()
+		var main := _main("coffee")
+		main.state.wallet.savings = 20
+		_hosted(main).finished.emit({"score": 1.0, "skipped": false, "choice": choice})
+		assert_eq(_lines().size(), 1, choice)
+		assert_eq(_lines()[0].choice, choice)
 
 
 func test_a_shift_game_reports_its_shift_as_the_time_limit() -> void:
@@ -230,29 +277,6 @@ func test_triage_reports_a_buried_email_as_never_reaching_the_top() -> void:
 	)
 	s.tick(1.0)
 	assert_eq(s.probe_detail().emails, [{"correct": false, "seconds": null}])
-
-
-func test_the_cup_reports_its_press_offset_from_the_zone_centre() -> void:
-	var s := CoffeeSession.new({"speed": 1.0, "zone_center": 0.5, "zone_width": 0.2, "lead": 0.0})
-	s.tick(0.45)
-	s.grab()
-	var d := s.probe_detail()
-	assert_eq(d.outcome, CoffeeSession.BUY)
-	assert_almost_eq(d.offset, -0.05, 0.0001, "pressed a touch early")
-	assert_almost_eq(d.half_zone, 0.1, 0.0001)
-	assert_eq(d.can_afford, true)
-
-
-func test_a_cup_left_to_pass_has_no_offset() -> void:
-	var s := CoffeeSession.new({
-		"speed": 1.0, "zone_center": 0.5, "zone_width": 0.2, "lead": 0.0, "can_afford": false,
-	})
-	s.grab()
-	s.tick(2.0)
-	var d := s.probe_detail()
-	assert_eq(d.outcome, CoffeeSession.SKIP)
-	assert_eq(d.offset, null)
-	assert_eq(d.can_afford, false, "broke, so the press did nothing")
 
 
 func test_breakfast_reports_each_beats_offset_from_the_centre() -> void:

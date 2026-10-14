@@ -14,8 +14,7 @@ extends RefCounted
 ##   short_stroke     chance a swipe falls short of the 40 px a stroke needs
 ##   circle_rps       scrub / stir circling speed, revolutions per second
 ##   circle_radius    scrub / stir radius range, px
-##   beat_sd          timing error on a beat press, or on the coffee cup grab
-##                    (s, gaussian)
+##   beat_sd          timing error on a beat press (s, gaussian)
 ##   late_pass        chance of letting the marker go by once before pressing
 ##   char_frames      mean frames between typed characters in work AM's
 ##                    burst; char_sd jitter
@@ -34,9 +33,9 @@ extends RefCounted
 ##   shoes_first      chance of trying shoes before pants
 ##
 ## Policy (deterministic per profile):
-##   coffee          "buy" (aim a press at the cup crossing the grab zone)
-##                   | "skip" (water: let the cup pass); water when the cup
-##                   is out of reach (unaffordable)
+##   coffee          the cart's choices in order of preference; the first
+##                   one the dog can afford is bought (water is free, so it
+##                   ends every list)
 ##   cook_every      dinner: walk to the pan when day % cook_every == 0, else
 ##                   to the phone (takeout); 1 = always cook. Walks to the pan
 ##                   when takeout is out of reach (not enough savings)
@@ -69,7 +68,7 @@ const PROFILES := {
 		"skip": 0.0,
 		"misdrop": 0.0,
 		"shoes_first": 0.0,
-		"coffee": "skip",
+		"coffee": ["both", "coffee", "water"],
 		"cook_every": 1,
 		"freetime_games": 0,
 	},
@@ -98,7 +97,7 @@ const PROFILES := {
 		"skip": 0.15,
 		"misdrop": 0.1,
 		"shoes_first": 0.25,
-		"coffee": "buy",
+		"coffee": ["water"],
 		"cook_every": 3,
 		"freetime_games": 2,
 	},
@@ -117,7 +116,7 @@ static func policy_rows(profile: Dictionary) -> Array[String]:
 		"orient: %.1f-%.1f s taking in each new screen before the first input" % [
 			profile.orient.x, profile.orient.y,
 		],
-		"coffee: %s" % ("buy one" if profile.coffee == "buy" else "water"),
+		"coffee: %s" % ", else ".join(PackedStringArray(profile.coffee)),
 		"dinner: %s (cook when takeout is unaffordable)" % dinner,
 		"free-time games per night: %d" % profile.freetime_games,
 		"skippable chores skipped: %d%%" % roundi(profile.skip * 100.0),

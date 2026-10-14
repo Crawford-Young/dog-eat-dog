@@ -193,32 +193,67 @@ func test_sleep_is_a_no_op_because_bedtime_is_already_derived() -> void:
 	assert_eq(state.energy, before)
 
 
-func test_coffee_buy_spends_and_flags() -> void:
+func _shop(choice: String, savings: int) -> GameState:
 	var s := GameState.new()
-	s.wallet.credit(10)
-	StatEffects.apply("coffee", {"score": 1.0, "skipped": false, "choice": "buy"}, s, cfg)
+	s.wallet.credit(savings)
+	StatEffects.apply("coffee", {"score": 1.0, "skipped": false, "choice": choice}, s, cfg)
+	return s
+
+
+func test_the_shipped_shop_prices() -> void:
+	assert_eq(cfg.coffee_price, 5)
+	assert_eq(cfg.snack_price, 3)
+	assert_eq(cfg.snack_buff_tiers, 1)
+	assert_eq(cfg.shop_prices(), {"coffee": 5, "snack": 3, "both": 8},
+			"both is the two together, never its own price")
+
+
+func test_coffee_spends_its_price_and_flags_the_morning() -> void:
+	var s := _shop("coffee", 10)
 	assert_true(s.coffee_today)
+	assert_false(s.snack_today)
 	assert_eq(s.wallet.savings, 10 - cfg.coffee_price)
 
 
-func test_coffee_skip_costs_nothing() -> void:
-	var s := GameState.new()
-	StatEffects.apply("coffee", {"score": 1.0, "skipped": false, "choice": "skip"}, s, cfg)
+func test_a_snack_spends_its_price_and_flags_the_afternoon() -> void:
+	var s := _shop("snack", 10)
+	assert_true(s.snack_today)
 	assert_false(s.coffee_today)
-	assert_eq(s.wallet.savings, 0)
+	assert_eq(s.wallet.savings, 10 - cfg.snack_price)
 
 
-func test_coffee_spill_pays_the_price_and_buys_no_focus() -> void:
-	var s := GameState.new()
-	s.wallet.credit(10)
-	var before := s.energy
-	var performance := s.performance
-	StatEffects.apply("coffee",
-			{"score": 0.0, "skipped": false, "failed": true, "choice": "spill"}, s, cfg)
-	assert_eq(s.wallet.savings, 10 - cfg.coffee_price, "the cart still takes its five")
-	assert_false(s.coffee_today, "and the cup is on the floor")
-	assert_eq(s.energy, before, "money is the whole cost: no loss energy")
-	assert_eq(s.performance, performance, "nor a loss performance cost")
+func test_both_spends_eight_and_flags_both() -> void:
+	var s := _shop("both", 10)
+	assert_true(s.coffee_today)
+	assert_true(s.snack_today)
+	assert_eq(s.wallet.savings, 2, "coffee and a snack together: 10 - 8")
+
+
+func test_water_costs_nothing_and_buys_nothing() -> void:
+	var s := _shop("water", 10)
+	assert_false(s.coffee_today)
+	assert_false(s.snack_today)
+	assert_eq(s.wallet.savings, 10)
+
+
+## The card greys out what the dog cannot pay for; should one arrive anyway,
+## the wallet refuses it whole, never half a purchase.
+func test_a_purchase_the_dog_cannot_pay_buys_nothing() -> void:
+	var s := _shop("both", 7)
+	assert_false(s.coffee_today)
+	assert_false(s.snack_today)
+	assert_eq(s.wallet.savings, 7)
+	assert_false(_shop("coffee", 4).coffee_today)
+	assert_false(_shop("snack", 2).snack_today)
+
+
+## The shop is a breather: whatever the dog picks, energy and performance are
+## untouched at the cart (the coffee's crash lands at work, below).
+func test_the_cart_never_touches_energy_or_performance() -> void:
+	for choice in ["coffee", "snack", "both", "water"]:
+		var s := _shop(choice, 20)
+		assert_eq(s.energy, GameState.new().energy, choice)
+		assert_eq(s.performance, GameState.new().performance, choice)
 
 
 ## A dinner that timed out is the sad kibble (#18): no takeout energy, no
@@ -247,6 +282,19 @@ func test_coffee_crash_drains_after_morning_work() -> void:
 	wired.coffee_today = true
 	StatEffects.apply("work_am", {"score": 0.5, "skipped": false}, wired, cfg)
 	assert_eq(wired.energy, sober.energy - cfg.coffee_crash_drain)
+
+
+## The snack is an afternoon boost with no crash (user ruling 2026-10-14).
+func test_a_snack_never_crashes() -> void:
+	for slot in ["work_am", "work_pm"]:
+		var sober := GameState.new()
+		sober.energy = 80.0
+		StatEffects.apply(slot, {"score": 0.5, "skipped": false}, sober, cfg)
+		var snacked := GameState.new()
+		snacked.energy = 80.0
+		snacked.snack_today = true
+		StatEffects.apply(slot, {"score": 0.5, "skipped": false}, snacked, cfg)
+		assert_eq(snacked.energy, sober.energy, slot)
 
 
 func test_takeout_costs_money_cook_is_free() -> void:

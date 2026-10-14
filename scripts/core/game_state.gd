@@ -18,6 +18,7 @@ var rank: int = 0
 var warning: bool = false
 var promote_streak: int = 0
 var coffee_today: bool = false
+var snack_today: bool = false
 var sick_today: bool = false
 var sick_recovery: float = 65.0
 
@@ -59,4 +60,5 @@ func start_next_day(cfg: BalanceConfig) -> void:
 	brushed_today = false
 	showered_today = false
 	coffee_today = false
+	snack_today = false
 	sick_today = false

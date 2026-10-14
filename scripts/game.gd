@@ -83,10 +83,12 @@ const ZONE_COLORS := {
 ## can state the ramp the game ran at; any other slot runs at 1.0.
 const RAMP_MAXES := {
 	"breakfast": "day_ramp_breakfast_max",
-	"coffee": "day_ramp_cup_max",
 	"work_am": "day_ramp_burst_max",
 	"work_pm": "day_ramp_triage_max",
 }
+## Untimed choice cards that are no game (#18). Each writes a choice-only probe
+## line, so a ride shows whether every option gets picked.
+const BREATHER_SLOTS := ["coffee"]
 ## A skip is neither a win nor a loss, so it stamps muted (issue #17 ruling).
 const STAMP_COLORS := {
 	Verdict.HIT: Color(0.45, 0.9, 0.45),
@@ -344,8 +346,14 @@ func _params_for(slot: String) -> Dictionary:
 				_day_progress(),
 			)
 		"work_pm":
-			# No boost: coffee is a morning buff (it lifts work AM only).
-			return Difficulty.triage_params(state.energy, cfg, 0, state.rank, _day_progress())
+			# The snack is the afternoon's buff; coffee lifts work AM only.
+			return Difficulty.triage_params(
+				state.energy,
+				cfg,
+				cfg.snack_buff_tiers if state.snack_today else 0,
+				state.rank,
+				_day_progress(),
+			)
 		"drive_home":
 			return Difficulty.drive_home_params(state.energy, cfg)
 		"cooking":
@@ -371,9 +379,13 @@ func _params_for(slot: String) -> Dictionary:
 				"hold": cfg.sleep_hold_time,
 			}
 		"coffee":
-			var cup := Difficulty.cup_params(state.energy, cfg, _day_progress())
-			cup["can_afford"] = state.wallet.savings >= cfg.coffee_price
-			return cup
+			var prices := cfg.shop_prices()
+			return {
+				"text_speed": cfg.typewriter_chars_per_sec,
+				"disabled_choices":
+					prices.keys().filter(func(choice: String) -> bool:
+						return prices[choice] > state.wallet.savings),
+			}
 		"retire_offer":
 			return {"text_speed": cfg.typewriter_chars_per_sec}
 		"warning":
@@ -446,10 +458,23 @@ func _on_finished(result: Dictionary, slot: String, node: Node) -> void:
 	_hold_stamp(_continue_day.bind(slot, result))
 
 
-## One probe line for a finished game (never a beat or card), from its result
-## as stamped and the start state noted at mount. Off without a recorder.
+## One probe line for a finished game, from its result as stamped and the
+## start state noted at mount, or a choice-only line for a breather. Beats and
+## other cards write none. Off without a recorder.
 func _record_probe(slot: String, result: Dictionary, node: Node) -> void:
-	if probes == null or not cfg.probes_enabled or slot not in Verdict.COUNTED_SLOTS:
+	if probes == null or not cfg.probes_enabled:
+		return
+	if slot in BREATHER_SLOTS:
+		# StatEffects has not run yet, so these are the savings the dog chose with.
+		probes.record({
+			"day": state.day,
+			"slot": slot,
+			"choice": result.get("choice"),
+			"start_energy": _probe_start["start_energy"],
+			"savings": state.wallet.savings,
+		})
+		return
+	if slot not in Verdict.COUNTED_SLOTS:
 		return
 	var entry := _probe_start.duplicate()
 	var mounted: int = entry["mounted_msec"]

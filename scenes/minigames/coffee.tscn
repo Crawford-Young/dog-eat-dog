@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/minigames/coffee_minigame.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/minigames/choice_card.gd" id="1"]
 
 [node name="Coffee" type="Control"]
 anchor_right = 1.0
@@ -8,57 +8,33 @@ anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("1")
 
-[node name="DeskSlot" type="Control" parent="."]
-unique_name_in_owner = true
-anchor_left = 0.1
-anchor_top = 0.45
-anchor_right = 0.9
-anchor_bottom = 0.85
-mouse_filter = 2
-
 [node name="Prompt" type="Label" parent="."]
-anchor_left = 0.25
-anchor_top = 0.08
-anchor_right = 0.75
-anchor_bottom = 0.15
+unique_name_in_owner = true
+anchor_left = 0.2
+anchor_top = 0.2
+anchor_right = 0.8
+anchor_bottom = 0.28
 mouse_filter = 2
-text = "the cart rolls by. grab a coffee?"
+text = "the cart rolls by. coffee for the morning, a snack for the afternoon?"
 horizontal_alignment = 1
 
-[node name="Hint" type="Label" parent="."]
+[node name="Choices" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
-anchor_left = 0.25
-anchor_top = 0.16
-anchor_right = 0.75
-anchor_bottom = 0.23
+anchor_left = 0.2
+anchor_top = 0.4
+anchor_right = 0.8
+anchor_bottom = 0.55
 mouse_filter = 2
-horizontal_alignment = 1
+alignment = 1
 
-[node name="Track" type="Control" parent="."]
-anchor_left = 0.05
-anchor_top = 0.28
-anchor_right = 0.95
-anchor_bottom = 0.5
-mouse_filter = 2
+[node name="Coffee" type="Button" parent="Choices"]
+text = "coffee $5"
 
-[node name="Zone" type="ColorRect" parent="Track"]
-unique_name_in_owner = true
-anchor_left = 0.63
-anchor_right = 0.77
-anchor_bottom = 1.0
-mouse_filter = 2
-color = Color(0.5, 1, 0.5, 0.2)
+[node name="Snack" type="Button" parent="Choices"]
+text = "snack $3"
 
-[node name="PawSlot" type="Control" parent="Track"]
-unique_name_in_owner = true
-anchor_left = 0.63
-anchor_top = 1.0
-anchor_right = 0.77
-anchor_bottom = 1.6
-mouse_filter = 2
+[node name="Both" type="Button" parent="Choices"]
+text = "both $8"
 
-[node name="CupSlot" type="Control" parent="Track"]
-unique_name_in_owner = true
-visible = false
-anchor_bottom = 1.0
-mouse_filter = 2
+[node name="Water" type="Button" parent="Choices"]
+text = "water, free"

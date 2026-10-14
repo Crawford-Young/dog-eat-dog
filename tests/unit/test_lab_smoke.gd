@@ -148,19 +148,12 @@ func test_triage_params_use_the_selected_rank() -> void:
 	assert_eq(params["window"], lab.cfg.triage_email_windows[2], "rank selector feeds triage_params")
 
 
-func test_coffee_launches_the_cup_grab_with_a_cup_the_dog_can_pay_for() -> void:
+## The coffee cart is a shop card now (#18), with nothing to feel in
+## isolation: the coffee_morning day preset rides it in a real day instead.
+func test_the_lab_has_no_coffee_activity() -> void:
 	var lab := _fresh_lab()
-	lab._launch("coffee")
-	var hosted: Node = lab.get_node("%Host").get_child(0)
-	assert_true(hosted.session() is CoffeeSession, "the coffee button hosts the cup grab")
-	assert_true(hosted.session().can_afford(), "the lab dog always has the five")
-	assert_true(hosted.is_running())
-
-
-func test_the_coffee_button_launches_it() -> void:
-	var lab := _fresh_lab()
-	lab.get_node("%Activities/Coffee").pressed.emit()
-	assert_eq(lab.get_node("%Host").get_child_count(), 1)
+	assert_null(lab.get_node_or_null("%Activities/Coffee"))
+	assert_false(lab.SCENES.has("coffee"))
 
 
 func test_dinner_launches_the_walk_with_a_phone_the_dog_can_pay_for() -> void:
@@ -278,7 +271,6 @@ func test_the_lab_starts_every_game_at_the_start_of_the_day() -> void:
 	var lab := _fresh_lab()
 	assert_almost_eq(lab._progress_slider.value, 0.0, 0.0001)
 	assert_almost_eq(lab._params_for("breakfast").speed, lab.cfg.breakfast_beat_speed, 0.0001)
-	assert_almost_eq(lab._params_for("coffee").speed, lab.cfg.coffee_cup_speed, 0.0001)
 	assert_almost_eq(lab._params_for("work_am").speed, 1.0, 0.0001)
 	assert_almost_eq(lab._params_for("work_pm").speed, 1.0, 0.0001)
 
@@ -295,8 +287,6 @@ func test_the_progress_slider_feeds_every_ramped_game_its_end_of_day_speed() -> 
 	var cfg: BalanceConfig = lab.cfg
 	assert_almost_eq(lab._params_for("breakfast").speed,
 			cfg.breakfast_beat_speed * cfg.day_ramp_breakfast_max, 0.0001)
-	assert_almost_eq(lab._params_for("coffee").speed,
-			cfg.coffee_cup_speed * cfg.day_ramp_cup_max, 0.0001)
 	assert_almost_eq(lab._params_for("work_am").speed, cfg.day_ramp_burst_max, 0.0001)
 	assert_almost_eq(lab._params_for("work_pm").speed, cfg.day_ramp_triage_max, 0.0001)
 

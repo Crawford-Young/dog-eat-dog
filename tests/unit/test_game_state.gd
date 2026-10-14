@@ -108,14 +108,17 @@ func test_new_state_starts_in_the_mailroom_broke() -> void:
 	assert_eq(s.wallet.savings, 0)
 	assert_false(s.warning)
 	assert_false(s.coffee_today)
+	assert_false(s.snack_today)
 	assert_false(s.sick_today)
 
 
 func test_next_day_clears_daily_flags() -> void:
 	var s := GameState.new()
 	s.coffee_today = true
+	s.snack_today = true
 	s.start_next_day(cfg)
 	assert_false(s.coffee_today)
+	assert_false(s.snack_today, "the snack is today only, like the coffee")
 
 
 func test_sick_recovery_overrides_bedtime_energy() -> void:
