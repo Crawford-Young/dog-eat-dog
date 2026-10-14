@@ -25,7 +25,6 @@ const SCENES := {
 	"work_am": preload("res://scenes/minigames/burst.tscn"),
 	"work_pm": preload("res://scenes/minigames/triage.tscn"),
 	"listening": preload("res://scenes/minigames/listening.tscn"),
-	"dinner": preload("res://scenes/minigames/dinner.tscn"),
 	"freetime": preload("res://scenes/minigames/freetime.tscn"),
 	"sleep": preload("res://scenes/minigames/sleep.tscn"),
 }
@@ -269,10 +268,6 @@ func _params_for(activity: String) -> Dictionary:
 			return Difficulty.listening_params(energy, cfg)
 		"freetime", "sleep":
 			return _params_for_debt(activity, _selected_debt())
-		"dinner":
-			var walk := Difficulty.dinner_params(energy, cfg)
-			walk["can_afford"] = true
-			return walk
 		_:
 			return {}
 

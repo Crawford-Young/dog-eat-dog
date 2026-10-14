@@ -88,7 +88,7 @@ const RAMP_MAXES := {
 }
 ## Untimed choice cards that are no game (#18). Each writes a choice-only probe
 ## line, so a ride shows whether every option gets picked.
-const BREATHER_SLOTS := ["coffee"]
+const BREATHER_SLOTS := ["coffee", "dinner"]
 ## A skip is neither a win nor a loss, so it stamps muted (issue #17 ruling).
 const STAMP_COLORS := {
 	Verdict.HIT: Color(0.45, 0.9, 0.45),
@@ -363,9 +363,11 @@ func _params_for(slot: String) -> Dictionary:
 		"freetime":
 			return Difficulty.temptation_params(state.energy, cfg, state.ledger.debt_minutes)
 		"dinner":
-			var walk := Difficulty.dinner_params(state.energy, cfg)
-			walk["can_afford"] = state.wallet.savings >= cfg.takeout_price
-			return walk
+			return {
+				"text_speed": cfg.typewriter_chars_per_sec,
+				"disabled_choices":
+					[] if state.wallet.savings >= cfg.takeout_price else ["takeout"],
+			}
 		"sleep":
 			# The night was recorded when freetime ended, so both of these
 			# read a ledger that already moved. Debt is stated ONCE, here,
@@ -581,7 +583,7 @@ func _on_out_of_band_beat_finished(_result: Dictionary, node: Node) -> void:
 
 ## Same out-of-band shape as _show_rank_news: advance() never runs for it, so
 ## schedule.current() stays "dinner" while the pan is up. Unlike a beat it
-## finishes through the slot tail, _on_finished, because a dinner has effects
+## finishes through the slot tail, _on_finished, because the pan has effects
 ## to bank and a verdict to stamp. The clock keeps running, which IS the
 ## point — cooking is what takeout buys you out of.
 func _show_cooking() -> void:

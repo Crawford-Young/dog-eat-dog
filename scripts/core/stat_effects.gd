@@ -14,10 +14,9 @@ class_name StatEffects
 ## miss is already charged as the lateness debit, the work-score EMA and the
 ## sleep ledger (user ruling, issue #17), so paying here would double it. So is
 ## drive_home: past home_by, its bill is the evening clock and sleep (#18). The
-## coffee cart is a shop, not a game, so it never fails. Dinner pays it: a walk
-## that times out is sad kibble, with nothing else charged.
-const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "dinner",
-		"cooking"]
+## breathers, the coffee cart and the dinner choice, are no games, so they never
+## fail; the pan that cook hosts is a game and pays it.
+const LOSS_COST_SLOTS := ["wake", "brush", "shower", "clothes", "breakfast", "lunch", "cooking"]
 
 
 static func apply(slot: String, result: Dictionary, state: GameState, cfg: BalanceConfig) -> void:
@@ -84,12 +83,12 @@ static func apply(slot: String, result: Dictionary, state: GameState, cfg: Balan
 		"dinner":
 			# Takeout buys CLOCK with money — the first and only place in the
 			# game where that trade exists. The morning is the inverse: skipping
-			# a chore costs time there, never saves it (wave-3a invariant). A
-			# walk that timed out (sad kibble) carries no choice, so it gets no
-			# energy here; the loss cost below is its bill.
-			if result.get("choice") == "takeout":
+			# a chore costs time there, never saves it (wave-3a invariant). The
+			# card greys takeout out when the dog is broke, and the wallet
+			# refuses a bill whole, so an unaffordable order brings no food.
+			# Cook pays nothing here: the pan it hosts pays the energy.
+			if result.get("choice") == "takeout" and state.wallet.spend(cfg.takeout_price):
 				state.apply_energy(cfg.dinner_takeout_energy)
-				state.wallet.spend(cfg.takeout_price)
 		"cooking":
 			state.apply_energy(
 				lerpf(cfg.cook_energy_min, cfg.cook_energy_max, result.get("score", 0.0))
