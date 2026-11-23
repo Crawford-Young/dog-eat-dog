@@ -1,0 +1,4 @@
+# husky owns core.hooksPath (.husky/_), which shadows the hook git-lfs installs.
+# Without this, post-merge never reaches git-lfs (#26).
+command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\nThis repo uses Git LFS but git-lfs is not on PATH (.husky/post-merge).\n"; exit 2; }
+git lfs post-merge "$@"
