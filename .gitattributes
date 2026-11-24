@@ -6,3 +6,8 @@
 *.ogg filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.blend filter=lfs diff=lfs merge=lfs -text
+# The GUT addon's fonts were vendored as plain blobs, not LFS pointers, so the
+# *.ttf rule above made every fresh clone show them modified (#31, #34). They
+# stay plain: excluding them needs no LFS upload, and the addon is vendored
+# as-is. Later lines win, so this overrides the *.ttf rule for them only.
+addons/gut/fonts/*.ttf -filter -diff -merge binary
